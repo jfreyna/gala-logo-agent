@@ -1,0 +1,10 @@
+# Secrets and local environment
+.env*
+
+# Dependencies
+node_modules
+
+# The persona prompt, phase instructions and hall rules are withheld.
+# Any local draft lives here and is never committed.
+private/
+*.private.md
