@@ -61,27 +61,26 @@ const STATUS_COLOR = {
   upcoming: "text-stroke-2-light dark:text-stroke-2-dark",
 } as const;
 
-/** gala-phase-row (Figma 5534:3735): Done, Current (outlined) or Upcoming (dimmed). */
-function PhaseRow({ phase, onOpen }: { phase: Phase; onOpen: () => void }) {
+/**
+ * gala-phase-row (Figma 5534:3735): Done, Current (outlined) or Upcoming
+ * (dimmed). A Done row carries "Back to this step" under its summary
+ * (layer `go-back`, 5534:3605 and 5534:3670). The row opens the phase; the
+ * link is its own button above it, so the two never nest.
+ */
+function PhaseRow({ phase, onOpen, onGoBack }: { phase: Phase; onOpen: () => void; onGoBack: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onOpen}
+    <div
       className={`relative flex w-full shrink-0 items-start gap-[12px] rounded-[12px] p-[12px] text-left ${
         phase.status === "current" ? "border border-solid border-stroke-2-light dark:border-stroke-2-dark" : ""
       }`}
       data-name="gala-phase-row"
     >
+      <button type="button" onClick={onOpen} aria-label={phase.name} className="absolute inset-0 rounded-[12px]" />
       <Icon name={STATUS_ICON[phase.status]} className={STATUS_COLOR[phase.status]} />
       <span className="relative flex min-w-px flex-[1_0_0] flex-col items-start gap-[4px]" data-name="texts">
-        <span
-          className={`type-body-semibold w-full ${
-            phase.status === "upcoming" ? "text-text-neutral-2-light dark:text-text-neutral-2-dark" : "text-text-neutral-1-light dark:text-text-neutral-1-dark"
-          }`}
-        >
-          {phase.name}
+        <span className="type-body-semibold w-full text-text-blue-1-light dark:text-text-blue-1-dark">{phase.name}
         </span>
-        <span className="type-caption-medium w-full text-text-neutral-2-light dark:text-text-neutral-2-dark">{phase.summary}</span>
+        <span className="type-caption-medium w-full text-text-neutral-1-light dark:text-text-neutral-1-dark">{phase.summary}</span>
         {phase.thumbs !== undefined && phase.thumbs.length > 0 && (
           <span className="relative flex shrink-0 items-start gap-[6px] pt-[4px]" data-name="thumbnails">
             {phase.thumbs.map((url, index) => (
@@ -91,13 +90,23 @@ function PhaseRow({ phase, onOpen }: { phase: Phase; onOpen: () => void }) {
             ))}
           </span>
         )}
+        {phase.status === "done" && (
+          <button
+            type="button"
+            onClick={onGoBack}
+            className="type-caption-semibold relative z-10 shrink-0 whitespace-nowrap text-left text-text-blue-1-light dark:text-text-blue-1-dark"
+            data-name="go-back"
+          >
+            Back to this step
+          </button>
+        )}
       </span>
       <Icon name="chevron" className="text-text-neutral-2-light dark:text-text-neutral-2-dark" />
-    </button>
+    </div>
   );
 }
 
-function History({ data, onOpenPhase, onOpenMemory, onClose, onDownloadFormat }: { data: HistoryView } & Pick<Props, "onOpenPhase" | "onOpenMemory" | "onClose" | "onDownloadFormat">) {
+function History({ data, onOpenPhase, onGoBack, onOpenMemory, onClose, onDownloadFormat }: { data: HistoryView } & Pick<Props, "onOpenPhase" | "onGoBack" | "onOpenMemory" | "onClose" | "onDownloadFormat">) {
   return (
     <Shell
       header={
@@ -122,7 +131,7 @@ function History({ data, onOpenPhase, onOpenMemory, onClose, onDownloadFormat }:
     >
       <div className="relative flex min-h-px w-full flex-[1_0_0] flex-col items-start gap-[4px] overflow-y-auto px-[16px] py-[12px]" data-name="history">
         {data.phases.map((phase) => (
-          <PhaseRow key={phase.key} phase={phase} onOpen={() => onOpenPhase(phase.key)} />
+          <PhaseRow key={phase.key} phase={phase} onOpen={() => onOpenPhase(phase.key)} onGoBack={() => onGoBack(phase.key)} />
         ))}
       </div>
       <div className="relative flex w-full shrink-0 flex-col items-start gap-[8px] overflow-clip border-t border-solid border-stroke-1-light p-[16px] dark:border-stroke-1-dark" data-name="kit">
@@ -156,9 +165,9 @@ function Artifact({ data, onBack, onClose, onChoose }: { data: ArtifactView; onB
         </div>
         <div className="relative flex shrink-0 items-baseline gap-[8px]" data-name="title">
           <p className="shrink-0 font-headings text-[20px] font-bold leading-[normal] text-headline-2-light dark:text-headline-2-dark">{data.letter}</p>
-          <p className="type-body-semibold shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">{data.name}</p>
+          <p className="type-body-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">{data.name}</p>
         </div>
-        <p className="type-body-regular w-full shrink-0 text-text-neutral-2-light dark:text-text-neutral-2-dark">{data.rationale}</p>
+        <p className="type-body-regular w-full shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">{data.rationale}</p>
         <div className="relative flex w-full shrink-0 flex-wrap items-start gap-x-[12px] gap-y-[8px]" data-name="checks">
           {data.checks.map((check) => (
             <CheckBadge key={check.label} label={check.label} pass={check.pass} />
@@ -210,11 +219,16 @@ function FilterChip({ label, selected, onClick }: { label: string; selected: boo
   );
 }
 
-/** gala-type-row (Figma 5548:7028): the brand name set in one family, and "Use for A". */
+/**
+ * gala-type-row (Figma 5548:7028, light 5548:7012, dark 5548:7020): the
+ * brand name set in one family on white paper, with its name and "Use for
+ * A" under it, and a divider under each row, so a scrolled list never
+ * leaves a name between two specimens.
+ */
 function TypeRow({ family, brandName, letter, onUse }: { family: TypeFamily; brandName: string; letter: string; onUse: () => void }) {
   useGoogleFont(family.family, brandName);
   return (
-    <div className="relative flex w-full shrink-0 flex-col items-start gap-[8px]" data-name="gala-type-row">
+    <div className="relative flex w-full shrink-0 flex-col items-start gap-[8px] border-b border-solid border-form-stroke-light pb-[10px] dark:border-form-stroke-dark" data-name="gala-type-row">
       <div className="relative flex w-full shrink-0 items-center rounded-[8px] bg-neutral-0 px-[16px] py-[12px]" data-name="paper">
         <p className="shrink-0 whitespace-nowrap text-[24px] leading-[normal] text-[#000000]" style={{ fontFamily: `"${family.family}", serif` }}>
           {brandName}
@@ -222,7 +236,7 @@ function TypeRow({ family, brandName, letter, onUse }: { family: TypeFamily; bra
       </div>
       <div className="relative flex w-full shrink-0 items-center justify-between" data-name="meta">
         <div className="relative flex shrink-0 items-baseline gap-[8px]" data-name="names">
-          <p className="type-body-semibold shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">{family.family}</p>
+          <p className="type-body-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">{family.family}</p>
           <p className="type-mini-semibold shrink-0 text-headline-1-light dark:text-headline-1-dark">{family.category}</p>
         </div>
         {family.current ? (
@@ -377,10 +391,10 @@ function Memory({ data, onBack, onClose, onAddMemory, onEditMemory, onRemoveMemo
   return (
     <Shell header={<SubHeader heading="Memory" onBack={onBack} onClose={onClose} />}>
       <div className="relative flex min-h-px w-full flex-[1_0_0] flex-col items-start gap-[20px] overflow-y-auto p-[16px]" data-name="memory">
-        <p className="type-caption-medium w-full shrink-0 text-text-neutral-2-light dark:text-text-neutral-2-dark">Used across all your projects. Change or remove anything.</p>
+        <p className="type-caption-medium w-full shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">Used across all your projects. Change or remove anything.</p>
         {groups.map((group) => (
           <section key={group} className="relative flex w-full shrink-0 flex-col items-start gap-[8px]" data-name={`section/${group}`}>
-            <h3 className="type-caption-semibold shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">{group}</h3>
+            <h3 className="type-caption-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">{group}</h3>
             {data.lines
               .filter((line) => line.group === group)
               .map((line) => (
@@ -442,6 +456,8 @@ type Props = {
   onClose: () => void;
   onBack: () => void;
   onOpenPhase: (key: string) => void;
+  /** "Back to this step" on a Done row. */
+  onGoBack: (key: string) => void;
   onOpenMemory: () => void;
   onChooseArtifact: () => void;
   onFilter: (filter: { category?: string; mood?: string }) => void;
@@ -457,7 +473,7 @@ export function WorkPanel(props: Props) {
   const { view, onBack, onClose } = props;
   switch (view.view) {
     case "history":
-      return <History data={view} onOpenPhase={props.onOpenPhase} onOpenMemory={props.onOpenMemory} onClose={onClose} onDownloadFormat={props.onDownloadFormat} />;
+      return <History data={view} onOpenPhase={props.onOpenPhase} onGoBack={props.onGoBack} onOpenMemory={props.onOpenMemory} onClose={onClose} onDownloadFormat={props.onDownloadFormat} />;
     case "artifact":
       return <Artifact data={view} onBack={onBack} onClose={onClose} onChoose={props.onChooseArtifact} />;
     case "color":

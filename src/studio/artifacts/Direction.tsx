@@ -24,7 +24,7 @@ export function Direction({ data, onChange, onApprove }: { data: DirectionArtifa
     <div className="relative flex w-full shrink-0 flex-col items-start gap-[12px]" data-name="gala-direction">
       <Turn>{data.say}</Turn>
       <ArtifactCard name="direction">
-        <p className="type-body-semibold shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">Direction</p>
+        <p className="type-body-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">Direction</p>
         <Row label="Mood">
           <p className={value}>{data.mood}</p>
         </Row>

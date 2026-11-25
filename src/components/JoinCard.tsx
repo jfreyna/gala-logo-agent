@@ -114,7 +114,7 @@ export function JoinCard({ start }: { start?: JoinCardStart }) {
         className="relative flex w-full shrink-0 flex-col items-center gap-[12px] rounded-[16px] border border-solid border-stroke-2-light bg-background-2-light p-[24px] desktop:w-[340px] dark:border-stroke-2-dark dark:bg-background-1-dark"
         data-name="gala-join-card"
       >
-        <p className="type-body-semibold shrink-0 whitespace-nowrap text-text-neutral-1-light dark:text-text-neutral-1-dark">Sign in to Gala</p>
+        <p className="type-body-semibold shrink-0 whitespace-nowrap text-text-blue-1-light dark:text-text-blue-1-dark">Sign in to Gala</p>
         {start?.passwordSet && (
           <p className="type-caption-medium w-full shrink-0 text-center text-text-neutral-1-light dark:text-text-neutral-1-dark" data-name="password-set" role="status">
             Your password is set. Sign in to start.
@@ -192,13 +192,13 @@ export function JoinCard({ start }: { start?: JoinCardStart }) {
       className="relative flex w-full shrink-0 flex-col items-center gap-[12px] rounded-[16px] border border-solid border-stroke-2-light bg-background-2-light p-[24px] desktop:w-[340px] dark:border-stroke-2-dark dark:bg-background-1-dark"
       data-name="gala-join-card"
     >
-      <p className="type-body-semibold shrink-0 whitespace-nowrap text-text-neutral-1-light dark:text-text-neutral-1-dark">Start your first logo</p>
+      <p className="type-body-semibold shrink-0 whitespace-nowrap text-text-blue-1-light dark:text-text-blue-1-dark">Start your first logo</p>
 
       {showsSent ? (
         <div className="relative flex w-full shrink-0 flex-col items-center gap-[8px] py-[4px]" data-name="sent">
           <img alt="" src={checkCircleLight} width={32} height={32} className="size-[32px] shrink-0 dark:hidden" />
           <img alt="" src={checkCircleDark} width={32} height={32} className="hidden size-[32px] shrink-0 dark:block" />
-          <p className="type-body-semibold w-full shrink-0 text-center text-text-neutral-1-light dark:text-text-neutral-1-dark" role="status">
+          <p className="type-body-semibold w-full shrink-0 text-center text-text-blue-1-light dark:text-text-blue-1-dark" role="status">
             Check your email to get the access link.
           </p>
           <p className="type-caption-medium max-w-full shrink-0 truncate text-center text-text-neutral-2-light dark:text-text-neutral-2-dark">

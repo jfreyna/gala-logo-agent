@@ -31,22 +31,18 @@ const DESCRIBED_SHAPE: Shape = {
 
 /** Waiting on the pick-your-colors card. */
 export async function pickColors(turn: Turn): Promise<Outcome> {
-  const card = turn.latest("colorPicker");
+  const next = turn.take();
+  const card = turn.current("colorPicker");
   if (card === null) return "wait";
   const picker = card.artifact!;
-  if (picker.saved === true && picker.colors !== null) {
+  if (picker.saved === true && picker.colors !== null && next?.act !== "redo") {
     await turn.write([{ op: "project", stage: "colorways" }]);
     return "continue";
   }
 
-  const said = turn.unansweredText();
-  if (said === "") return "wait";
-  const meaning = await turn.intent(said, {
-    describe: "The person describes the colors they want in words",
-    other: "The person is asking or saying something else",
-  });
-  if (meaning !== "describe") {
-    await turn.converse("the person to pick their colors on the card and save it");
+  if (next === null) return "wait";
+  if (next.act !== "redo") {
+    await turn.answer(next, "the person to pick their colors on the card and save it");
     return "wait";
   }
   // "Or describe your colors in words": Gala fills the card in; the person still saves it.
@@ -131,9 +127,10 @@ async function agreesWithNumbers(words: string[], options: ColorwayOption[], sig
 }
 
 export async function colorways(turn: Turn): Promise<Outcome> {
+  const next = turn.take();
   const picker = turn.latest("colorPicker")!.artifact!;
   const colors = picker.colors as BrandColors;
-  const card = turn.latest("colorwaySet");
+  const card = turn.current("colorwaySet");
   const current = card !== null && JSON.stringify(card.artifact!.colors) === JSON.stringify(colors);
 
   if (current) {
@@ -145,26 +142,17 @@ export async function colorways(turn: Turn): Promise<Outcome> {
       ]);
       return "continue";
     }
-    const said = turn.unansweredText();
-    if (said === "") return "wait";
-    const picks = Object.fromEntries(set.colorways.map((entry: { letter: string; name: string }) => [entry.letter, `The person chooses colorway ${entry.letter}, ${entry.name}`]));
-    const meaning = await turn.intent(said, { ...picks, otherColors: "The person wants different colors", other: "The person is asking or saying something else" });
-    const chosen = set.colorways.find((entry: { letter: string }) => entry.letter === meaning);
-    if (chosen !== undefined) {
-      await turn.write([{ op: "patchArtifact", messageId: card.id, artifact: { ...set, chosenId: chosen.id } }]);
-      return "continue";
-    }
-    if (meaning === "otherColors") {
-      // "Or ask for other colors": the pick-your-colors card opens again.
+    if (next?.act === "redo") {
+      // "Or ask for other colors": the pick-your-colors card opens again, and a description in words fills it in.
       const pickerCard = turn.latest("colorPicker")!;
       await turn.write([
         { op: "patchArtifact", messageId: pickerCard.id, artifact: { ...pickerCard.artifact!, saved: false } },
         { op: "project", stage: "pickColors" },
       ]);
-      await turn.converse("the person to change their colors on the pick-your-colors card and save it");
-      return "wait";
+      turn.steer(next);
+      return "continue";
     }
-    await turn.converse("the person to pick colorway A, B or C, or edit their colors");
+    if (next !== null) await turn.answer(next, "the person to pick colorway A, B or C, or edit their colors");
     return "wait";
   }
 
@@ -206,7 +194,7 @@ export async function colorways(turn: Turn): Promise<Outcome> {
     })),
   );
   await turn.write([
-    { op: "artifact", kind: "colorwaySet", artifact: { say: picked?.say ?? COLORWAYS_LINE, brandName: turn.brand, family: familyOf(turn), colors, colorways: cards, chosenId: null } },
+    { op: "artifact", kind: "colorwaySet", artifact: { say: picked?.say ?? COLORWAYS_LINE, brandName: turn.nameAsSet, family: familyOf(turn), colors, colorways: cards, chosenId: null } },
   ]);
   return "wait";
 }

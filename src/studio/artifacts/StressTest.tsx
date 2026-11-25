@@ -29,8 +29,8 @@ export function StressTest({ data }: { data: StressTestArtifact }) {
       <Turn>{data.say}</Turn>
       <ArtifactCard name="stress-test" gap={12}>
         <div className="relative flex w-full shrink-0 items-center justify-between" data-name="heading">
-          <p className="type-body-semibold shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">Stress test</p>
-          <p className="type-caption-medium shrink-0 text-text-neutral-2-light dark:text-text-neutral-2-dark">
+          <p className="type-body-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">Stress test</p>
+          <p className="type-caption-medium shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">
             {passed} of {results.length} passed
           </p>
         </div>

@@ -32,7 +32,7 @@ export function Brief({ data, onEdit }: { data: BriefArtifact; onEdit: () => voi
       <Turn>{data.say}</Turn>
       <ArtifactCard name="brief">
         <div className="relative flex w-full shrink-0 items-center justify-between" data-name="heading">
-          <p className="type-body-semibold shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">Brief</p>
+          <p className="type-body-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">Brief</p>
           <button type="button" onClick={onEdit} className="type-caption-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">
             Edit
           </button>

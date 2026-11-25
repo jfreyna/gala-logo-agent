@@ -104,6 +104,7 @@ export function Preview({ pathname, search }: { pathname: string; search: string
             onClose={() => setPanelName(null)}
             onBack={() => setPanelName("history")}
             onOpenPhase={() => setPanelName("artifact")}
+            onGoBack={() => undefined}
             onOpenMemory={() => setPanelName("memory")}
             onChooseArtifact={noop}
             onFilter={noop}

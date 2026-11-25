@@ -340,6 +340,15 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
               if (key === "color" && latest("colorPicker")?.data.colors) setPanel({ view: "color" });
               if (key === "kit" && kit != null) setPanel({ view: "kit" });
             }}
+            onGoBack={(key) => {
+              // The same move as a spoken "go back": the engine returns the project to the phase's first step, and Gala picks up in the chat.
+              const step = PHASES.find((phase) => phase.key === key)?.stages[0];
+              if (step === undefined || working !== null || asking.current) return;
+              asking.current = true;
+              void requestTurn(projectId, step).finally(() => {
+                asking.current = false;
+              });
+            }}
             onOpenMemory={() => setPanel({ view: "memory" })}
             onChooseArtifact={() => undefined}
             onFilter={(filter) => {

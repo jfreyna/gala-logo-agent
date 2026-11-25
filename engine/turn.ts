@@ -9,14 +9,42 @@
  */
 import { fill, type Image, type Shape, type Spoken } from "./gemini.ts";
 import { checkReply, describeVerdict, type Shown } from "./guard.ts";
-import { ask, SURE } from "./jev.ts";
 import { DECLINE_LINE } from "./lines.ts";
 import { recall } from "./memory.ts";
 import { instructionsFor, type Prompt } from "./prompt.ts";
+import { stepIndexOfKind } from "./steps.ts";
 import type { Operation, Project, Stage, Store, StoredMessage } from "./store.ts";
 
 /** What a stage tells the loop: stop and wait for the person, or go on to the next stage now. */
 export type Outcome = "wait" | "continue";
+
+/**
+ * The particulars of what a person asked for, read from their message and
+ * checked against what is real (steer.ts). Each is null when not asked.
+ */
+export type Request = {
+  /** A Google family, by its exact name on Google's list. */
+  typeface: string | null;
+  /** How the name is written: the brand's own name in another case, like "GALA". */
+  nameAs: string | null;
+  /** What to change or try in the drawing, in the person's own words. */
+  drawing: string | null;
+  /** Any other change to the step's work, in the person's own words. */
+  note: string | null;
+};
+
+/**
+ * What steering decided the current step should do with the person's
+ * message. A pick or a plain "go back" is already done when the step runs,
+ * so it leaves nothing here.
+ */
+export type Steering =
+  /** Do the step's work again, with what the person asked for. */
+  | { act: "redo"; request: Request }
+  /** Something was unclear: Gala asks one short question, and nothing moves. */
+  | { act: "ask"; facts?: Record<string, unknown> }
+  /** Nothing to act on: Gala answers in words, and the work stays where it is. */
+  | { act: "talk"; facts?: Record<string, unknown> };
 
 export class Turn {
   state!: Project;
@@ -52,6 +80,56 @@ export class Turn {
   /** The newest card of a kind, or null. */
   latest(kind: string): StoredMessage | null {
     return this.state.messages.findLast((message) => message.kind === kind) ?? null;
+  }
+
+  /**
+   * The current card of a kind, or null. A card is current only if no card
+   * of an earlier step came after it; once a person goes back, every later
+   * card is history. It stays in the conversation and is never deleted.
+   */
+  current(kind: string): StoredMessage | null {
+    const card = this.latest(kind);
+    return card !== null && this.isLive(card) ? card : null;
+  }
+
+  /** False when a card of an earlier step came after this one. */
+  isLive(card: StoredMessage): boolean {
+    const step = stepIndexOfKind(card.kind);
+    if (step < 0) return true;
+    const at = this.state.messages.indexOf(card);
+    return !this.state.messages.slice(at + 1).some((later) => {
+      const laterStep = stepIndexOfKind(later.kind);
+      return later.author === "gala" && laterStep >= 0 && laterStep < step;
+    });
+  }
+
+  /** How the name is set in type: as the person asked on the type card ("GALA"), or the brand's name. */
+  get nameAsSet(): string {
+    return this.latest("typeSet")?.artifact?.nameAs ?? this.brand;
+  }
+
+  /**
+   * What the person asked to change in the drawing, from every card that is
+   * not history: each request is written onto the card it was said about,
+   * and handed to every drawing from then on, not only the next one.
+   */
+  drawingRequests(): string[] {
+    const asked = this.state.messages.filter((message) => message.artifact !== null && Array.isArray(message.artifact.requests) && this.isLive(message)).flatMap((message) => message.artifact!.requests as string[]);
+    return [...new Set(asked)];
+  }
+
+  private steering: Steering | null = null;
+
+  /** Set by steering before the step runs. */
+  steer(next: Steering | null): void {
+    this.steering = next;
+  }
+
+  /** What steering left for the step. Taken once, so a later step in the same turn can't act on it again. */
+  take(): Steering | null {
+    const next = this.steering;
+    this.steering = null;
+    return next;
   }
 
   /** True when card `a` came after card `b` (or `b` does not exist). */
@@ -126,21 +204,6 @@ export class Turn {
     });
   }
 
-  /**
-   * What the person meant, as one of a few named options. Jev decides. Null
-   * when Jev is not sure enough, and then Gala answers in words instead of
-   * acting.
-   */
-  async intent<K extends string>(text: string, options: Record<K, string>): Promise<K | null> {
-    if (text.trim() === "") return null;
-    const answers = await ask({
-      state: { message: text },
-      questions: { meaning: { type: "choice", instructions: "What does the person mean by `message`?", criteria: options } },
-      signal: this.signal,
-    });
-    return answers.meaning.confidence >= SURE ? (answers.meaning.choice as K) : null;
-  }
-
   /** The "working" line the studio shows while a step runs. */
   async status(text: string): Promise<void> {
     await this.store.write([{ op: "status", text }]);
@@ -185,13 +248,13 @@ export class Turn {
   }
 
   /** A short spoken reply that leaves the work where it is. */
-  async converse(waitingFor: string): Promise<void> {
+  async converse(waitingFor: string, options: { task?: string; facts?: Record<string, unknown> } = {}): Promise<void> {
     const reply = await this.compose(
       () =>
         this.think<{ say: string }>({
           section: "conversation",
-          task: "Reply to the person's last message.",
-          facts: { step: this.stage, waitingFor },
+          task: options.task ?? "Reply to the person's last message.",
+          facts: { step: this.stage, waitingFor, ...options.facts },
           shape: { type: "OBJECT", properties: { say: { type: "STRING" } }, required: ["say"] },
         }),
       (value) => ({ line: value.say }),
@@ -199,6 +262,30 @@ export class Turn {
     if (reply === null) await this.decline();
     else await this.write([{ op: "say", text: reply.say }]);
   }
+
+  /** Gala's answer when steering moved nothing: one short question when unsure, or a reply in words. */
+  async answer(next: Steering, waitingFor: string): Promise<void> {
+    if (next.act === "ask") {
+      await this.converse(waitingFor, {
+        task: "You are not sure what the person wants. Ask them one short question to find out, and change nothing.",
+        facts: next.facts,
+      });
+    } else {
+      await this.converse(waitingFor, { facts: next.act === "talk" ? next.facts : undefined });
+    }
+  }
+}
+
+/** What the person asked for, as a step's facts carry it. Null when nothing. */
+export function asked(request: Request | null): string[] | null {
+  if (request === null) return null;
+  const said = [request.drawing, request.note].filter((entry): entry is string => entry !== null);
+  return said.length > 0 ? said : null;
+}
+
+/** The drawing request, written onto the card made in answer to it. */
+export function requestsOf(request: Request | null): { requests?: string[] } {
+  return request?.drawing ? { requests: [request.drawing] } : {};
 }
 
 /** A short random id for an option on a card. */

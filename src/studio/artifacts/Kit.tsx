@@ -22,7 +22,7 @@ export function Kit({
       <Turn>{data.say}</Turn>
       <ArtifactCard name="kit">
         <div className="relative flex w-full shrink-0 items-center justify-between" data-name="heading">
-          <p className="type-body-semibold shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">Lock-up kit</p>
+          <p className="type-body-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">Lock-up kit</p>
           <div className="relative flex shrink-0 items-center gap-[4px]" data-name="saved">
             <Icon name="check" className="text-text-green-1-light dark:text-text-green-1-dark" />
             <p className="type-mini-semibold shrink-0 text-text-neutral-2-light dark:text-text-neutral-2-dark">Saved to your projects</p>

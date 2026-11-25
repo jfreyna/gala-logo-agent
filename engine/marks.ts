@@ -91,6 +91,9 @@ const REAL_WORLD = {
   inverted: { type: "noul", instructions: "`dark` shows `mark` in white on black. Does it read clearly, with no part closing up or disappearing?" },
 } as const;
 
+/** What a draft is judged against: the approved direction and the competitors found in research. */
+export type DraftContext = { direction: unknown; competitors: unknown; competitorImages?: Image[] };
+
 /** What Jev found in one draft. */
 export type Judgement = {
   /** Reasons the draft can't be shown as an option. Empty when it can. */
@@ -116,21 +119,30 @@ const REJECTION = {
  * Judges a draft against the brief's direction and the competitors found
  * in research.
  *
- * What this does not prove: "distinct" compares the drawing with written
- * descriptions of the competitors' logos, not with their images, so a
- * close visual match that the descriptions don't capture gets through. It
- * is not a trademark search. The 16px, circle and inverted answers are one
+ * "Distinct" compares the drawing with the competitors' own site icons,
+ * fetched in research, as images, alongside the written descriptions of
+ * their logos. What this does not prove: a site icon is often an app icon,
+ * not the full logo, and where a site gave none only the description is
+ * compared. It is not a trademark search. The 16px, circle and inverted answers are one
  * model's reading of one render each.
  */
-export async function judgeDraft(mark: Mark, context: { direction: unknown; competitors: unknown }, signal?: AbortSignal): Promise<Judgement> {
+export async function judgeDraft(mark: Mark, context: DraftContext, signal?: AbortSignal): Promise<Judgement> {
   const images = renders(mark);
+  const theirs = Object.fromEntries((context.competitorImages ?? []).map((image, index) => [`competitor${index + 1}`, image]));
+  const shown = Object.keys(theirs).map((key) => `\`${key}\``).join(", ");
   const answers = await ask({
     state: { direction: context.direction, competitors: context.competitors },
-    images: { mark: images.drawing, small: images.small, round: images.round, dark: images.dark },
+    images: { mark: images.drawing, small: images.small, round: images.round, dark: images.dark, ...theirs },
     questions: {
       pureBlackAndWhite: { type: "noul", instructions: "Is `mark` drawn only in solid black on a white background, with no colour, gradients or grey shading?" },
       lettering: { type: "noul", instructions: "Does `mark` contain any letters, words or numbers?" },
-      tooClose: { type: "noul", instructions: "Would `mark` be mistaken for the logo of one of the brands described in `competitors`?" },
+      tooClose: {
+        type: "noul",
+        instructions:
+          shown === ""
+            ? "Would `mark` be mistaken for the logo of one of the brands described in `competitors`?"
+            : `Would \`mark\` be mistaken for the logo of one of the brands described in \`competitors\`, whose own site icons are ${shown}?`,
+      },
       fitsDirection: { type: "noul", instructions: "Does `mark` fit the mood, posture and energy described in `direction`?" },
       ...REAL_WORLD,
     },

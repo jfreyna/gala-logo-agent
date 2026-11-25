@@ -33,12 +33,13 @@ async function post(path: string, body: Record<string, unknown>): Promise<string
 }
 
 /**
- * Asks Gala to take a turn on a project. Resolves when the turn ends, with
+ * Asks Gala to take a turn on a project; with `back`, the turn first goes
+ * back to that step ("Back to this step" in the Work panel). Resolves when the turn ends, with
  * how it ended: "done", "stopped", "busy", "signin" (the sign-in was
  * refused when the turn opened), "trouble", or null when nothing answered.
  */
-export function requestTurn(projectId: string): Promise<string | null> {
-  return post("/api/turn", { projectId }).catch(() => null);
+export function requestTurn(projectId: string, back?: string): Promise<string | null> {
+  return post("/api/turn", back === undefined ? { projectId } : { projectId, back }).catch(() => null);
 }
 
 /** Stops the turn in progress. */

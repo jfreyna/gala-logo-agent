@@ -31,7 +31,7 @@ export function ConceptCard({
 }) {
   return (
     <div
-      className={`relative flex h-[438px] w-[248px] shrink-0 flex-col items-start gap-[12px] rounded-[16px] border-solid bg-background-1-light p-[12px] dark:bg-background-2-dark ${
+      className={`relative flex w-[248px] shrink-0 flex-col items-start gap-[12px] rounded-[16px] border-solid bg-background-1-light p-[12px] dark:bg-background-2-dark ${
         chosen
           ? "border-2 border-button-1-default-light dark:border-button-1-default-dark"
           : "border border-stroke-1-light dark:border-stroke-1-dark"
@@ -43,9 +43,10 @@ export function ConceptCard({
       </div>
       <div className="relative flex shrink-0 items-baseline gap-[8px] whitespace-nowrap" data-name="title">
         <p className="shrink-0 font-headings text-[20px] font-bold leading-[normal] text-headline-2-light dark:text-headline-2-dark">{letter}</p>
-        <p className="type-body-semibold shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">{name}</p>
+        <p className="type-body-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">{name}</p>
       </div>
-      <p className="type-caption-medium relative min-h-px w-full flex-[1_0_0] text-text-neutral-2-light [word-break:break-word] dark:text-text-neutral-2-dark">
+      {/* The rationale hugs its text and is never clipped; in a stretched row it takes the extra height, so the checks and Choose line up across cards. */}
+      <p className="type-caption-medium relative w-full flex-[1_0_auto] text-text-neutral-1-light [word-break:break-word] dark:text-text-neutral-1-dark">
         {rationale}
       </p>
       <div className="relative flex shrink-0 items-center gap-[12px]" data-name="checks">

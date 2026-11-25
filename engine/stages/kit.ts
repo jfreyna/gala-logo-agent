@@ -72,7 +72,7 @@ export async function kit(turn: Turn): Promise<Outcome> {
 
   const built = await buildKit({
     mark: { bytes: source.bytes, mime: source.contentType as "image/png" | "image/jpeg" },
-    name: turn.brand,
+    name: turn.nameAsSet,
     fontFamily: family,
     colors: { primary: colors.primary, secondary: colors.secondary, ...(colors.tertiary !== null ? { tertiary: colors.tertiary } : {}) },
     // A white ground on screen becomes the kit's neutral gray for the square and the social image.
@@ -127,7 +127,9 @@ export async function kit(turn: Turn): Promise<Outcome> {
   const drafts = turn.state.messages
     .filter((message) => message.kind === "conceptSet" || message.kind === "variationSet")
     .flatMap((message) => [...message.artifact!.concepts, ...(message.artifact!.discarded ?? message.artifact!.setAside ?? [])])
-    .map((draft: { id: string; markFileId: string }) => ({ id: draft.id, markFileId: draft.markFileId }));
+    .map((draft: { id: string; markFileId: string }) => ({ id: draft.id, markFileId: draft.markFileId }))
+    // Going back puts a copy of a card in the conversation, so a draft can appear twice.
+    .filter((draft: { id: string }, index: number, all: { id: string }[]) => all.findIndex((other) => other.id === draft.id) === index);
   const remembered = await memoryOperations(turn, { mark: mark.name, family }, { brief: briefOf(turn), chosenMark: mark.name, typeface: family, colorway: colorway.name });
 
   await turn.write([
@@ -165,9 +167,10 @@ export async function quotePasses(quote: string, signal?: AbortSignal): Promise<
 }
 
 export async function picks(turn: Turn): Promise<Outcome> {
-  const card = turn.latest("picks");
+  const next = turn.take();
+  const card = turn.current("picks");
   if (card === null || card.artifact!.answered === null) {
-    if (turn.unansweredText() !== "") await turn.converse("the person to submit their picks or choose not to");
+    if (next !== null) await turn.answer(next, "the person to submit their picks or choose not to");
     return "wait";
   }
   await turn.status(WORKING.picks);
@@ -184,6 +187,7 @@ export async function picks(turn: Turn): Promise<Outcome> {
 
 /** After the project is finished, Gala still answers. */
 export async function done(turn: Turn): Promise<Outcome> {
-  if (turn.unansweredText() !== "") await turn.converse("nothing; the kit is finished. The person can ask for a change or start a new project");
+  const next = turn.take();
+  if (next !== null) await turn.answer(next, "nothing; the kit is finished. The person can go back to any step to change it, or start a new project");
   return "wait";
 }

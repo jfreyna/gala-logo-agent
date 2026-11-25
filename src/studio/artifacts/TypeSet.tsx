@@ -44,7 +44,7 @@ function TypeSpecimen({
         </p>
       </div>
       <div className="relative flex w-full shrink-0 items-center justify-between gap-[8px]" data-name="head">
-        <p className="type-body-semibold min-w-px truncate text-text-neutral-1-light dark:text-text-neutral-1-dark">{direction.family}</p>
+        <p className="type-body-semibold min-w-px truncate text-text-blue-1-light dark:text-text-blue-1-dark">{direction.family}</p>
         {direction.pick !== null && (
           <span className="relative flex shrink-0 items-start rounded-[999px] bg-background-3-light px-[8px] py-[2px] dark:bg-background-3-dark" data-name="pick">
             <span className="type-mini-semibold shrink-0 whitespace-nowrap text-text-neutral-1-light dark:text-text-neutral-1-dark">
@@ -57,7 +57,7 @@ function TypeSpecimen({
         <p className="type-mini-semibold shrink-0 text-headline-1-light dark:text-headline-1-dark">{direction.category}</p>
         <p className="type-mini-medium shrink-0 text-text-neutral-2-light dark:text-text-neutral-2-dark">{direction.moods}</p>
       </div>
-      <p className="type-caption-medium relative w-full flex-[1_0_auto] text-text-neutral-2-light dark:text-text-neutral-2-dark">{direction.rationale}</p>
+      <p className="type-caption-medium relative w-full flex-[1_0_auto] text-text-neutral-1-light dark:text-text-neutral-1-dark">{direction.rationale}</p>
       <div className="relative flex w-full shrink-0 items-start gap-[8px]" data-name="actions">
         <button
           type="button"
@@ -101,7 +101,7 @@ function SavedType({ direction, brandName, onEdit }: { direction: TypeDirection;
           </p>
         </div>
         <div className="relative flex shrink-0 flex-col items-start gap-[4px]" data-name="meta">
-          <p className="type-body-semibold shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">{direction.family}</p>
+          <p className="type-body-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">{direction.family}</p>
           <p className="type-mini-semibold shrink-0 text-headline-1-light dark:text-headline-1-dark">{direction.category}</p>
         </div>
       </div>

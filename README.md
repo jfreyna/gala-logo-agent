@@ -38,8 +38,9 @@ How a turn runs:
 1. The person does something: sends a message, or presses a button on a card. That writes straight to storage (`convex/messages.ts`, `convex/studio.ts`), as the person, and never as Gala.
 2. The page asks Gala's server for a turn (`POST /api/turn`), carrying the person's own sign-in token.
 3. The server opens the turn in storage, which checks the person's token, takes a lock so a project has one turn at a time, and reads the project. The token is used for this one step and then dropped.
-4. It runs the current stage, and keeps going through stages until one needs the person.
-5. Everything Gala is about to say passes the prompt-protection checks, then is written to storage. The page sees it through its live queries. The browser receives Gala's replies and nothing else.
+4. It reads the person's message once (`engine/steer.ts`): Jev answers three yes or no questions (does it pick an option on screen, go back or start over, ask for a change), the model fills in only the details, and code checks them and moves the stage. Going back puts a new card for that step in the conversation; later cards stay as history.
+5. It runs the current stage, and keeps going through stages until one needs the person.
+6. Everything Gala is about to say passes the prompt-protection checks, then is written to storage. The page sees it through its live queries. The browser receives Gala's replies and nothing else.
 
 | Stage | What happens |
 |---|---|

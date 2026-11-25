@@ -66,7 +66,7 @@ export function HallModal({ entry, kind, onClose }: { entry: HallEntry; kind: Ha
           )}
         </div>
         <div className="relative flex w-full shrink-0 items-center justify-between overflow-clip whitespace-nowrap" data-name="meta">
-          <p className="type-caption-semibold shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">{entry.brandName}</p>
+          <p className="type-caption-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">{entry.brandName}</p>
           <p
             className={`type-mini-semibold shrink-0 ${kind === "shame" ? "text-error-text-light dark:text-error-text-dark" : "text-text-green-1-light dark:text-text-green-1-dark"}`}
           >

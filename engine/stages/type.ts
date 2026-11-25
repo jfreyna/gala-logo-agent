@@ -6,11 +6,11 @@
  * wants each of Google's moods. Code then ranks every family in each class
  * by those scores. The model writes only the words.
  */
-import { classLabel, fontData, rank, topMoods, type Family } from "../fonts.ts";
+import { classLabel, fontData, rank, topMoods } from "../fonts.ts";
 import type { Shape } from "../gemini.ts";
 import { ask, SURE, type Choice, type Score } from "../jev.ts";
 import { WORKING } from "../lines.ts";
-import { optionId, type Outcome, type Turn } from "../turn.ts";
+import { optionId, requestsOf, type Outcome, type Request, type Turn } from "../turn.ts";
 import { briefOf } from "./brief.ts";
 import { directionOf } from "./research.ts";
 
@@ -28,7 +28,11 @@ const WORDS_SHAPE: Shape = {
   required: ["say", "reasons"],
 };
 
-async function propose(turn: Turn): Promise<Outcome> {
+/**
+ * Three typefaces. A family the person named is set first, exactly as
+ * named, and marked as their own pick; the other two are Gala's.
+ */
+async function propose(turn: Turn, request: Request | null): Promise<Outcome> {
   await turn.status(WORKING.type);
   const data = await fontData();
   const state = { brief: briefOf(turn), direction: directionOf(turn) };
@@ -53,13 +57,23 @@ async function propose(turn: Turn): Promise<Outcome> {
     .slice(0, 3)
     .map(([name]) => name);
   const used = new Set<string>();
-  const picks = topClasses.map((typeClass) => {
+  const named = request?.typeface ? data.families.find((family) => family.family === request.typeface) : undefined;
+  const picks: { typeClass: string; family: (typeof data.families)[number]; person: boolean }[] = [];
+  if (named !== undefined) {
+    const typeClass = Object.entries(named.classes).sort((a, b) => b[1] - a[1])[0]?.[0] ?? topClasses[0]!;
+    picks.push({ typeClass, family: named, person: true });
+    used.add(named.family);
+  }
+  for (const typeClass of topClasses) {
+    if (picks.length >= 3) break;
     const family = rank(data, typeClass, moodWeights).find((candidate) => !used.has(candidate.family))!;
     used.add(family.family);
-    return { typeClass, family };
-  });
-  // "My pick" only when Jev is sure of its first class; otherwise the cards themselves are the question.
-  const galaIsSure = classes.typeClass.confidence >= SURE;
+    picks.push({ typeClass, family, person: false });
+  }
+  // "My pick" only when Jev is sure of its first class and the person named none; otherwise the cards themselves are the question.
+  const galaIsSure = named === undefined && classes.typeClass.confidence >= SURE;
+  // How the name is set: as the person asked now, or as they asked before.
+  const nameAs = request?.nameAs ?? turn.nameAsSet;
 
   const words = await turn.compose(
     () =>
@@ -70,6 +84,8 @@ async function propose(turn: Turn): Promise<Outcome> {
           ...state,
           typefaces: picks.map((pick, index) => ({ letter: LETTERS[index], family: pick.family.family, class: pick.typeClass, moods: topMoods(pick.family) })),
           myPick: galaIsSure ? "A" : null,
+          thePersonsOwnPick: named !== undefined ? "A" : null,
+          nameIsWritten: nameAs,
         },
         shape: WORDS_SHAPE,
       }),
@@ -86,7 +102,9 @@ async function propose(turn: Turn): Promise<Outcome> {
       kind: "typeSet",
       artifact: {
         say: words.say,
-        brandName: turn.brand,
+        brandName: nameAs,
+        ...(nameAs !== turn.brand ? { nameAs } : {}),
+        ...requestsOf(request),
         directions: picks.map((pick, index) => ({
           id: optionId(),
           letter: LETTERS[index],
@@ -94,7 +112,7 @@ async function propose(turn: Turn): Promise<Outcome> {
           category: classLabel(pick.typeClass),
           moods: topMoods(pick.family),
           rationale: words.reasons[index] ?? "",
-          pick: index === 0 && galaIsSure ? "gala" : null,
+          pick: pick.person ? "person" : index === 0 && galaIsSure ? "gala" : null,
         })),
         chosenId: null,
         saved: false,
@@ -106,21 +124,12 @@ async function propose(turn: Turn): Promise<Outcome> {
   return "wait";
 }
 
-/** The Google family named in a message, if there is one: the longest family name that appears in it as whole words. */
-async function namedFamily(message: string): Promise<{ family: string; typeClass: string; entry: Family } | null> {
-  const data = await fontData();
-  const text = ` ${message.toLowerCase().replace(/[^a-z0-9]+/g, " ")} `;
-  const match = data.families
-    .filter((family) => text.includes(` ${family.family.toLowerCase().replace(/[^a-z0-9]+/g, " ")} `))
-    .sort((a, b) => b.family.length - a.family.length)[0];
-  if (match === undefined) return null;
-  const typeClass = Object.entries(match.classes).sort((a, b) => b[1] - a[1])[0]?.[0];
-  return typeClass === undefined ? null : { family: match.family, typeClass, entry: match };
-}
-
 export async function type(turn: Turn): Promise<Outcome> {
-  const card = turn.latest("typeSet");
-  if (card === null) return propose(turn);
+  const next = turn.take();
+  // A typeface named, how the name is written, or new ones asked for: three again.
+  if (next?.act === "redo") return propose(turn, next.request);
+  const card = turn.current("typeSet");
+  if (card === null) return propose(turn, null);
   const set = card.artifact!;
 
   if (set.saved === true && set.chosenId !== null) {
@@ -131,29 +140,7 @@ export async function type(turn: Turn): Promise<Outcome> {
     return "continue";
   }
 
-  // The person wrote instead of pressing Choose: "Go with B".
-  const said = turn.unansweredText();
-  if (said === "") return "wait";
-  const options = Object.fromEntries(set.directions.map((entry: { letter: string; family: string }) => [entry.letter, `The person chooses typeface ${entry.letter}, ${entry.family}`]));
-  const meaning = await turn.intent(said, { ...options, named: "The person names another typeface they want", other: "The person is asking or saying something else" });
-  const chosen = set.directions.find((entry: { letter: string }) => entry.letter === meaning);
-  if (chosen !== undefined) {
-    await turn.write([{ op: "patchArtifact", messageId: card.id, artifact: { ...set, chosenId: chosen.id, saved: true } }]);
-    return "continue";
-  }
-  if (meaning === "named") {
-    // "Or name a font you like": if Google has a family by that name, it takes the last card and is chosen.
-    const named = await namedFamily(said);
-    if (named !== null) {
-      const last = set.directions[set.directions.length - 1];
-      const directions = set.directions.map((entry: { id: string }) =>
-        entry.id === last.id ? { ...entry, family: named.family, category: classLabel(named.typeClass), moods: topMoods(named.entry), rationale: "", pick: "person" } : entry,
-      );
-      await turn.write([{ op: "patchArtifact", messageId: card.id, artifact: { ...set, directions, chosenId: last.id, saved: true } }]);
-      return "continue";
-    }
-  }
-  await turn.converse("the person to choose one of the three typefaces, or change one in the type tray");
+  if (next !== null) await turn.answer(next, "the person to choose one of the three typefaces, or change one in the type tray");
   return "wait";
 }
 

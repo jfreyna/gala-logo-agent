@@ -9,7 +9,7 @@
  * problems are passed on so Gala can say so.
  */
 import { ModelError, type Image } from "./gemini.ts";
-import { drawMark, judgeDraft, markSvg, type Judgement, type Mark } from "./marks.ts";
+import { drawMark, judgeDraft, markSvg, type DraftContext, type Judgement, type Mark } from "./marks.ts";
 import { optionId, type Turn } from "./turn.ts";
 
 export type Idea = { name: string; idea: string; prompt: string };
@@ -35,7 +35,7 @@ async function saveMark(turn: Turn, mark: Mark): Promise<{ markFileId: string; s
   return { markFileId, sourceFileId };
 }
 
-async function draftOne(turn: Turn, idea: Idea, context: { direction: unknown; competitors: unknown }, from: Image | undefined, setAside: SetAside[]): Promise<Draft> {
+async function draftOne(turn: Turn, idea: Idea, context: DraftContext, from: Image | undefined, setAside: SetAside[]): Promise<Draft> {
   for (let attempt = 1; attempt <= TRIES; attempt++) {
     let mark: Mark;
     try {
@@ -53,7 +53,7 @@ async function draftOne(turn: Turn, idea: Idea, context: { direction: unknown; c
   throw new ModelError("No draft could be drawn.");
 }
 
-export async function draftThree(turn: Turn, ideas: Idea[], context: { direction: unknown; competitors: unknown }, from?: Image): Promise<{ drafts: Draft[]; setAside: SetAside[] }> {
+export async function draftThree(turn: Turn, ideas: Idea[], context: DraftContext, from?: Image): Promise<{ drafts: Draft[]; setAside: SetAside[] }> {
   const setAside: SetAside[] = [];
   const drafts = await Promise.all(ideas.slice(0, 3).map((idea) => draftOne(turn, idea, context, from, setAside)));
   return { drafts, setAside };

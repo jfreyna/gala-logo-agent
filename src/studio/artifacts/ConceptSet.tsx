@@ -3,10 +3,10 @@ import { CheckBadge } from "../../components/CheckBadge";
 import type { Concept, ConceptSetArtifact, VariationSetArtifact } from "./types";
 import { Turn } from "./Turn";
 
-/** Three cards across the column; a row that swipes sideways on a phone. */
+/** Three cards across the column, each as tall as the tallest; a row that swipes sideways on a phone. */
 function ConceptRow({ concepts, chosenId, onChoose, name }: { concepts: Concept[]; chosenId: string | null; onChoose: (id: string) => void; name: string }) {
   return (
-    <div className="swipe-row relative flex w-full shrink-0 items-start gap-[12px] overflow-x-auto desktop:overflow-visible" data-name={name}>
+    <div className="swipe-row relative flex w-full shrink-0 items-stretch gap-[12px] overflow-x-auto desktop:overflow-visible" data-name={name}>
       {concepts.map((concept) => (
         <ConceptCard
           key={concept.id}

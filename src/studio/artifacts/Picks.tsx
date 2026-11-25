@@ -62,8 +62,8 @@ export function Picks({ data, onSubmit, onDecline }: { data: PicksArtifact; onSu
       <Turn>{data.say}</Turn>
       <div className="relative flex w-full shrink-0 flex-col items-start gap-[20px] rounded-[16px] bg-background-1-light p-[16px] dark:bg-background-2-dark" data-name="picks">
         <div className="relative flex w-full shrink-0 flex-col items-start gap-[4px]" data-name="heading">
-          <p className="type-body-semibold shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">Tell me what you loved and what you hated</p>
-          <p className="type-caption-medium w-full shrink-0 text-text-neutral-2-light dark:text-text-neutral-2-dark">
+          <p className="type-body-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">Tell me what you loved and what you hated</p>
+          <p className="type-caption-medium w-full shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">
             Submitted picks join the Hall of fame and the Hall of shame on my front page, with your brand name and your one-liner. Submit one, both, or neither.
           </p>
         </div>

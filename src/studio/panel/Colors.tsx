@@ -27,8 +27,8 @@ export function ColorSummary({ colors }: { colors: RoleColor[] }) {
         <div key={color.role} className="relative flex w-full shrink-0 items-start gap-[12px]" data-name={`color/${color.role}`}>
           <span className="block h-[36px] w-[48px] shrink-0 rounded-[4px] border border-solid border-neutral-500" style={{ backgroundColor: color.hex }} data-name="swatch" />
           <div className="relative flex min-w-px flex-[1_0_0] flex-col items-start gap-[4px]" data-name="texts">
-            <p className="type-body-semibold shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">{color.role}</p>
-            <p className="type-caption-medium shrink-0 text-text-neutral-2-light dark:text-text-neutral-2-dark">{color.use}</p>
+            <p className="type-body-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">{color.role}</p>
+            <p className="type-caption-medium shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">{color.use}</p>
             <Contrast hex={color.hex} className="pt-[4px]" />
           </div>
         </div>

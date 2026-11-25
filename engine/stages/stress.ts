@@ -13,7 +13,8 @@ import { chosenConcept } from "./directions.ts";
 const SAY: Shape = { type: "OBJECT", properties: { say: { type: "STRING" } }, required: ["say"] };
 
 export async function stressTest(turn: Turn): Promise<Outcome> {
-  const card = turn.latest("stressTest");
+  const next = turn.take();
+  const card = turn.current("stressTest");
   const chosen = chosenConcept(turn, "variationSet");
 
   if (!turn.isNewer(card, turn.latest("variationSet"))) {
@@ -34,28 +35,25 @@ export async function stressTest(turn: Turn): Promise<Outcome> {
       await turn.decline();
       return "wait";
     }
-    await turn.write([{ op: "artifact", kind: "stressTest", artifact: { say: words.say, brandName: turn.brand, markFileId: chosen.markFileId, sourceFileId: chosen.sourceFileId, checks } }]);
+    await turn.write([{ op: "artifact", kind: "stressTest", artifact: { say: words.say, brandName: turn.nameAsSet, markFileId: chosen.markFileId, sourceFileId: chosen.sourceFileId, checks } }]);
     return "wait";
   }
 
-  const said = turn.unansweredText();
-  if (said === "") return "wait";
-  const meaning = await turn.intent(said, {
-    approve: "The person accepts the mark and wants to go on",
-    change: "The person wants the mark changed",
-    other: "The person is asking or saying something else",
-  });
-  if (meaning === "approve") {
+  // A change to the mark: another round of variations from this one, with what was asked.
+  if (next?.act === "redo") {
+    await turn.write([{ op: "project", stage: "variations" }]);
+    turn.steer(next);
+    return "continue";
+  }
+  if (card!.artifact!.approved === true) {
+    // Colors already picked on an earlier pass come back filled in, still to be saved.
+    const earlier = turn.latest("colorPicker")?.artifact?.colors ?? null;
     await turn.write([
-      { op: "artifact", kind: "colorPicker", artifact: { say: PICK_COLORS_LINE, colors: null, saved: false } },
+      { op: "artifact", kind: "colorPicker", artifact: { say: PICK_COLORS_LINE, colors: earlier, saved: false } },
       { op: "project", stage: "pickColors" },
     ]);
     return "wait";
   }
-  if (meaning === "change") {
-    await turn.write([{ op: "project", stage: "variations" }]);
-    return "continue";
-  }
-  await turn.converse(`the person to approve ${chosen.name} or ask for a change`);
+  if (next !== null) await turn.answer(next, `the person to approve ${chosen.name} or ask for a change`);
   return "wait";
 }

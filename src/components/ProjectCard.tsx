@@ -45,7 +45,7 @@ export function ProjectCard({
         </div>
       )}
       <div className="relative flex w-full shrink-0 flex-col items-start gap-[4px] overflow-clip" data-name="meta">
-        <p className="type-body-semibold shrink-0 whitespace-nowrap text-text-neutral-1-light dark:text-text-neutral-1-dark">{brandName}</p>
+        <p className="type-body-semibold shrink-0 whitespace-nowrap text-text-blue-1-light dark:text-text-blue-1-dark">{brandName}</p>
         <div className="relative flex shrink-0 items-center gap-[6px] overflow-clip" data-name="stage">
           <img alt="" src={DOT[status]} width={8} height={8} className="size-[8px] shrink-0" />
           <p className="type-caption-medium shrink-0 whitespace-nowrap text-text-neutral-1-light dark:text-text-neutral-1-dark">{stageLabel}</p>

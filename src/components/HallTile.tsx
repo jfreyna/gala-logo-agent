@@ -78,7 +78,7 @@ export function HallTile({ entry, kind, onOpen }: { entry: HallEntry; kind: Hall
       {active ? (
         <>
           <span className="relative flex w-full shrink-0 items-center justify-between overflow-clip whitespace-nowrap" data-name="meta">
-            <span className="type-caption-semibold shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">{entry.brandName}</span>
+            <span className="type-caption-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">{entry.brandName}</span>
             <span
               className={`type-mini-semibold shrink-0 ${kind === "shame" ? "text-error-text-light dark:text-error-text-dark" : "text-text-green-1-light dark:text-text-green-1-dark"}`}
             >
@@ -92,7 +92,7 @@ export function HallTile({ entry, kind, onOpen }: { entry: HallEntry; kind: Hall
           )}
         </>
       ) : (
-        <span className="type-mini-medium shrink-0 whitespace-nowrap text-text-neutral-2-light dark:text-text-neutral-2-dark">{entry.brandName}</span>
+        <span className="type-mini-medium shrink-0 whitespace-nowrap text-text-blue-1-light dark:text-text-blue-1-dark">{entry.brandName}</span>
       )}
     </button>
   );

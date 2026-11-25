@@ -21,6 +21,7 @@ import { classLabel, fontData } from "./fonts.ts";
 import { runTurn, type TurnResult } from "./loop.ts";
 import { headingFor } from "./memory.ts";
 import { assertComplete, loadPrompt, type Prompt } from "./prompt.ts";
+import { isStage } from "./steps.ts";
 import { ConvexStore, fileMemoryLine, ownsProject, StorageError } from "./store-convex.ts";
 
 /** Turns in progress, by project. One per project; storage's lock says the same. */
@@ -87,8 +88,11 @@ function idOf(value: unknown): string | null {
 
 async function turn(request: IncomingMessage, response: ServerResponse): Promise<void> {
   const token = tokenOf(request);
-  const projectId = idOf((await readJson(request))?.projectId);
-  if (token === null || projectId === null) return json(response, 400, { state: "refused" });
+  const body = await readJson(request);
+  const projectId = idOf(body?.projectId);
+  // "Back to this step" in the Work panel names the step; anything else is refused.
+  const back = body?.back === undefined ? undefined : isStage(body.back) ? body.back : null;
+  if (token === null || projectId === null || back === null) return json(response, 400, { state: "refused" });
   if (prompt === null) return json(response, 503, { state: "unavailable" });
 
   let entry = running.get(projectId);
@@ -98,7 +102,7 @@ async function turn(request: IncomingMessage, response: ServerResponse): Promise
     // The turn's id: random, and from here on the proof that this turn was opened by the project's owner.
     const store = new ConvexStore({ projectId, turnId: randomUUID(), token });
     console.log(`Turn asked for; sign-in token ${tokenTimes(token)}.`);
-    const finished = runTurn(store, prompt, controller.signal)
+    const finished = runTurn(store, prompt, controller.signal, { back })
       .catch((error): TurnResult | "signin" => {
         // Storage refused to open the turn. A refused sign-in is told apart, so the page can sign in afresh and ask again.
         console.warn(`Turn not opened: ${error instanceof Error ? error.message : "unknown error"}`);

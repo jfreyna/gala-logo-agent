@@ -266,37 +266,67 @@ check("studio: on a phone the prompt bar's working line stays on one line, and i
   return short.shown === "Reading your brief…" && oneLine(short) && !short.cut && oneLine(long) && long.cut;
 });
 
-check("studio: a gap of 28px (20px on a phone) sits between the conversation and the prompt bar, under a 32px fade at each end", async () => {
+check("studio: no fades; a gap of 28px (20px on a phone) between the conversation and the prompt bar, and 64px (32px) of padding at the conversation's end", async () => {
   const measure = (page) =>
     page.evaluate(() => {
       const box = (name) => document.querySelector(`[data-name="${name}"]`).getBoundingClientRect();
-      const style = (name) => getComputedStyle(document.querySelector(`[data-name="${name}"]`));
-      const area = box("conversation-area");
-      const top = box("fade/top");
-      const bottom = box("fade/bottom");
       return {
-        gap: Math.round(box("composer").top - area.bottom),
-        fades: [Math.round(top.height), Math.round(bottom.height)],
-        // Each fade lies on its end of the conversation, as wide as it, and never over the prompt bar or the header.
-        placed: Math.round(top.top) === Math.round(area.top) && Math.round(bottom.bottom) === Math.round(area.bottom) && Math.round(top.width) === Math.round(area.width) && Math.round(bottom.width) === Math.round(area.width),
-        clickThrough: style("fade/top").pointerEvents === "none" && style("fade/bottom").pointerEvents === "none",
-        gradients: style("fade/top").backgroundImage.includes("linear-gradient") && style("fade/bottom").backgroundImage.includes("linear-gradient"),
+        gap: Math.round(box("composer").top - box("conversation-area").bottom),
+        padding: parseFloat(getComputedStyle(document.querySelector('[data-name="conversation-content"]')).paddingBottom),
+        fades: document.querySelectorAll('[data-name^="fade/"]').length,
       };
     });
   const desktop = await measure(await open("/preview/directions"));
   const phone = await measure(await open("/preview/directions", { width: 380, height: 812 }));
-  const good = (screen, gap) => screen.gap === gap && screen.fades[0] === 32 && screen.fades[1] === 32 && screen.placed && screen.clickThrough && screen.gradients;
-  return good(desktop, 28) && good(phone, 20);
+  return desktop.gap === 28 && desktop.padding === 64 && desktop.fades === 0 && phone.gap === 20 && phone.padding === 32 && phone.fades === 0;
 });
 
-check("studio: a card's button under the bottom fade still takes the click", async () => {
-  const page = await open("/preview/directions");
-  // The element at a point inside the bottom fade is the conversation's content, not the fade.
-  return page.evaluate(() => {
-    const fade = document.querySelector('[data-name="fade/bottom"]').getBoundingClientRect();
-    const hit = document.elementFromPoint(fade.left + fade.width / 2, fade.top + fade.height / 2);
-    return hit !== null && hit.getAttribute("data-name") !== "fade/bottom" && document.querySelector('[data-name="conversation-area"]').contains(hit);
-  });
+check("studio: scrolled to the newest item, it rests 92px (52px on a phone) above the prompt bar", async () => {
+  const measure = (page) =>
+    page.evaluate(() => {
+      const scroller = document.querySelector('[data-name="conversation"]');
+      const last = document.querySelector('[data-name="conversation-content"]').lastElementChild.getBoundingClientRect();
+      return {
+        overflows: scroller.scrollHeight > scroller.clientHeight,
+        atEnd: Math.abs(scroller.scrollTop + scroller.clientHeight - scroller.scrollHeight) <= 1,
+        above: Math.round(document.querySelector('[data-name="composer"]').getBoundingClientRect().top - last.bottom),
+      };
+    });
+  const desktop = await measure(await open("/preview/directions"));
+  const phone = await measure(await open("/preview/directions", { width: 380, height: 812 }));
+  return desktop.overflows && desktop.atEnd && desktop.above === 92 && phone.overflows && phone.atEnd && phone.above === 52;
+});
+
+check("studio: a long rationale grows its card instead of running into the checks, and the row's checks and buttons line up", async () => {
+  // The founder's walk: five lines of rationale ran over the 16px / Circle / Inverted badges.
+  const long = "A drop of ink pivots on its point, the way a brush lands before a stroke. It keeps Gala's motion without leaning on the obvious paintbrush, and the counter stays open at small sizes, so it still reads in a browser tab.";
+  const measure = (page, cardName, rowName) =>
+    page.evaluate(
+      (text, cardName, rowName) => {
+        const row = document.querySelector(`[data-name="${rowName}"]`);
+        const cards = [...row.querySelectorAll(`[data-name="${cardName}"]`)];
+        const rationale = cards[0].querySelector("p.type-caption-medium");
+        rationale.textContent = text;
+        const tops = (name) => cards.map((card) => Math.round(card.querySelector(`[data-name="${name}"]`).getBoundingClientRect().top));
+        const below = cards[0].querySelector('[data-name="checks"], [data-name="roles"], [data-name="choose"]');
+        // The text's own extent, not its box: a box that shrinks lets the text spill past it.
+        const range = document.createRange();
+        range.selectNodeContents(rationale);
+        return {
+          clear: range.getBoundingClientRect().bottom <= below.getBoundingClientRect().top && rationale.scrollHeight <= rationale.clientHeight + 1,
+          sameHeights: new Set(cards.map((card) => Math.round(card.getBoundingClientRect().height))).size === 1,
+          buttonsLineUp: new Set(tops("choose")).size === 1,
+        };
+      },
+      long,
+      cardName,
+      rowName,
+    );
+  const results = [];
+  for (const size of [{}, { width: 380, height: 812 }]) {
+    results.push(await measure(await open("/preview/directions?top=1", size), "gala-concept-card", "directions"));
+  }
+  return results.every((result) => result.clear && result.sameHeights && result.buttonsLineUp);
 });
 
 check("studio: the send button is dimmed until something is typed", async () => {

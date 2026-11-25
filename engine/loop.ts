@@ -19,6 +19,7 @@ import { done, kit, picks } from "./stages/kit.ts";
 import { research } from "./stages/research.ts";
 import { stressTest } from "./stages/stress.ts";
 import { type } from "./stages/type.ts";
+import { steer } from "./steer.ts";
 import type { Stage, Store } from "./store.ts";
 import { Turn, type Outcome } from "./turn.ts";
 
@@ -41,10 +42,16 @@ const MAX_STAGES_PER_TURN = 12;
 
 export type TurnResult = "done" | "busy" | "stopped" | "trouble";
 
-export async function runTurn(store: Store, prompt: Prompt, signal: AbortSignal): Promise<TurnResult> {
+/**
+ * `back` is a "Back to this step" press in the Work panel: the turn goes
+ * back to that step, the same move as a spoken "go back".
+ */
+export async function runTurn(store: Store, prompt: Prompt, signal: AbortSignal, options: { back?: Stage } = {}): Promise<TurnResult> {
   const turn = new Turn(store, prompt, signal);
   if (!(await turn.read())) return "busy";
   try {
+    // The person's message is read once, before the step runs; code moves the stage (steer.ts).
+    await steer(turn, options);
     for (let step = 0; step < MAX_STAGES_PER_TURN; step++) {
       if ((await STAGES[turn.stage](turn)) === "wait") return "done";
     }
