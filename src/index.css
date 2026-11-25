@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Type styles, named as in the Figma file. Kumbh Sans is drawn with its
+ * YOPQ axis at 300 everywhere in the frames.
+ */
+@layer components {
+  .type-h1-xxxl { font-family: "Space Grotesk", system-ui, sans-serif; font-weight: 700; font-size: 60px; line-height: 60px; }
+  .type-h1-l { font-family: "Space Grotesk", system-ui, sans-serif; font-weight: 700; font-size: 40px; line-height: 41px; }
+  .type-h2-light-xl { font-family: "Space Grotesk", system-ui, sans-serif; font-weight: 400; font-size: 32px; line-height: 37px; }
+  .type-body-regular { font-family: "Kumbh Sans", system-ui, sans-serif; font-variation-settings: "YOPQ" 300; font-weight: 400; font-size: 16px; line-height: 25px; }
+  .type-body-semibold { font-family: "Kumbh Sans", system-ui, sans-serif; font-variation-settings: "YOPQ" 300; font-weight: 600; font-size: 16px; line-height: 23px; }
+  .type-caption-medium { font-family: "Kumbh Sans", system-ui, sans-serif; font-variation-settings: "YOPQ" 300; font-weight: 500; font-size: 14px; line-height: 19px; }
+  .type-caption-semibold { font-family: "Kumbh Sans", system-ui, sans-serif; font-variation-settings: "YOPQ" 300; font-weight: 600; font-size: 14px; line-height: 19px; }
+  .type-mini-medium { font-family: "Kumbh Sans", system-ui, sans-serif; font-variation-settings: "YOPQ" 300; font-weight: 500; font-size: 12px; line-height: 17px; }
+  .type-mini-semibold { font-family: "Kumbh Sans", system-ui, sans-serif; font-variation-settings: "YOPQ" 300; font-weight: 600; font-size: 12px; line-height: 17px; }
+  .type-micro-semibold { font-family: "Kumbh Sans", system-ui, sans-serif; font-variation-settings: "YOPQ" 300; font-weight: 600; font-size: 10px; line-height: 13px; }
+}
+
+html, body, #root { height: 100%; }
+body { margin: 0; -webkit-font-smoothing: antialiased; }
+
+/*
+ * The halls. The strip's ground is the frame's gradient; its edges fade with
+ * a mask. The track holds two identical laps and slides one lap's width.
+ */
+.hall-strip {
+  background-image: linear-gradient(1.19deg, rgba(246, 250, 252, 0.5) 1.9%, rgba(231, 243, 248, 0.5) 97.849%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+}
+[data-theme="dark"] .hall-strip {
+  background-image: linear-gradient(1.19deg, rgba(2, 28, 41, 0.5) 1.9%, rgba(2, 46, 64, 0.5) 97.849%);
+}
+@media (min-width: 768px) {
+  .hall-strip {
+    background-image: linear-gradient(0.44deg, rgba(246, 250, 252, 0.5) 1.9%, rgba(231, 243, 248, 0.5) 97.849%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 120px, #000 calc(100% - 120px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 120px, #000 calc(100% - 120px), transparent 100%);
+  }
+  [data-theme="dark"] .hall-strip {
+    background-image: linear-gradient(0.44deg, rgba(2, 28, 41, 0.5) 1.9%, rgba(2, 46, 64, 0.5) 97.849%);
+  }
+}
+@keyframes hall-roll-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes hall-roll-right {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+.hall-track { animation-timing-function: linear; animation-iteration-count: infinite; }
+.hall-track-left { animation-name: hall-roll-left; }
+.hall-track-right { animation-name: hall-roll-right; }
+.hall-strip:hover .hall-track,
+.hall-strip:focus-within .hall-track { animation-play-state: paused; }
+/* Standing still, the row starts where the frame draws it. */
+@media (prefers-reduced-motion: reduce) {
+  .hall-track { animation: none; padding-left: 16px; }
+  .hall-strip { -webkit-mask-image: none; mask-image: none; }
+}
+@media (prefers-reduced-motion: reduce) and (min-width: 768px) {
+  .hall-track { padding-left: 120px; }
+}
+
+/*
+ * The hero's ground: the dot pattern, with the frame's fade laid over it.
+ * Both sit over the silk backdrop, which shows between the dots.
+ */
+.hero {
+  background-image: linear-gradient(to bottom, #f6fafc 10%, rgba(246, 250, 252, 0) 57.212%), url("/backdrops/hero-dots-light.svg");
+  background-size: auto, 6px 6px;
+  background-repeat: no-repeat, repeat;
+  background-position: 0 0, top center;
+}
+[data-theme="dark"] .hero {
+  background-image: linear-gradient(to bottom, #021c29 0%, rgba(29, 87, 111, 0) 49.038%), url("/backdrops/hero-dots-dark.svg");
+  background-position: 0 0, top left;
+}
+
+/* The prompt grows with what is typed, up to a few lines, as the mobile Typing frame shows. */
+.prompt-field { field-sizing: content; max-height: 125px; }
+/* An empty prompt shows its hint on one line, cut with an ellipsis, as the mobile frames draw it. */
+.prompt-field:placeholder-shown { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* A row that swipes sideways on a phone, with no scrollbar drawn. */
+.swipe-row { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.swipe-row::-webkit-scrollbar { display: none; }
+
+/* The conversation scrolls without drawing a scrollbar, as the frames show it. */
+.conversation { scrollbar-width: none; }
+.conversation::-webkit-scrollbar { display: none; }

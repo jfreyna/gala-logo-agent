@@ -8,3 +8,6 @@ node_modules
 # Any local draft lives here and is never committed.
 private/
 *.private.md
+
+# Build output
+dist
