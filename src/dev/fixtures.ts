@@ -6,6 +6,7 @@
  */
 import hearthRaw from "./marks/hearth.svg?raw";
 import monogramRaw from "./marks/monogram.svg?raw";
+import peelRaw from "./marks/peel.svg?raw";
 import risingRaw from "./marks/rising.svg?raw";
 import wheatRaw from "./marks/discard-wheat.svg?raw";
 import badgeRaw from "./marks/discard-badge.svg?raw";
@@ -25,6 +26,7 @@ const tinted = (svg: string, color: string, flame = "white") =>
 export const marks = {
   hearth: dataUrl(hearthRaw),
   monogram: dataUrl(monogramRaw),
+  peel: dataUrl(peelRaw),
   rising: dataUrl(risingRaw),
   wheat: dataUrl(wheatRaw),
   badge: dataUrl(badgeRaw),
@@ -56,9 +58,9 @@ const conceptSet: StreamItem = {
       {
         id: "b",
         letter: "B",
-        name: "Monogram",
-        rationale: "The most ownable of the three, but the ampersand closes up at 16px.",
-        markUrl: marks.monogram,
+        name: "Peel",
+        rationale: "The most ownable of the three, but the handle thins out at 16px.",
+        markUrl: marks.peel,
         checks: [{ label: "16px", pass: false }, ...pass("Circle", "Inverted")],
       },
       { id: "c", letter: "C", name: "Rising", rationale: "Warm and simple. The least distinct from other bakeries nearby.", markUrl: marks.rising, checks: pass("16px", "Circle", "Inverted") },
@@ -110,6 +112,37 @@ const kit: StreamItem = {
     formats: ["SVG", "EPS", "PNG", "Square", "Social"],
   },
 };
+
+const wordmark: StreamItem = {
+  id: "wordmark",
+  kind: "wordmark",
+  data: {
+    say: "Here’s Ember & Rye in Young Serif, before any symbol. I kept your capitals and left the spacing as the typeface draws it. Approve it, or ask me to change the case, the spacing or the typeface.",
+    brandName: BRAND,
+    family: "Young Serif",
+    case: "asTyped",
+    spacing: "asDrawn",
+    letterSpacingEm: 0,
+    approved: false,
+  },
+};
+
+const lockupCard = (layout: "sideBySide" | "stacked"): StreamItem => ({
+  id: "lockup",
+  kind: "lockup",
+  data: {
+    say: "Hearth and your wordmark together. Side by side suits signs and the site header; stacked suits bags and the square avatar. Pick the one you’ll use most. The kit includes both.",
+    brandName: BRAND,
+    family: "Young Serif",
+    letterSpacingEm: 0,
+    markName: "Hearth",
+    markUrl: marks.heavy,
+    layout,
+    spaceBetween: "asSet",
+    gapScale: 1,
+    approved: false,
+  },
+});
 
 /** Each studio screen in the frames: its conversation and its prompt placeholders. */
 export const screens: Record<string, { items: StreamItem[]; placeholder: string; placeholderMobile: string; working?: [string, string] }> = {
@@ -227,6 +260,33 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholder: "Pick A, B or C, or name a font you like.",
     placeholderMobile: "Pick A, B or C.",
   },
+  wordmark: { items: [{ id: "pick", kind: "visitor", text: "A, Young Serif." }, wordmark], placeholder: "Approve the wordmark, or ask for a change.", placeholderMobile: "Approve, or ask for a change." },
+  held: {
+    items: [
+      wordmark,
+      { id: "ask", kind: "visitor", text: "Can the symbol be a paintbrush?" },
+      { id: "kept", kind: "gala", text: "A paintbrush could work. I’ll keep it for the symbol, which comes right after this. We’re still on the wordmark: approve it, or tell me what to change in the type." },
+    ],
+    placeholder: "Approve the wordmark, or ask for a change.",
+    placeholderMobile: "Approve, or ask for a change.",
+  },
+  opener: {
+    items: [
+      { id: "approve", kind: "visitor", text: "Use this wordmark." },
+      {
+        id: "opener",
+        kind: "symbolOpener",
+        data: {
+          say: "Wordmark approved. Now the symbol: a shape that stands on its own beside the name, with no letters in it. What are you picturing? From your research, a few ideas to start from: the oven’s arch, a bread peel, loaves rising. Tell me one of those, something of your own, or say go ahead and I’ll draw three.",
+        },
+      },
+    ],
+    placeholder: "Describe a symbol, or say go ahead.",
+    placeholderMobile: "Describe a symbol, or say go ahead.",
+  },
+  lockup: { items: [{ id: "approve", kind: "visitor", text: "Approve Hearth." }, lockupCard("sideBySide")], placeholder: "Approve the lockup, or ask for a change.", placeholderMobile: "Approve, or ask for a change." },
+  // Not drawn in the design file: the lockup card with Stacked selected, for a look at the build's reading of it.
+  lockupStacked: { items: [lockupCard("stacked")], placeholder: "Approve the lockup, or ask for a change.", placeholderMobile: "Approve, or ask for a change." },
   directions: { items: [visitorBrief, conceptSet], placeholder: "Pick A, B or C, or tell me what to change.", placeholderMobile: "Pick A, B or C." },
   variations: {
     items: [
@@ -281,6 +341,43 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholderMobile: "Pick A, B or C.",
   },
   kit: { items: [kit], placeholder: "Ask for a change, or start a new project.", placeholderMobile: "Ask for a change." },
+  // Wordmark only (Figma 5656:16820): the colorways and the kit with the name alone.
+  nameOnly: {
+    items: [
+      {
+        id: "colorways",
+        kind: "colorwaySet",
+        data: {
+          say: "Three colorways with your colors. A sets the name in tertiary and reads well on white; keep the secondary for backgrounds, not text.",
+          brandName: BRAND,
+          family: "Young Serif",
+          letterSpacingEm: 0,
+          colors: { primary: PRIMARY, secondary: SECONDARY, tertiary: TERTIARY },
+          chosenId: null,
+          colorways: [
+            { id: "a", letter: "A", name: "Tertiary-led", rationale: "The name in tertiary. Strongest on white and on signage.", ground: "#FFFFFF", wordmarkColor: TERTIARY, roles: ["Tertiary"] },
+            { id: "b", letter: "B", name: "Dark ground", rationale: "Secondary on a tertiary ground. Built for dark menus, merch and night signs.", ground: TERTIARY, wordmarkColor: "#FFFFFF", roles: ["Secondary", "Tertiary"] },
+            { id: "c", letter: "C", name: "Primary-led", rationale: "The name in primary. The warmest of the three.", ground: "#FFFFFF", wordmarkColor: PRIMARY, roles: ["Primary"] },
+          ],
+        },
+      },
+      {
+        id: "kit",
+        kind: "kit",
+        data: {
+          say: "Your wordmark kit is ready. You have it in color, all black and all white, in SVG and EPS, plus a quick-reference sheet for your hex and CMYK values.",
+          lockups: [
+            { label: "Wordmark", previewUrl: lockup("", TERTIARY, 0, 26), ground: "white" },
+            { label: "All black", previewUrl: lockup("", "#000000", 0, 26), ground: "white" },
+            { label: "All white", previewUrl: lockup("", "#FFFFFF", 0, 26), ground: "black" },
+          ],
+          formats: ["SVG", "EPS", "PNG", "Square", "Social"],
+        },
+      },
+    ],
+    placeholder: "Ask for a change, or start a new project.",
+    placeholderMobile: "Ask for a change.",
+  },
   picks: {
     items: [
       kit,
@@ -289,7 +386,7 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
         kind: "picks",
         data: {
           say: "One last thing, and it’s optional.",
-          drafts: [marks.rising, marks.monogram, marks.wheat, marks.badge, marks.narrow, marks.heavy, marks.withName, marks.hearth].map((markUrl, index) => ({ id: String(index), markUrl })),
+          drafts: [marks.rising, marks.peel, marks.wheat, marks.badge, marks.narrow, marks.heavy, marks.withName, marks.hearth].map((markUrl, index) => ({ id: String(index), markUrl })),
           finalMarkUrl: tinted(heavyRaw, PRIMARY),
           answered: null,
         },
@@ -313,9 +410,11 @@ export const panels: Record<string, PanelView> = {
       { key: "brief", name: "Brief", summary: "Ember & Rye, a wood-fired bakery in Madison", status: "done" },
       { key: "research", name: "Research", summary: "6 competitors and 4 neighbors reviewed", status: "done" },
       { key: "type", name: "Type", summary: "Young Serif · Serif, Old Style Garalde", status: "done" },
-      { key: "directions", name: "Directions", summary: "3 directions, waiting on your pick", status: "current", thumbs: [marks.hearth, marks.monogram, marks.rising] },
+      { key: "wordmark", name: "Wordmark", summary: "Ember & Rye in Young Serif, as typed", status: "done" },
+      { key: "directions", name: "Directions", summary: "3 directions, waiting on your pick", status: "current", thumbs: [marks.hearth, marks.peel, marks.rising] },
       { key: "variations", name: "Variations", summary: "Three refinements of your pick", status: "upcoming" },
       { key: "stressTest", name: "Stress test", summary: "16px, circle, inverted, poster", status: "upcoming" },
+      { key: "lockup", name: "Lockup", summary: "Symbol and wordmark, side by side and stacked", status: "upcoming" },
       { key: "color", name: "Color", summary: "Palette and three colorways", status: "upcoming" },
       { key: "kit", name: "Kit", summary: "SVG, EPS, PNG, square and social images", status: "upcoming" },
     ],

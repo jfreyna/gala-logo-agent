@@ -8,7 +8,7 @@
  * with no sign-in. The engine cannot tell which one it has.
  */
 
-export type Stage = "brief" | "research" | "type" | "directions" | "variations" | "stressTest" | "pickColors" | "colorways" | "kit" | "picks" | "done";
+export type Stage = "brief" | "research" | "type" | "wordmark" | "symbolOpener" | "directions" | "variations" | "stressTest" | "lockup" | "pickColors" | "colorways" | "kit" | "picks" | "done";
 
 export type StoredMessage = {
   id: string;
@@ -29,7 +29,11 @@ export type Project = {
   choices: { step: Stage; chosen: string | null; discarded: string[] }[];
   memory: MemoryLine[];
   quotesToCheck: { id: string; hall: "fame" | "shame"; quote: string }[];
+  /** Requests the person made ahead of their step, kept for it in their own words. */
+  held: HeldIdea[];
 };
+
+export type HeldIdea = { step: Stage; text: string };
 
 export type StoredFile = { label: string; fileName: string; contentType: string; fileId: string };
 
@@ -41,6 +45,7 @@ export type Operation =
   | { op: "status"; text: string }
   | { op: "project"; brandName?: string; stage?: Stage; latestMarkFileId?: string }
   | { op: "choice"; step: Stage; chosen?: string; discarded: string[]; messageRef?: string }
+  | { op: "hold"; step: Stage; text: string }
   | { op: "remember"; group: string; text: string }
   | { op: "kit"; files: StoredFile[]; downloads: StoredFile[]; spec: unknown }
   | { op: "quoteChecked"; submissionId: string; passed: boolean };

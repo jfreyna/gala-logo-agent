@@ -42,6 +42,8 @@ const STUDIO = [
   ["research", "/preview/research"],
   ["upload", "/preview/upload"],
   ["type", "/preview/type?panel=type&top=1", { plain: "/preview/type", mobile: "/preview/type?skip=1&top=1" }],
+  ["wordmark", "/preview/wordmark?top=1", { h: 1040, mobile: "/preview/wordmark?skip=1&top=1" }],
+  ["lockup", "/preview/lockup?top=1", { h: 1040, mobile: "/preview/lockup?skip=1&top=1" }],
   ["directions", "/preview/directions", { h: 1000, mobile: "/preview/directions?skip=1&top=1" }],
   ["variations", "/preview/variations"],
   ["stresstest", "/preview/stress", { mobile: "/preview/stress?skip=1" }],
@@ -72,6 +74,9 @@ const screens = [
   { name: "projects-desktop-light", path: "/preview/projects", w: 1440, h: 858, scheme: "light" },
   { name: "projects-desktop-dark", path: "/preview/projects", w: 1440, h: 858, scheme: "dark" },
   { name: "projects-mobile-light", path: "/preview/projects", ...MOBILE, scheme: "light", full: true },
+  // Drawn in desktop light only: a request held for a later step, and Gala opening the symbol step.
+  { name: "held-desktop-light", path: "/preview/held?top=1", w: 1440, h: 1240, scheme: "light" },
+  { name: "opener-desktop-light", path: "/preview/opener?top=1", ...DESKTOP, scheme: "light" },
   // The join card's three sign-in states, drawn in Figma as component variants: the card alone, 340 wide on desktop and 348 on a phone.
   ...[
     ["signin", "signIn", 450],

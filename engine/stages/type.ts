@@ -10,6 +10,7 @@ import { classLabel, fontData, rank, topMoods } from "../fonts.ts";
 import type { Shape } from "../gemini.ts";
 import { ask, SURE, type Choice, type Score } from "../jev.ts";
 import { WORKING } from "../lines.ts";
+import { googleFamily } from "../steer.ts";
 import { optionId, requestsOf, type Outcome, type Request, type Turn } from "../turn.ts";
 import { briefOf } from "./brief.ts";
 import { directionOf } from "./research.ts";
@@ -57,7 +58,10 @@ async function propose(turn: Turn, request: Request | null): Promise<Outcome> {
     .slice(0, 3)
     .map(([name]) => name);
   const used = new Set<string>();
-  const named = request?.typeface ? data.families.find((family) => family.family === request.typeface) : undefined;
+  // A family the person named now, or one they asked for before this step opened.
+  const kept = turn.heldFor("type");
+  const wanted = request?.typeface ?? (await Promise.all(kept.map((text) => googleFamily(text)))).find((family) => family !== null) ?? null;
+  const named = wanted !== null ? data.families.find((family) => family.family === wanted) : undefined;
   const picks: { typeClass: string; family: (typeof data.families)[number]; person: boolean }[] = [];
   if (named !== undefined) {
     const typeClass = Object.entries(named.classes).sort((a, b) => b[1] - a[1])[0]?.[0] ?? topClasses[0]!;
@@ -73,7 +77,7 @@ async function propose(turn: Turn, request: Request | null): Promise<Outcome> {
   // "My pick" only when Jev is sure of its first class and the person named none; otherwise the cards themselves are the question.
   const galaIsSure = named === undefined && classes.typeClass.confidence >= SURE;
   // How the name is set: as the person asked now, or as they asked before.
-  const nameAs = request?.nameAs ?? turn.nameAsSet;
+  const nameAs = request?.nameAs ?? turn.nameAsTyped;
 
   const words = await turn.compose(
     () =>
@@ -86,6 +90,7 @@ async function propose(turn: Turn, request: Request | null): Promise<Outcome> {
           myPick: galaIsSure ? "A" : null,
           thePersonsOwnPick: named !== undefined ? "A" : null,
           nameIsWritten: nameAs,
+          whatThePersonAskedForEarlier: kept.length > 0 ? kept : null,
         },
         shape: WORDS_SHAPE,
       }),
@@ -132,10 +137,11 @@ export async function type(turn: Turn): Promise<Outcome> {
   if (card === null) return propose(turn, null);
   const set = card.artifact!;
 
+  // The typeface is chosen: the next step shows the name set in it, and waits for its own sign-off.
   if (set.saved === true && set.chosenId !== null) {
     await turn.write([
       { op: "choice", step: "type", chosen: set.chosenId, discarded: set.directions.filter((entry: { id: string }) => entry.id !== set.chosenId).map((entry: { id: string }) => entry.id) },
-      { op: "project", stage: "directions" },
+      { op: "project", stage: "wordmark" },
     ]);
     return "continue";
   }

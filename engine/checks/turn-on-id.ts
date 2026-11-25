@@ -2,7 +2,7 @@
  * The engine's half of scripts/check-turn.mjs: runs one real turn on a turn
  * that is already open, with no sign-in token at all.
  *
- *   node --env-file=<the server's settings> engine/checks/turn-on-id.ts <project id> <turn id>
+ *   node --env-file=<the server's settings> engine/checks/turn-on-id.ts <project id> <turn id> [step to go back to]
  *
  * The turn was opened elsewhere (by the project's owner). From here on the
  * engine has only the shared secret and the turn's id, which is exactly
@@ -11,12 +11,15 @@
  */
 import { runTurn } from "../loop.ts";
 import { assertComplete, loadPrompt } from "../prompt.ts";
+import { isStage } from "../steps.ts";
 import { ConvexStore } from "../store-convex.ts";
 
-const [projectId, turnId] = process.argv.slice(2);
-if (!projectId || !turnId) throw new Error("Usage: turn-on-id.ts <project id> <turn id>");
+const [projectId, turnId, back] = process.argv.slice(2);
+if (!projectId || !turnId) throw new Error("Usage: turn-on-id.ts <project id> <turn id> [step to go back to]");
+// The third argument is a "Back to this step" press: the turn first goes back to that step.
+if (back !== undefined && !isStage(back)) throw new Error(`"${back}" is not a step.`);
 
 const prompt = await loadPrompt();
 assertComplete(prompt);
 const store = new ConvexStore({ projectId, turnId, token: null });
-console.log(`turn ended: ${await runTurn(store, prompt, new AbortController().signal)} (prompt: ${prompt.source})`);
+console.log(`turn ended: ${await runTurn(store, prompt, new AbortController().signal, { back })} (prompt: ${prompt.source})`);

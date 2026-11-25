@@ -8,7 +8,8 @@
  * happens next: `STAGES` does.
  *
  * A turn runs the current stage, and keeps going through stages until one
- * of them needs the person.
+ * of them needs the person. Every step needs the person before the next
+ * one opens: a stage returns "continue" only after its own sign-off.
  */
 import { TROUBLE_LINE } from "./lines.ts";
 import type { Prompt } from "./prompt.ts";
@@ -16,9 +17,12 @@ import { brief } from "./stages/brief.ts";
 import { colorways, pickColors } from "./stages/color.ts";
 import { directions, variations } from "./stages/directions.ts";
 import { done, kit, picks } from "./stages/kit.ts";
+import { lockup } from "./stages/lockup.ts";
+import { symbolOpener } from "./stages/opener.ts";
 import { research } from "./stages/research.ts";
 import { stressTest } from "./stages/stress.ts";
 import { type } from "./stages/type.ts";
+import { wordmark } from "./stages/wordmark.ts";
 import { steer } from "./steer.ts";
 import type { Stage, Store } from "./store.ts";
 import { Turn, type Outcome } from "./turn.ts";
@@ -27,9 +31,12 @@ const STAGES: Record<Stage, (turn: Turn) => Promise<Outcome>> = {
   brief,
   research,
   type,
+  wordmark,
+  symbolOpener,
   directions,
   variations,
   stressTest,
+  lockup,
   pickColors,
   colorways,
   kit,
@@ -38,7 +45,7 @@ const STAGES: Record<Stage, (turn: Turn) => Promise<Outcome>> = {
 };
 
 /** More stages than a turn can pass through; a guard against a loop that never waits. */
-const MAX_STAGES_PER_TURN = 12;
+const MAX_STAGES_PER_TURN = 15;
 
 export type TurnResult = "done" | "busy" | "stopped" | "trouble";
 

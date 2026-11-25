@@ -13,9 +13,12 @@ export const stage = v.union(
   v.literal("brief"),
   v.literal("research"),
   v.literal("type"),
+  v.literal("wordmark"),
+  v.literal("symbolOpener"),
   v.literal("directions"),
   v.literal("variations"),
   v.literal("stressTest"),
+  v.literal("lockup"),
   v.literal("pickColors"),
   v.literal("colorways"),
   v.literal("kit"),
@@ -48,6 +51,13 @@ export default defineSchema({
     turn: v.optional(v.object({ id: v.string(), startedAt: v.number(), status: v.string() })),
     /** The person did something Gala has not answered yet. */
     waitingOnGala: v.optional(v.boolean()),
+    /**
+     * Requests the person made ahead of their step, each kept for that step
+     * in their own words. Gala does not act on one where it was said; the
+     * step reads it when it opens. They live on the project, not on a card,
+     * so going back to an earlier step does not lose them.
+     */
+    heldIdeas: v.optional(v.array(v.object({ step: stage, text: v.string() }))),
   }).index("by_owner_and_updatedAt", ["ownerSubject", "updatedAt"]),
 
   /**

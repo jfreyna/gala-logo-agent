@@ -236,6 +236,66 @@ check("studio: the Work button opens the panel, and Memory asks before clearing"
   return history && asked && (await text(page)).includes("Clear all memory");
 });
 
+check("wordmark card: the name is set four times in the chosen family (72, 32, 16 and 32 inverted), with the set Case and Spacing pressed", async () => {
+  const page = await open("/preview/wordmark");
+  const found = await page.$eval('[data-name="gala-wordmark"]', (card) => {
+    const names = [...card.querySelectorAll('[data-name="hero"] p, [data-name="preview"] p')];
+    return {
+      sizes: names.map((name) => Math.round(parseFloat(getComputedStyle(name).fontSize))),
+      families: [...new Set(names.map((name) => getComputedStyle(name).fontFamily.split(",")[0].replaceAll('"', "").trim()))],
+      texts: [...new Set(names.map((name) => name.textContent))],
+      inverted: getComputedStyle(names[3]).color,
+      pressed: [...card.querySelectorAll('[aria-pressed="true"]')].map((chip) => chip.textContent.trim()),
+      chips: card.querySelectorAll('[data-name="gala-filter-chip"]').length,
+      actions: [...card.querySelectorAll('[data-name="actions"] button')].map((button) => button.textContent.trim()),
+    };
+  });
+  const phone = await open("/preview/wordmark", { width: 380, height: 812 });
+  const heroOnPhone = await phone.$eval('[data-name="gala-wordmark"] [data-name="hero"] p', (name) => Math.round(parseFloat(getComputedStyle(name).fontSize)));
+  return (
+    found.sizes.join() === "72,32,16,32" && heroOnPhone === 40 && found.families.join() === "Young Serif" && found.texts.join() === "Ember & Rye" && found.inverted === "rgb(255, 255, 255)" &&
+    found.pressed.join() === "As typed,As drawn" && found.chips === 6 && found.actions.join() === "Change typeface,Use this wordmark"
+  );
+});
+
+check("lockup card: the hero shows the selected layout and the first tile shows the other one", async () => {
+  const read = async (path) =>
+    (await open(path)).$eval('[data-name="gala-lockup"]', (card) => {
+      const row = (element) => getComputedStyle(element).flexDirection;
+      const hero = card.querySelector('[data-name="hero"] > div');
+      const tile = card.querySelector('[data-name="sizes"] > div');
+      return {
+        hero: row(hero),
+        mark: Math.round(hero.querySelector("img").getBoundingClientRect().width),
+        gap: Math.round(parseFloat(getComputedStyle(hero).columnGap)),
+        tile: row(tile.querySelector('[data-name="preview"] > div')),
+        caption: tile.querySelector(":scope > p").textContent,
+        captions: [...card.querySelectorAll('[data-name="sizes"] > div > p')].map((caption) => caption.textContent),
+        pressed: [...card.querySelectorAll('[aria-pressed="true"]')].map((chip) => chip.textContent.trim()),
+        actions: [...card.querySelectorAll('[data-name="actions"] button')].map((button) => button.textContent.trim()),
+      };
+    });
+  const beside = await read("/preview/lockup");
+  const stacked = await read("/preview/lockupStacked");
+  return (
+    beside.hero === "row" && beside.mark === 96 && beside.gap === 24 && beside.tile === "column" && beside.captions.join() === "Stacked,At 32px,Inverted" && beside.pressed.join() === "Side by side,As set" &&
+    beside.actions.join() === "Change symbol,Use this lockup" && stacked.hero === "column" && stacked.tile === "row" && stacked.caption === "Side by side" && stacked.pressed.join() === "Stacked,As set"
+  );
+});
+
+check("symbol opener: Gala's opening line is a plain message, with no card and nothing to press", async () => {
+  const page = await open("/preview/opener");
+  const body = await text(page);
+  const cards = await page.$$eval('[data-name="conversation"] [data-name="gala-wordmark"], [data-name="conversation"] [data-name="gala-lockup"], [data-name="conversation"] button', (found) => found.length);
+  return body.includes("What are you picturing?") && cards === 0;
+});
+
+check("Work panel: Wordmark sits after Type and Lockup after Stress test", async () => {
+  const page = await open("/preview/directions?panel=history");
+  const rows = await page.$$eval('[data-name="gala-phase-row"] [data-name="texts"] > span:first-child', (names) => names.map((name) => name.textContent.trim()));
+  return rows.join() === "Brief,Research,Type,Wordmark,Directions,Variations,Stress test,Lockup,Color,Kit" && (await text(page)).includes("Ember & Rye in Young Serif, as typed");
+});
+
 check("studio: the working mark is a file: the animated one normally, the static one under reduced motion", async () => {
   const fileOf = (page) => page.$eval('[data-name="thinking"]', (mark) => [mark.dataset.file, getComputedStyle(mark).maskImage || getComputedStyle(mark).webkitMaskImage, mark.offsetWidth, mark.offsetHeight]);
   const moving = await fileOf(await open("/preview/studio?working=1"));

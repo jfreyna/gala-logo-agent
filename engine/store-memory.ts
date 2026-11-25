@@ -4,13 +4,14 @@
  * on the Sprite against the real models with a scripted person and no
  * sign-in. It is never used to serve anyone.
  */
-import type { MemoryLine, Operation, Project, Stage, Store, StoredFile, StoredMessage } from "./store.ts";
+import type { HeldIdea, MemoryLine, Operation, Project, Stage, Store, StoredFile, StoredMessage } from "./store.ts";
 
 export class MemoryStore implements Store {
   project: { id: string; brandName: string; stage: Stage } = { id: "project", brandName: "", stage: "brief" };
   messages: StoredMessage[] = [];
   choices: Project["choices"] = [];
   memory: MemoryLine[] = [];
+  held: HeldIdea[] = [];
   quotes: (Project["quotesToCheck"][number] & { check: "none" | "passed" | "failed" })[] = [];
   files = new Map<string, { bytes: Uint8Array; contentType: string }>();
   kit: { files: StoredFile[]; downloads: StoredFile[]; spec: unknown } | null = null;
@@ -47,6 +48,7 @@ export class MemoryStore implements Store {
       messages: this.messages,
       choices: this.choices,
       memory: this.memory,
+      held: this.held,
       quotesToCheck: this.quotes.filter((quote) => quote.check === "none").map(({ id, hall, quote }) => ({ id, hall, quote })),
     });
   }
@@ -88,6 +90,9 @@ export class MemoryStore implements Store {
           else this.choices.push({ step: item.step, chosen: item.chosen ?? null, discarded: item.discarded });
           break;
         }
+        case "hold":
+          if (!this.held.some((idea) => idea.step === item.step && idea.text === item.text)) this.held.push({ step: item.step, text: item.text });
+          break;
         case "remember":
           if (!this.memory.some((line) => line.text === item.text)) this.memory.push({ id: this.id("memory"), group: item.group, text: item.text, writtenBy: "gala" });
           break;

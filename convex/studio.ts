@@ -6,7 +6,8 @@ import { requireOwnProject } from "./lib/owner";
 
 /**
  * What a person does on one of Gala's cards: approve the direction, pick a
- * typeface, pick a mark, save colors, send picks to the halls.
+ * typeface, sign off the wordmark, pick a mark, sign off the lockup, save
+ * colors, send picks to the halls.
  *
  * This is the person's side only. It marks the card and notes that Gala has
  * something to answer; it never writes anything as Gala. A choice is
@@ -25,6 +26,33 @@ async function card(ctx: MutationCtx, projectId: Id<"projects">, messageId: Id<"
     throw new Error("Card not found.");
   }
   return { message, artifact: (message.artifact ?? {}) as Artifact };
+}
+
+/**
+ * Letter spacing in ems for each Spacing value, and the gap between symbol
+ * and name for each Space between value as a multiple of the standard gap.
+ * The same numbers as engine/settings.ts, which the kit reads.
+ */
+const LETTER_SPACING_EM = { tight: -0.02, asDrawn: 0, wide: 0.08 } as const;
+const GAP_SCALE = { tight: 0.6, asSet: 1, wide: 1.5 } as const;
+
+/** The name in a case. "As typed" leaves it alone. */
+function inCase(name: string, value: "asTyped" | "allCaps" | "lowercase"): string {
+  return value === "allCaps" ? name.toUpperCase() : value === "lowercase" ? name.toLowerCase() : name;
+}
+
+/** The project's newest type card, where the name as the person had it written lives. */
+async function typeCard(ctx: MutationCtx, projectId: Id<"projects">): Promise<Artifact | null> {
+  const messages = await ctx.db
+    .query("messages")
+    .withIndex("by_project", (q) => q.eq("projectId", projectId))
+    .order("desc")
+    .collect();
+  return (messages.find((message) => message.kind === "typeSet")?.artifact ?? null) as Artifact | null;
+}
+
+function nameAsTyped(type: Artifact | null, brandName: string): string {
+  return typeof type?.nameAs === "string" ? type.nameAs : brandName;
 }
 
 function hasOption(options: unknown, id: string): boolean {
@@ -52,6 +80,22 @@ const action = v.union(
   v.object({ type: v.literal("editType") }),
   /** "Use for A" in the type tray: a Google family replaces one card's typeface. */
   v.object({ type: v.literal("useFamily"), id: v.string(), family: v.string(), category: v.string(), moods: v.string() }),
+  /** "Use this wordmark": the sign-off that opens the symbol. */
+  v.object({ type: v.literal("approveWordmark") }),
+  /** A Case or Spacing chip on the wordmark card. */
+  v.object({
+    type: v.literal("setWordmark"),
+    case: v.optional(v.union(v.literal("asTyped"), v.literal("allCaps"), v.literal("lowercase"))),
+    spacing: v.optional(v.union(v.literal("tight"), v.literal("asDrawn"), v.literal("wide"))),
+  }),
+  /** "Use this lockup": the sign-off that opens color. */
+  v.object({ type: v.literal("approveLockup") }),
+  /** A Layout or Space between chip on the lockup card. */
+  v.object({
+    type: v.literal("setLockup"),
+    layout: v.optional(v.union(v.literal("sideBySide"), v.literal("stacked"))),
+    spaceBetween: v.optional(v.union(v.literal("tight"), v.literal("asSet"), v.literal("wide"))),
+  }),
   v.object({ type: v.literal("chooseConcept"), id: v.string() }),
   v.object({ type: v.literal("chooseVariation"), id: v.string() }),
   v.object({ type: v.literal("saveColors"), primary: v.string(), secondary: v.string(), tertiary: v.union(v.string(), v.null()) }),
@@ -100,6 +144,48 @@ export const act = mutation({
             : direction,
         );
         await ctx.db.patch(messageId, { artifact: { ...artifact, directions } });
+        break;
+      }
+      case "approveWordmark": {
+        if (project.stage !== "wordmark") throw new Error("That step is done.");
+        const { artifact } = await card(ctx, projectId, messageId, "wordmark");
+        await ctx.db.patch(messageId, { artifact: { ...artifact, approved: true } });
+        waitingOnGala = true;
+        break;
+      }
+      case "setWordmark": {
+        // A chip changes the card at once; Gala has nothing to answer until the sign-off.
+        if (project.stage !== "wordmark") throw new Error("That step is done.");
+        const { artifact } = await card(ctx, projectId, messageId, "wordmark");
+        const next = { ...artifact };
+        if (action.case !== undefined) {
+          next.case = action.case;
+          next.brandName = inCase(nameAsTyped(await typeCard(ctx, projectId), project.brandName), action.case);
+        }
+        if (action.spacing !== undefined) {
+          next.spacing = action.spacing;
+          next.letterSpacingEm = LETTER_SPACING_EM[action.spacing];
+        }
+        await ctx.db.patch(messageId, { artifact: next });
+        break;
+      }
+      case "approveLockup": {
+        if (project.stage !== "lockup") throw new Error("That step is done.");
+        const { artifact } = await card(ctx, projectId, messageId, "lockup");
+        await ctx.db.patch(messageId, { artifact: { ...artifact, approved: true } });
+        waitingOnGala = true;
+        break;
+      }
+      case "setLockup": {
+        if (project.stage !== "lockup") throw new Error("That step is done.");
+        const { artifact } = await card(ctx, projectId, messageId, "lockup");
+        const next = { ...artifact };
+        if (action.layout !== undefined) next.layout = action.layout;
+        if (action.spaceBetween !== undefined) {
+          next.spaceBetween = action.spaceBetween;
+          next.gapScale = GAP_SCALE[action.spaceBetween];
+        }
+        await ctx.db.patch(messageId, { artifact: next });
         break;
       }
       case "chooseConcept":

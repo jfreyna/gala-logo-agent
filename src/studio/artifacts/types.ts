@@ -84,6 +84,46 @@ export type TypeSetArtifact = {
   saved: boolean;
 };
 
+export type WordmarkCase = "asTyped" | "allCaps" | "lowercase";
+export type WordmarkSpacing = "tight" | "asDrawn" | "wide";
+
+export type WordmarkArtifact = {
+  say: string;
+  /** The name as set: its case already applied. */
+  brandName: string;
+  /** The family chosen in the type step. */
+  family: string;
+  case: WordmarkCase;
+  spacing: WordmarkSpacing;
+  /** The letter spacing that goes with `spacing`, in ems. */
+  letterSpacingEm: number;
+  /** True once the person signs it off; the symbol opens then. */
+  approved: boolean;
+};
+
+/** Gala's line that opens the symbol step. It is drawn as a plain message. */
+export type SymbolOpenerArtifact = { say: string };
+
+export type LockupLayout = "sideBySide" | "stacked";
+export type LockupSpaceBetween = "tight" | "asSet" | "wide";
+
+export type LockupArtifact = {
+  say: string;
+  brandName: string;
+  family: string;
+  /** The approved wordmark's letter spacing, in ems. */
+  letterSpacingEm: number;
+  /** The approved symbol: its name, and the mark in black on a clear ground. */
+  markName: string;
+  markUrl: string;
+  layout: LockupLayout;
+  spaceBetween: LockupSpaceBetween;
+  /** The gap between symbol and name that goes with `spaceBetween`, as a multiple of the standard gap. */
+  gapScale: number;
+  /** True once the person signs it off; color opens then. */
+  approved: boolean;
+};
+
 export type StressTestArtifact = {
   say: string;
   brandName: string;
@@ -111,11 +151,11 @@ export type Colorway = {
   rationale: string;
   /** The ground the lock-up sits on (white, or one of the person's colors). */
   ground: string;
-  /** The mark, already in this colorway's colors. */
-  markUrl: string;
+  /** The mark, already in this colorway's colors. Absent for a logo of the name alone. */
+  markUrl?: string;
   wordmarkColor: string;
-  /** The two roles this colorway leans on, shown as swatches. */
-  roles: [Role, Role];
+  /** The roles this colorway leans on, shown as swatches. */
+  roles: Role[];
 };
 
 export type ColorwaySetArtifact = {
@@ -123,6 +163,8 @@ export type ColorwaySetArtifact = {
   brandName: string;
   /** The family chosen in the type step, for the wordmark. */
   family: string;
+  /** The approved wordmark's letter spacing, in ems. Absent on a project from before the wordmark step. */
+  letterSpacingEm?: number;
   colors: BrandColors;
   colorways: Colorway[];
   chosenId: string | null;

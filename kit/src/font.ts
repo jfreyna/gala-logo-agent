@@ -124,12 +124,16 @@ export type SetText = {
   capHeight: number;
 };
 
-/** Sets `text` with its baseline at y = 0 at `fontSize` units, as outlines. */
-export function setText(loaded: LoadedFont, text: string, fontSize: number): SetText {
+/**
+ * Sets `text` with its baseline at y = 0 at `fontSize` units, as outlines.
+ * `letterSpacing` is added after every letter, in ems (0 sets the type as
+ * the typeface draws it).
+ */
+export function setText(loaded: LoadedFont, text: string, fontSize: number, letterSpacing = 0): SetText {
   const { font } = loaded;
   const missing = [...new Set([...text])].filter((ch) => ch.trim() !== "" && font.charToGlyphIndex(ch) === 0);
   if (missing.length > 0) throw new Error(`kit: ${loaded.info.family} has no glyph for ${missing.map((c) => JSON.stringify(c)).join(", ")}`);
-  const path = font.getPath(text, 0, 0, fontSize, { kerning: true });
+  const path = font.getPath(text, 0, 0, fontSize, { kerning: true, ...(letterSpacing !== 0 ? { letterSpacing } : {}) });
   // Read the commands directly: opentype.js 2.0's toPathData rounding emits
   // "NaN" for some sizes (seen at 285.714 units in Young Serif).
   const segments = fromCommands(path.commands);

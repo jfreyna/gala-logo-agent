@@ -11,20 +11,29 @@ import type { BrandColors } from "../colorways.ts";
 import type { Shape } from "../gemini.ts";
 import { ask, YES } from "../jev.ts";
 import { mentionsHex } from "../guard.ts";
-import { KIT_LINE, PICKS_LINE, WORKING } from "../lines.ts";
+import { KIT_LINE, NAME_ONLY_KIT_LINE, PICKS_LINE, WORKING } from "../lines.ts";
 import { headingFor } from "../memory.ts";
 import type { Operation, StoredFile } from "../store.ts";
 import type { Outcome, Turn } from "../turn.ts";
 import { zip } from "../zip.ts";
 import { briefOf } from "./brief.ts";
 import { chosenConcept } from "./directions.ts";
+import { lockupOf } from "./lockup.ts";
 import { familyOf } from "./type.ts";
+import { letterSpacingOf } from "./wordmark.ts";
 
 const SAY: Shape = { type: "OBJECT", properties: { say: { type: "STRING" } }, required: ["say"] };
 const LINES: Shape = { type: "OBJECT", properties: { lines: { type: "ARRAY", items: { type: "STRING" } } }, required: ["lines"] };
 
 /** The kit card's format chips. */
 const FORMATS = ["SVG", "EPS", "PNG", "Square", "Social"];
+
+/** For a logo of the name alone: the wordmark in color, in black and in white. */
+const NAME_ONLY_PREVIEWS = [
+  { label: "Wordmark", lockup: "wordmark", variant: "color", ground: "white" },
+  { label: "All black", lockup: "wordmark", variant: "black", ground: "white" },
+  { label: "All white", lockup: "wordmark", variant: "white", ground: "black" },
+] as const;
 
 /** The lock-ups the kit card previews, each from one of the kit's SVG files. */
 const PREVIEWS = [
@@ -51,8 +60,8 @@ async function storeAll(turn: Turn, files: KitFile[]): Promise<Map<string, strin
  * project taught about the person's taste is the model's to write, and
  * Jev files each of those lines under its heading.
  */
-async function memoryOperations(turn: Turn, outcome: { mark: string; family: string }, facts: Record<string, unknown>): Promise<Operation[]> {
-  const operations: Operation[] = [{ op: "remember", group: "From past projects", text: `${turn.brand}: picked the ${outcome.mark} mark, set in ${outcome.family}.` }];
+async function memoryOperations(turn: Turn, outcome: { mark: string | null; family: string }, facts: Record<string, unknown>): Promise<Operation[]> {
+  const operations: Operation[] = [{ op: "remember", group: "From past projects", text: outcome.mark === null ? `${turn.brand}: chose a wordmark with no symbol, set in ${outcome.family}.` : `${turn.brand}: picked the ${outcome.mark} mark, set in ${outcome.family}.` }];
   const { lines } = await turn.think<{ lines: string[] }>({ section: "memory", task: "List what is worth remembering about this person, apart from the project's outcome, which is already recorded.", facts, shape: LINES });
   const kept = lines.filter((line) => line.trim() !== "").slice(0, 4);
   if (kept.length > 0 && (await turn.mayShow({ line: "", card: kept }))) {
@@ -63,17 +72,23 @@ async function memoryOperations(turn: Turn, outcome: { mark: string; family: str
 
 export async function kit(turn: Turn): Promise<Outcome> {
   await turn.status(WORKING.kit);
-  const mark = chosenConcept(turn, "variationSet");
-  const source = await turn.store.readFile(mark.sourceFileId);
+  // A logo with no symbol has no mark: the kit is then the wordmark alone.
+  const nameOnly = turn.nameOnly;
+  const mark = nameOnly ? null : chosenConcept(turn, "variationSet");
+  const source = mark === null ? null : await turn.store.readFile(mark.sourceFileId);
   const set = turn.latest("colorwaySet")!.artifact!;
   const colorway = set.colorways.find((entry: { id: string }) => entry.id === set.chosenId);
   const colors = set.colors as BrandColors;
   const family = familyOf(turn);
+  const previews = nameOnly ? NAME_ONLY_PREVIEWS : PREVIEWS;
 
   const built = await buildKit({
-    mark: { bytes: source.bytes, mime: source.contentType as "image/png" | "image/jpeg" },
+    ...(source !== null ? { mark: { bytes: source.bytes, mime: source.contentType as "image/png" | "image/jpeg" } } : {}),
     name: turn.nameAsSet,
     fontFamily: family,
+    // What the person signed off: the wordmark's letter spacing, and the lockup's gap and layout.
+    letterSpacing: letterSpacingOf(turn),
+    ...lockupOf(turn),
     colors: { primary: colors.primary, secondary: colors.secondary, ...(colors.tertiary !== null ? { tertiary: colors.tertiary } : {}) },
     // A white ground on screen becomes the kit's neutral gray for the square and the social image.
     colorway: { mark: colorway.assignment.mark, wordmark: colorway.assignment.wordmark, ...(colorway.assignment.ground !== "white" ? { ground: colorway.assignment.ground } : {}) },
@@ -110,7 +125,8 @@ export async function kit(turn: Turn): Promise<Outcome> {
           brand: turn.brand,
           typeface: family,
           kitHolds: {
-            lockups: PREVIEWS.map((preview) => preview.label),
+            lockups: previews.map((preview) => preview.label),
+            ...(nameOnly ? { logo: "the name alone, with no symbol; never mention a mark or a symbol" } : {}),
             fileFormats: ["SVG", "EPS", "PNG"],
             images: ["a square image", "a social image"],
             specSheet: ["clear space", "minimum sizes", "the typeface and its license", "each color's hex, RGB and CMYK values and its 50 to 900 ladder"],
@@ -130,17 +146,19 @@ export async function kit(turn: Turn): Promise<Outcome> {
     .map((draft: { id: string; markFileId: string }) => ({ id: draft.id, markFileId: draft.markFileId }))
     // Going back puts a copy of a card in the conversation, so a draft can appear twice.
     .filter((draft: { id: string }, index: number, all: { id: string }[]) => all.findIndex((other) => other.id === draft.id) === index);
-  const remembered = await memoryOperations(turn, { mark: mark.name, family }, { brief: briefOf(turn), chosenMark: mark.name, typeface: family, colorway: colorway.name });
+  const remembered = await memoryOperations(turn, { mark: mark?.name ?? null, family }, { brief: briefOf(turn), chosenMark: mark?.name ?? "none: the logo is the name alone", typeface: family, colorway: colorway.name });
+  // The logo as one file: the icon, or the wordmark when there is no symbol.
+  const logo = nameOnly ? fileFor("wordmark", "color") : fileFor("icon", "color");
 
   await turn.write([
     { op: "kit", files, downloads, spec: built.spec },
     {
       op: "artifact",
       kind: "kit",
-      artifact: { say: words?.say ?? KIT_LINE, lockups: PREVIEWS.map((preview) => ({ label: preview.label, previewFileId: fileFor(preview.lockup, preview.variant), ground: preview.ground })), formats: FORMATS },
+      artifact: { say: words?.say ?? (nameOnly ? NAME_ONLY_KIT_LINE : KIT_LINE), lockups: previews.map((preview) => ({ label: preview.label, previewFileId: fileFor(preview.lockup, preview.variant), ground: preview.ground })), formats: FORMATS },
     },
-    { op: "artifact", kind: "picks", artifact: { say: PICKS_LINE, drafts, finalMarkFileId: fileFor("icon", "color"), answered: null } },
-    { op: "project", stage: "picks", latestMarkFileId: fileFor("icon", "color") },
+    { op: "artifact", kind: "picks", artifact: { say: PICKS_LINE, drafts, finalMarkFileId: logo, answered: null } },
+    { op: "project", stage: "picks", latestMarkFileId: logo },
     ...remembered,
   ]);
   return "wait";

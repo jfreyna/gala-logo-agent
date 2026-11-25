@@ -6,6 +6,8 @@ import { Upload } from "./artifacts/Upload";
 import { TypeSet } from "./artifacts/TypeSet";
 import { ConceptSet, VariationSet } from "./artifacts/ConceptSet";
 import { StressTest } from "./artifacts/StressTest";
+import { Wordmark } from "./artifacts/Wordmark";
+import { Lockup } from "./artifacts/Lockup";
 import { ColorPicker } from "./artifacts/ColorPicker";
 import { ColorwaySet } from "./artifacts/ColorwaySet";
 import { Kit } from "./artifacts/Kit";
@@ -38,12 +40,33 @@ export function StreamEntry({ item, onAction }: { item: StreamItem; onAction: (a
           onEdit={() => onAction({ type: "editType" })}
         />
       );
+    case "wordmark":
+      return (
+        <Wordmark
+          data={item.data}
+          onSet={(setting) => onAction({ type: "setWordmark", ...setting })}
+          onChangeTypeface={() => onAction({ type: "changeTypeface" })}
+          onApprove={() => onAction({ type: "approveWordmark" })}
+        />
+      );
+    case "symbolOpener":
+      // The opener is Gala speaking: no card, only her line.
+      return <GalaMessage>{item.data.say}</GalaMessage>;
     case "conceptSet":
       return <ConceptSet data={item.data} onChoose={(id) => onAction({ type: "chooseConcept", id })} />;
     case "variationSet":
       return <VariationSet data={item.data} onChoose={(id) => onAction({ type: "chooseVariation", id })} />;
     case "stressTest":
       return <StressTest data={item.data} />;
+    case "lockup":
+      return (
+        <Lockup
+          data={item.data}
+          onSet={(setting) => onAction({ type: "setLockup", ...setting })}
+          onChangeSymbol={() => onAction({ type: "changeSymbol" })}
+          onApprove={() => onAction({ type: "approveLockup" })}
+        />
+      );
     case "colorPicker":
       return <ColorPicker data={item.data} onSave={(colors) => onAction({ type: "saveColors", colors })} onEdit={() => onAction({ type: "editColors" })} />;
     case "colorwaySet":

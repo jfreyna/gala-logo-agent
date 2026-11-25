@@ -2,10 +2,11 @@
  * Phase 3, the stress test, on the chosen variation: 16px, a circle
  * avatar, inverted, and poster size. Code renders each case, Jev judges
  * the render, and Gala reports what came back. The person then approves
- * the mark or sends it back for another round of variations.
+ * the mark, which opens the lockup, or sends it back for another round of
+ * variations.
  */
 import type { Shape } from "../gemini.ts";
-import { PICK_COLORS_LINE, WORKING } from "../lines.ts";
+import { WORKING } from "../lines.ts";
 import { markFrom, stressTest as runTests } from "../marks.ts";
 import type { Outcome, Turn } from "../turn.ts";
 import { chosenConcept } from "./directions.ts";
@@ -45,14 +46,10 @@ export async function stressTest(turn: Turn): Promise<Outcome> {
     turn.steer(next);
     return "continue";
   }
+  // The mark is approved: the lockup shows it with the wordmark, and color waits for that sign-off.
   if (card!.artifact!.approved === true) {
-    // Colors already picked on an earlier pass come back filled in, still to be saved.
-    const earlier = turn.latest("colorPicker")?.artifact?.colors ?? null;
-    await turn.write([
-      { op: "artifact", kind: "colorPicker", artifact: { say: PICK_COLORS_LINE, colors: earlier, saved: false } },
-      { op: "project", stage: "pickColors" },
-    ]);
-    return "wait";
+    await turn.write([{ op: "project", stage: "lockup" }]);
+    return "continue";
   }
   if (next !== null) await turn.answer(next, `the person to approve ${chosen.name} or ask for a change`);
   return "wait";

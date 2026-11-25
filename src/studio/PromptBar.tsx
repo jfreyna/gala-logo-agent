@@ -185,7 +185,7 @@ export function PromptBar({
               rows={1}
               placeholder={placeholderMobile}
               aria-label={placeholderMobile}
-              className="prompt-field type-body-regular min-w-px flex-[1_0_0] resize-none bg-transparent text-text-neutral-1-light outline-none placeholder:text-text-neutral-2-light desktop:hidden dark:text-text-neutral-1-dark dark:placeholder:text-text-neutral-2-dark"
+              className="prompt-field type-body-regular min-w-px flex-[1_0_0] resize-none bg-transparent text-text-neutral-1-light outline-none placeholder:truncate placeholder:text-text-neutral-2-light desktop:hidden dark:text-text-neutral-1-dark dark:placeholder:text-text-neutral-2-dark"
             />
           </>
         )}

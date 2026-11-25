@@ -12,7 +12,7 @@ import { checkReply, describeVerdict, type Shown } from "./guard.ts";
 import { DECLINE_LINE } from "./lines.ts";
 import { recall } from "./memory.ts";
 import { instructionsFor, type Prompt } from "./prompt.ts";
-import { stepIndexOfKind } from "./steps.ts";
+import { STEPS, stepIndex, stepIndexOfKind } from "./steps.ts";
 import type { Operation, Project, Stage, Store, StoredMessage } from "./store.ts";
 
 /** What a stage tells the loop: stop and wait for the person, or go on to the next stage now. */
@@ -44,7 +44,11 @@ export type Steering =
   /** Something was unclear: Gala asks one short question, and nothing moves. */
   | { act: "ask"; facts?: Record<string, unknown> }
   /** Nothing to act on: Gala answers in words, and the work stays where it is. */
-  | { act: "talk"; facts?: Record<string, unknown> };
+  | { act: "talk"; facts?: Record<string, unknown> }
+  /** The person asked for something that belongs to a later step. It is kept for that step, and the work stays where it is. */
+  | { act: "held"; step: Stage; idea: string }
+  /** At the symbol opener, the person clearly asked for a logo with no symbol. */
+  | { act: "noSymbol" };
 
 export class Turn {
   state!: Project;
@@ -103,9 +107,24 @@ export class Turn {
     });
   }
 
-  /** How the name is set in type: as the person asked on the type card ("GALA"), or the brand's name. */
-  get nameAsSet(): string {
+  /** The name as the person had it written before the wordmark step: as asked on the type card ("GALA"), or the brand's name. */
+  get nameAsTyped(): string {
     return this.latest("typeSet")?.artifact?.nameAs ?? this.brand;
+  }
+
+  /** How the name is set in type: as the wordmark card sets it (its case applied), or as typed. */
+  get nameAsSet(): string {
+    return this.current("wordmark")?.artifact?.brandName ?? this.nameAsTyped;
+  }
+
+  /** True when the person explicitly asked for a logo with no symbol: the name alone is the logo. */
+  get nameOnly(): boolean {
+    return this.current("symbolOpener")?.artifact?.answered === "noSymbol";
+  }
+
+  /** What the person asked for ahead of time, kept for any of these steps, oldest first. */
+  heldFor(...steps: Stage[]): string[] {
+    return [...new Set(this.state.held.filter((idea) => steps.includes(idea.step)).map((idea) => idea.text))];
   }
 
   /**
@@ -117,6 +136,9 @@ export class Turn {
     const asked = this.state.messages.filter((message) => message.artifact !== null && Array.isArray(message.artifact.requests) && this.isLive(message)).flatMap((message) => message.artifact!.requests as string[]);
     return [...new Set(asked)];
   }
+
+  /** The person's message this turn, as steering read it. Empty when they pressed a button and said nothing. */
+  said = "";
 
   private steering: Steering | null = null;
 
@@ -263,9 +285,19 @@ export class Turn {
     else await this.write([{ op: "say", text: reply.say }]);
   }
 
-  /** Gala's answer when steering moved nothing: one short question when unsure, or a reply in words. */
+  /**
+   * Gala's answer when steering moved nothing: one short question when
+   * unsure, a reply in words, or, for a request kept for a later step,
+   * where the project is and what comes next.
+   */
   async answer(next: Steering, waitingFor: string): Promise<void> {
-    if (next.act === "ask") {
+    if (next.act === "held") {
+      const at = stepIndex(this.stage);
+      await this.converse(waitingFor, {
+        task: "The person asked for something that belongs to a later step. Say you have kept it for that step, without doing it now. Then say which step the project is on and which step comes next, and ask for what this step is waiting for.",
+        facts: { keptForStep: STEPS[stepIndex(next.step)]!.name, whatWasKept: next.idea, currentStep: STEPS[at]!.name, nextStep: STEPS[at + 1]?.name ?? null },
+      });
+    } else if (next.act === "ask") {
       await this.converse(waitingFor, {
         task: "You are not sure what the person wants. Ask them one short question to find out, and change nothing.",
         facts: next.facts,

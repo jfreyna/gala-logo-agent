@@ -8,13 +8,15 @@ import { colorwayOptions, hexOf, roleName, type BrandColors, type ColorwayOption
 import type { Shape } from "../gemini.ts";
 import { mentionsHex } from "../guard.ts";
 import { ask, YES } from "../jev.ts";
-import { COLORWAYS_LINE, WORKING } from "../lines.ts";
+import { COLORWAYS_LINE, PICK_COLORS_LINE, WORKING } from "../lines.ts";
+import type { Operation } from "../store.ts";
 import { markFrom, markSvg } from "../marks.ts";
-import { optionId, type Outcome, type Turn } from "../turn.ts";
+import { asked, optionId, type Outcome, type Turn } from "../turn.ts";
 import { briefOf } from "./brief.ts";
 import { chosenConcept } from "./directions.ts";
 import { directionOf } from "./research.ts";
 import { familyOf } from "./type.ts";
+import { letterSpacingOf } from "./wordmark.ts";
 
 const HEX = /^#[0-9A-Fa-f]{6}$/;
 
@@ -28,6 +30,22 @@ const DESCRIBED_SHAPE: Shape = {
   },
   required: ["say", "primary", "secondary", "tertiary"],
 };
+
+/**
+ * Opens the color step: the pick-your-colors card, and the stage. Called
+ * by the step whose sign-off comes before color (the lockup, or the symbol
+ * opener for a logo with no symbol). Colors the person described ahead of
+ * time fill the card in; they still save it.
+ */
+export async function openColors(turn: Turn, before: Operation[]): Promise<Outcome> {
+  // Colors already picked on an earlier pass come back filled in, still to be saved.
+  const earlier = turn.latest("colorPicker")?.artifact?.colors ?? null;
+  await turn.write([...before, { op: "artifact", kind: "colorPicker", artifact: { say: PICK_COLORS_LINE, colors: earlier, saved: false } }, { op: "project", stage: "pickColors" }]);
+  const kept = turn.heldFor("pickColors", "colorways");
+  if (kept.length === 0) return "wait";
+  turn.steer({ act: "redo", request: { typeface: null, nameAs: null, drawing: null, note: kept.join("\n") } });
+  return "continue";
+}
 
 /** Waiting on the pick-your-colors card. */
 export async function pickColors(turn: Turn): Promise<Outcome> {
@@ -51,7 +69,7 @@ export async function pickColors(turn: Turn): Promise<Outcome> {
       turn.think<{ say: string; primary: string; secondary: string; tertiary: string | null }>({
         section: "colors",
         task: "Turn the person's description into a color for each role they described.",
-        facts: { brief: briefOf(turn), direction: directionOf(turn) },
+        facts: { brief: briefOf(turn), direction: directionOf(turn), theirDescription: asked(next.request) },
         shape: DESCRIBED_SHAPE,
       }),
     (value) => ({ line: value.say }),
@@ -157,15 +175,21 @@ export async function colorways(turn: Turn): Promise<Outcome> {
   }
 
   await turn.status(WORKING.colorways);
-  const options = colorwayOptions(colors);
+  // A logo with no symbol has one thing to color: every option colors the name, on white or on another of the colors.
+  const nameOnly = turn.nameOnly;
+  const options = nameOnly
+    ? colorwayOptions(colors)
+        .filter((option) => option.mark === option.wordmark)
+        .map(({ markOnGround: _mark, ...option }) => ({ ...option, markOnGround: option.wordmarkOnGround }))
+    : colorwayOptions(colors);
   const cardOf = (value: Picked) => value.colorways.flatMap((entry) => [entry.name, entry.rationale]);
   const describe = (value: Picked) => [value.say, ...cardOf(value)];
   const picked = await turn.compose(
     () =>
       turn.think<Picked>({
         section: "colorways",
-        task: "Choose three of the options and write about them. The contrast numbers are computed; say nothing they don't support.",
-        facts: { brief: briefOf(turn), direction: directionOf(turn), options },
+        task: `Choose three of the options and write about them. The contrast numbers are computed; say nothing they don't support.${nameOnly ? " The logo is the name alone, with no symbol: write only about the name and its ground, and never mention a mark or a symbol." : ""}`,
+        facts: { brief: briefOf(turn), direction: directionOf(turn), logo: nameOnly ? "the name alone, with no symbol" : "a symbol and the name", options: nameOnly ? options.map(({ id, wordmark, ground, wordmarkOnGround }) => ({ id, name: wordmark, ground, nameOnGround: wordmarkOnGround })) : options },
         shape: pickedShape(options),
       }),
     (value) => ({ line: value.say, card: cardOf(value) }),
@@ -174,9 +198,13 @@ export async function colorways(turn: Turn): Promise<Outcome> {
   // No checked wording after two tries: show the colorways with the fixed line and no claims.
   const three = picked !== null ? threeOptions(picked, options) : threeOptions({ say: "", colorways: [] }, options);
 
-  const chosenMark = chosenConcept(turn, "variationSet");
-  const source = await turn.store.readFile(chosenMark.sourceFileId);
-  const mark = await markFrom({ bytes: source.bytes, mime: source.contentType });
+  // The mark recolored in code from its traced paths, so the color is exact. A logo with no symbol has no mark to color.
+  let mark: Awaited<ReturnType<typeof markFrom>> | null = null;
+  if (!nameOnly) {
+    const chosenMark = chosenConcept(turn, "variationSet");
+    const source = await turn.store.readFile(chosenMark.sourceFileId);
+    mark = await markFrom({ bytes: source.bytes, mime: source.contentType });
+  }
   const letters = ["A", "B", "C"];
   const cards = await Promise.all(
     three.map(async (entry, index) => ({
@@ -185,16 +213,16 @@ export async function colorways(turn: Turn): Promise<Outcome> {
       name: entry.name,
       rationale: entry.rationale,
       ground: hexOf(colors, entry.option.ground),
-      // The mark recolored in code from its traced paths, so the color is exact.
-      markFileId: await turn.store.saveFile(new TextEncoder().encode(markSvg(mark, hexOf(colors, entry.option.mark))), "image/svg+xml"),
+      ...(mark !== null ? { markFileId: await turn.store.saveFile(new TextEncoder().encode(markSvg(mark, hexOf(colors, entry.option.mark))), "image/svg+xml") } : {}),
       wordmarkColor: hexOf(colors, entry.option.wordmark),
-      roles: [roleName(entry.option.mark), roleName(entry.option.wordmark)],
+      // The roles the colorway leans on: the mark and the name, or for a name alone, the name and its ground when that is one of the colors.
+      roles: mark !== null ? [roleName(entry.option.mark), roleName(entry.option.wordmark)] : [roleName(entry.option.wordmark), ...(entry.option.ground !== "white" ? [roleName(entry.option.ground)] : [])],
       // Which role fills what, for the kit.
       assignment: { mark: entry.option.mark, wordmark: entry.option.wordmark, ground: entry.option.ground },
     })),
   );
   await turn.write([
-    { op: "artifact", kind: "colorwaySet", artifact: { say: picked?.say ?? COLORWAYS_LINE, brandName: turn.nameAsSet, family: familyOf(turn), colors, colorways: cards, chosenId: null } },
+    { op: "artifact", kind: "colorwaySet", artifact: { say: picked?.say ?? COLORWAYS_LINE, brandName: turn.nameAsSet, family: familyOf(turn), letterSpacingEm: letterSpacingOf(turn), colors, colorways: cards, chosenId: null } },
   ]);
   return "wait";
 }

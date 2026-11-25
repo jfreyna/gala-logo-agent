@@ -6,6 +6,7 @@
 import { badges, draftThree, findings, type Idea } from "../drafting.ts";
 import type { Image, Shape } from "../gemini.ts";
 import { WORKING } from "../lines.ts";
+import { SYMBOL_STEPS } from "../steps.ts";
 import type { Stage, StoredMessage } from "../store.ts";
 import { asked, requestsOf, type Outcome, type Request, type Turn } from "../turn.ts";
 import { briefOf } from "./brief.ts";
@@ -64,6 +65,15 @@ type Round = {
  */
 const LETTERING = "The mark never contains letters: the name is set in type beside it, and a mark with lettering is set aside. If the person asked for something drawn inside or in place of a letter, carry the idea into the mark's shape, and say plainly that you can't draw inside the letters and what you did instead.";
 
+/**
+ * Every request still standing, and what was just asked; each goes to
+ * every drawing until the mark is approved. What the person asked for
+ * ahead of the symbol steps, and at the symbol opener, is among them.
+ */
+export function standingRequests(turn: Turn, request: Request | null): string[] {
+  return [...new Set([...turn.heldFor(...SYMBOL_STEPS), ...turn.drawingRequests(), ...(asked(request) ?? [])])];
+}
+
 /** Draws three, has Gala write about them, and shows the card. */
 async function drawRound(turn: Turn, round: Round): Promise<Outcome> {
   await turn.status(round.working);
@@ -71,8 +81,7 @@ async function drawRound(turn: Turn, round: Round): Promise<Outcome> {
   // The competitors' own site icons go to the "distinct" check as images; the log carries the count, never the images.
   const competitorImageList = await competitorImages(turn);
   console.log(`Distinct check: ${competitorImageList.length} competitor image(s)`);
-  // Every request still standing, and what was just asked; each goes to every drawing until the mark is approved.
-  const standing = [...new Set([...turn.drawingRequests(), ...(asked(round.request) ?? [])])];
+  const standing = standingRequests(turn, round.request);
   const wanted = standing.length > 0 ? standing : null;
   const earlier = turn.state.messages
     .filter((message) => message.kind === round.kind)

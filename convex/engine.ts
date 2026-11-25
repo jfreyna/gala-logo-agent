@@ -93,6 +93,7 @@ async function projectContext(ctx: QueryCtx | MutationCtx, project: Doc<"project
       };
     }),
     choices: choices.map((choice) => ({ step: choice.step, chosen: choice.chosen ?? null, discarded: choice.discarded })),
+    held: project.heldIdeas ?? [],
     memory: memories.map((memory) => ({ id: memory._id, group: memory.group, text: memory.text, writtenBy: memory.writtenBy })),
     // Quotes sent to the halls that have not been checked yet.
     quotesToCheck: submissions
@@ -141,6 +142,10 @@ export const owns = internalQuery({
   },
 });
 
+/** The longest request kept for a later step, and how many a project keeps (the newest). */
+const MAX_HELD_LENGTH = 500;
+const MAX_HELD_IDEAS = 20;
+
 const kitFile = v.object({ label: v.string(), fileName: v.string(), contentType: v.string(), fileId: v.id("_storage") });
 
 /** One thing Gala's server writes. A `write` call applies a list of these together. */
@@ -167,6 +172,8 @@ const operation = v.union(
     discarded: v.array(v.string()),
     messageRef: v.optional(v.string()),
   }),
+  /** A request kept for a later step, in the person's own words. */
+  v.object({ op: v.literal("hold"), step: stage, text: v.string() }),
   /** A line of memory about the person. */
   v.object({ op: v.literal("remember"), group: v.string(), text: v.string() }),
   v.object({ op: v.literal("kit"), files: v.array(kitFile), downloads: v.array(kitFile), spec: v.any() }),
@@ -229,6 +236,15 @@ export const write = internalMutation({
             await ctx.db.insert("phaseChoices", { projectId, ownerSubject: subject, step: item.step, chosen: item.chosen, discarded: item.discarded, messageId });
           } else {
             await ctx.db.patch(existing._id, { chosen: item.chosen, discarded: item.discarded, messageId: messageId ?? existing.messageId });
+          }
+          break;
+        }
+        case "hold": {
+          // Read fresh: an earlier operation in this call may have added one.
+          const held = (await ctx.db.get(projectId))?.heldIdeas ?? [];
+          const text = item.text.slice(0, MAX_HELD_LENGTH);
+          if (!held.some((idea) => idea.step === item.step && idea.text === text)) {
+            await ctx.db.patch(projectId, { heldIdeas: [...held, { step: item.step, text }].slice(-MAX_HELD_IDEAS) });
           }
           break;
         }

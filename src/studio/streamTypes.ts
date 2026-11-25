@@ -5,11 +5,18 @@ import type {
   ConceptSetArtifact,
   DirectionArtifact,
   KitArtifact,
+  LockupArtifact,
+  LockupLayout,
+  LockupSpaceBetween,
   PicksArtifact,
   ResearchArtifact,
   StressTestArtifact,
+  SymbolOpenerArtifact,
   TypeSetArtifact,
   VariationSetArtifact,
+  WordmarkArtifact,
+  WordmarkCase,
+  WordmarkSpacing,
 } from "./artifacts/types";
 
 /**
@@ -26,9 +33,12 @@ export type StreamItem =
   | { id: string; kind: "research"; data: ResearchArtifact }
   | { id: string; kind: "direction"; data: DirectionArtifact }
   | { id: string; kind: "typeSet"; data: TypeSetArtifact }
+  | { id: string; kind: "wordmark"; data: WordmarkArtifact }
+  | { id: string; kind: "symbolOpener"; data: SymbolOpenerArtifact }
   | { id: string; kind: "conceptSet"; data: ConceptSetArtifact }
   | { id: string; kind: "variationSet"; data: VariationSetArtifact }
   | { id: string; kind: "stressTest"; data: StressTestArtifact }
+  | { id: string; kind: "lockup"; data: LockupArtifact }
   | { id: string; kind: "colorPicker"; data: ColorPickerArtifact }
   | { id: string; kind: "colorwaySet"; data: ColorwaySetArtifact }
   | { id: string; kind: "kit"; data: KitArtifact }
@@ -40,9 +50,12 @@ export const ARTIFACT_KINDS = [
   "research",
   "direction",
   "typeSet",
+  "wordmark",
+  "symbolOpener",
   "conceptSet",
   "variationSet",
   "stressTest",
+  "lockup",
   "colorPicker",
   "colorwaySet",
   "kit",
@@ -62,6 +75,12 @@ export type ArtifactAction =
   | { type: "chooseType"; id: string }
   | { type: "changeType"; id: string }
   | { type: "editType" }
+  | { type: "setWordmark"; case?: WordmarkCase; spacing?: WordmarkSpacing }
+  | { type: "changeTypeface" }
+  | { type: "approveWordmark" }
+  | { type: "setLockup"; layout?: LockupLayout; spaceBetween?: LockupSpaceBetween }
+  | { type: "changeSymbol" }
+  | { type: "approveLockup" }
   | { type: "chooseConcept"; id: string }
   | { type: "chooseVariation"; id: string }
   | { type: "saveColors"; colors: { primary: string; secondary: string; tertiary: string | null } }

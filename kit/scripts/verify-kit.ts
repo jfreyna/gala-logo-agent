@@ -342,6 +342,64 @@ h.check("primary lock-up in Rye: the name's ink starts exactly the stated gap to
   assertClose(await spacing("Rye", "primary"), LOCKUP_RATIOS.primary.gap, 1e-6, "gap, as a share of the mark's box");
 });
 
+// ---- what the wordmark and lockup steps set ---------------------------------
+//
+// The person signs off a letter spacing, a gap and a layout, and can ask for
+// a logo of the name alone. These check that each reaches the files, and
+// that leaving them out builds the same kit as before.
+//
+// What they do not prove: how any of it looks. They measure outlines.
+
+h.check("a wider gap moves the name: at 1.5 the primary lock-up's gap is 1.5 times the stated one, and 0.6 is 0.6 times", async () => {
+  const [mark, font] = await Promise.all([traceMark(fixtureBytes), loadFont("Young Serif", 400, fetch as unknown as FetchLike)]);
+  for (const scale of [0.6, 1.5]) {
+    const art = primaryLockup(mark, (fontSize) => setText(font, INPUT.name, fontSize), scale);
+    const markInk = inkBox(art, "mark");
+    const gap = (inkBox(art, "wordmark").x - (markInk.x + markInk.width)) / Math.max(markInk.width, markInk.height);
+    assertClose(gap, LOCKUP_RATIOS.primary.gap * scale, 1e-6, `gap at ${scale}, as a share of the mark's box`);
+  }
+});
+
+h.check("letter spacing widens or narrows the name, and 0 leaves it as the typeface draws it", async () => {
+  const font = await loadFont("Young Serif", 400, fetch as unknown as FetchLike);
+  const width = (spacing?: number) => bounds(setText(font, INPUT.name, 1000, spacing).segments).width;
+  const drawn = width();
+  assertEqual(width(0), drawn, "width at 0");
+  // Ten gaps follow the first ten of the eleven characters; the last one adds space after the ink.
+  assertClose(width(0.08) - drawn, 0.08 * 1000 * 10, 1, "added width at +0.08em");
+  assertClose(drawn - width(-0.02), 0.02 * 1000 * 10, 1, "removed width at -0.02em");
+});
+
+h.check("the settings reach the files: a wide name, a wide gap and the stacked layout change the wordmark, the primary lock-up and the social image", async () => {
+  if (!kit) throw new Error("buildKit did not finish");
+  const plain = kit;
+  const need = () => plain;
+  const set = await buildKit({ ...INPUT, letterSpacing: 0.08, gapScale: 1.5, layout: "stacked" });
+  const size = (result: KitResult, path: string) => {
+    const file = result.files.find((entry) => entry.path === path)!;
+    return file.width / file.height;
+  };
+  const wordmark = `svg/${SLUG}-wordmark-black.svg`;
+  const primary = `svg/${SLUG}-primary-black.svg`;
+  assert(size(set, wordmark) > size(need(), wordmark) * 1.05, "the wordmark is not wider");
+  assert(size(set, primary) > size(need(), primary) * 1.05, "the primary lock-up is not wider");
+  const social = (result: KitResult) => new TextDecoder("latin1").decode(result.files.find((entry) => entry.path === `social/${SLUG}-social.png`)!.bytes);
+  assert(social(set) !== social(need()), "the social image did not change with the layout");
+});
+
+h.check("no mark: the kit is the wordmark alone, with the name on the square and the social image, and only the wordmark's minimum size", async () => {
+  const { mark: _mark, ...withoutMark } = INPUT;
+  const named = await buildKit(withoutMark);
+  const expected = [...VARIANTS.flatMap((v) => FORMATS.map((f) => `${f}/${SLUG}-wordmark-${v}.${f}`)), `square/${SLUG}-square.png`, `social/${SLUG}-social.png`];
+  assertEqual(named.files.map((file) => file.path).sort(), [...expected].sort(), "files");
+  for (const file of named.files) assert(file.bytes.length > 0, `${file.path} is empty`);
+  const svg = new TextDecoder().decode(named.files.find((file) => file.path === `svg/${SLUG}-wordmark-color.svg`)!.bytes);
+  assertEqual((svg.match(/<path /g) ?? []).length, 1, "paths in the wordmark");
+  assert(svg.includes('fill="#2B2622"'), "the wordmark is not in the colorway's wordmark color");
+  assertEqual(named.spec.minimumSizes.map((size) => size.key), ["wordmark"], "minimum sizes");
+  assertEqual(named.spec.clearSpace.basis, "wordmarkHeight", "what clear space is measured from");
+});
+
 h.check("an SVG mark is rasterized and traced to the same subpath count", async () => {
   const svg = byPath(`svg/${SLUG}-icon-black.svg`);
   const traced = await traceMark(svg.bytes);

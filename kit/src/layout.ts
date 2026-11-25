@@ -57,24 +57,28 @@ function crop(shapes: Shape[]): Artwork {
 
 export type TypeSetter = (fontSize: number) => SetText;
 
-export function primaryLockup(mark: TracedMark, setType: TypeSetter): Artwork {
+/**
+ * `gapScale` multiplies the space between the mark and the name: 1 is the
+ * standard gap, the one every kit had before the lockup step could set it.
+ */
+export function primaryLockup(mark: TracedMark, setType: TypeSetter, gapScale = 1): Artwork {
   const m = unitMark(mark);
   const mb = bounds(m.segments);
   const markShape = place(m, 0, (UNIT - mb.height) / 2); // ink centered in its box
   const type = setType(UNIT * LOCKUP_RATIOS.primary.type);
   const tb = bounds(type.segments);
   const baseline = UNIT / 2 + type.capHeight / 2;
-  const word: Shape = { part: "wordmark", segments: transform(type.segments, 1, mb.width + UNIT * LOCKUP_RATIOS.primary.gap - tb.x, baseline), fillRule: "nonzero" };
+  const word: Shape = { part: "wordmark", segments: transform(type.segments, 1, mb.width + UNIT * LOCKUP_RATIOS.primary.gap * gapScale - tb.x, baseline), fillRule: "nonzero" };
   return crop([markShape, word]);
 }
 
-export function stackedLockup(mark: TracedMark, setType: TypeSetter): Artwork {
+export function stackedLockup(mark: TracedMark, setType: TypeSetter, gapScale = 1): Artwork {
   const m = unitMark(mark);
   const mb = bounds(m.segments);
   const markShape = place(m, -mb.width / 2, 0);
   const type = setType(UNIT * LOCKUP_RATIOS.stacked.type);
   const tb = bounds(type.segments);
-  const gap = UNIT * LOCKUP_RATIOS.stacked.gap;
+  const gap = UNIT * LOCKUP_RATIOS.stacked.gap * gapScale;
   // The name hangs from its cap height, the way the design draws it. But a
   // typeface can draw letters taller than the cap height it states, and
   // ascenders rise above capitals, so the gap is also held against the
@@ -116,6 +120,7 @@ function onCanvas(art: Artwork, width: number, height: number, fitW: number, fit
   };
 }
 
+/** The square holds the icon, or the name when the logo has no symbol. */
 export function squareArtwork(icon: Artwork): Artwork {
   return onCanvas(icon, SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE * SQUARE_FILL, SQUARE_SIZE * SQUARE_FILL);
 }

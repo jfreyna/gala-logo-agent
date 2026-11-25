@@ -14,9 +14,11 @@ export const WORKING = {
   brief: "Reading your brief",
   research: "Looking at competitors and neighbors",
   type: "Setting your name in three typefaces",
+  wordmark: "Setting your name as a wordmark",
   directions: "Drawing three directions",
   variations: "Drawing three variations",
   stressTest: "Testing the mark",
+  lockup: "Putting the symbol and the wordmark together",
   colorways: "Applying your colors",
   kit: "Building your kit",
   picks: "Checking your picks",
@@ -34,3 +36,6 @@ export const COLORWAYS_LINE = "Three colorways with your colors. Pick the one th
 /** Gala's handoff line when no checked line could be written (from the studio's design). */
 export const KIT_LINE =
   "Your lock-up kit is ready. You have primary, stacked, and monochrome variants in SVG and EPS, plus a quick-reference sheet for your hex and CMYK values.";
+
+/** The same, for a logo of the name alone: nothing in it names a mark or a lock-up. */
+export const NAME_ONLY_KIT_LINE = "Your wordmark kit is ready. You have it in color, all black and all white, in SVG and EPS, plus a quick-reference sheet for your hex and CMYK values.";

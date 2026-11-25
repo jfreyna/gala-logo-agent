@@ -22,14 +22,25 @@ export type { Colors, Colorway, SpecSheet, SpecColor, SpecPair } from "./spec.ts
 export type { Contrast, LadderEntry, LadderStep } from "./color.ts";
 
 export type KitInput = {
-  /** The chosen black-and-white mark. The format is read from the bytes; `mime` is a hint. */
-  mark: { bytes: Uint8Array; mime: "image/png" | "image/jpeg" | "image/svg+xml" };
+  /**
+   * The chosen black-and-white mark. The format is read from the bytes;
+   * `mime` is a hint. Leave it out for a logo of the name alone: the kit
+   * then holds the wordmark only, and the square and the social image show
+   * the name.
+   */
+  mark?: { bytes: Uint8Array; mime: "image/png" | "image/jpeg" | "image/svg+xml" };
   /** The wordmark text, e.g. "Ember & Rye". */
   name: string;
   /** A Google Fonts family. */
   fontFamily: string;
   /** Default 400; a family without that weight falls back to its default. */
   fontWeight?: number;
+  /** Added after every letter of the name, in ems. Default 0: the name as the typeface draws it. */
+  letterSpacing?: number;
+  /** Multiplies the space between the mark and the name in both lock-ups. Default 1: the standard gap. */
+  gapScale?: number;
+  /** The lock-up the person will use most, shown on the social image. Default "primary" (side by side). */
+  layout?: "primary" | "stacked";
   /** #rrggbb. */
   colors: Colors;
   /** The chosen colorway: which color fills the mark and the wordmark, and the ground of the square and the social image (default: the neutral light gray). */
@@ -85,6 +96,9 @@ export function slugify(name: string): string {
 function validate(input: KitInput): void {
   if (typeof input.name !== "string" || input.name.trim() === "") throw new Error("kit: the name is empty");
   if (input.name.length > 60) throw new Error("kit: the name is longer than 60 characters");
+  if (input.letterSpacing !== undefined && !(Number.isFinite(input.letterSpacing) && Math.abs(input.letterSpacing) <= 0.5)) throw new Error("kit: letterSpacing must be between -0.5 and 0.5 em");
+  if (input.gapScale !== undefined && !(Number.isFinite(input.gapScale) && input.gapScale > 0 && input.gapScale <= 4)) throw new Error("kit: gapScale must be above 0 and at most 4");
+  if (input.layout !== undefined && input.layout !== "primary" && input.layout !== "stacked") throw new Error("kit: layout must be primary or stacked");
   normalizeHex(input.colors.primary);
   normalizeHex(input.colors.secondary);
   if (input.colors.tertiary !== undefined) normalizeHex(input.colors.tertiary);
@@ -100,15 +114,15 @@ export async function buildKit(input: KitInput, options: KitOptions = {}): Promi
   validate(input);
   const fetcher = options.fetch ?? (globalThis.fetch as unknown as FetchLike);
   const name = input.name.trim();
-  const [mark, font] = await Promise.all([traceMark(input.mark.bytes), loadFont(input.fontFamily, input.fontWeight ?? 400, fetcher)]);
-  const setType = (fontSize: number) => setText(font, name, fontSize);
+  const [mark, font] = await Promise.all([input.mark === undefined ? null : traceMark(input.mark.bytes), loadFont(input.fontFamily, input.fontWeight ?? 400, fetcher)]);
+  const setType = (fontSize: number) => setText(font, name, fontSize, input.letterSpacing ?? 0);
+  const gapScale = input.gapScale ?? 1;
 
-  const art: Record<"primary" | "stacked" | "icon" | "wordmark", Artwork> = {
-    primary: primaryLockup(mark, setType),
-    stacked: stackedLockup(mark, setType),
-    icon: iconArtwork(mark),
-    wordmark: wordmarkArtwork(setType),
-  };
+  // With no mark the kit is the wordmark alone.
+  const art: Partial<Record<"primary" | "stacked" | "icon" | "wordmark", Artwork>> & { wordmark: Artwork } =
+    mark === null
+      ? { wordmark: wordmarkArtwork(setType) }
+      : { primary: primaryLockup(mark, setType, gapScale), stacked: stackedLockup(mark, setType, gapScale), icon: iconArtwork(mark), wordmark: wordmarkArtwork(setType) };
 
   const markColor = resolve(input.colors, input.colorway.mark);
   const wordColor = resolve(input.colors, input.colorway.wordmark);
@@ -125,8 +139,9 @@ export async function buildKit(input: KitInput, options: KitOptions = {}): Promi
   const title = (lockup: Lockup, variant: Variant) => `${name}, ${LABELS[lockup]}, ${VARIANT_LABELS[variant]}`;
 
   for (const lockup of ["primary", "stacked", "icon", "wordmark"] as const) {
+    const a = art[lockup];
+    if (a === undefined) continue;
     for (const variant of ["color", "black", "white"] as const) {
-      const a = art[lockup];
       const base = `${slug}-${lockup}-${variant}`;
       const svg = toSvg(a, fills[variant], title(lockup, variant));
       const svgSize = naturalSize(a);
@@ -138,7 +153,8 @@ export async function buildKit(input: KitInput, options: KitOptions = {}): Promi
     }
   }
 
-  const canvases = { square: squareArtwork(art.icon), social: socialArtwork(art.primary) };
+  // The square shows the icon and the social image the lock-up the person uses most; with no mark, both show the name.
+  const canvases = { square: squareArtwork(art.icon ?? art.wordmark), social: socialArtwork((input.layout === "stacked" ? art.stacked : art.primary) ?? art.wordmark) };
   for (const lockup of ["square", "social"] as const) {
     const a = canvases[lockup];
     const svg = toSvg(a, { ...fills.color, ground: groundColor }, title(lockup, "color"), { width: a.width, height: a.height });
@@ -146,5 +162,5 @@ export async function buildKit(input: KitInput, options: KitOptions = {}): Promi
     files.push({ path: `${lockup}/${slug}-${lockup}.png`, mime: "image/png", bytes: png.bytes, lockup, variant: "color", format: "png", width: png.width, height: png.height });
   }
 
-  return { files, spec: buildSpec(name, input.colors, input.colorway, font.info) };
+  return { files, spec: buildSpec(name, input.colors, input.colorway, font.info, { nameOnly: mark === null }) };
 }

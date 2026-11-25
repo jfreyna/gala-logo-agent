@@ -47,7 +47,8 @@ export type SpecPair = { foreground: Role | "white" | "black"; background: Role 
 export type SpecSheet = {
   version: 1;
   name: string;
-  clearSpace: { basis: "markHeight"; ratio: number };
+  /** Clear space as a share of the mark's height, or of the wordmark's when the logo has no symbol. */
+  clearSpace: { basis: "markHeight" | "wordmarkHeight"; ratio: number };
   minimumSizes: { key: "icon" | "primary" | "wordmark"; label: string; px: number; measure: "side" | "width" }[];
   type: FontInfo & { sample: string };
   colors: SpecColor[];
@@ -71,7 +72,7 @@ export function resolve(colors: Colors, key: Role | "white" | "black" | "neutral
   return normalizeHex(hex);
 }
 
-export function buildSpec(name: string, colors: Colors, colorway: Colorway, font: FontInfo): SpecSheet {
+export function buildSpec(name: string, colors: Colors, colorway: Colorway, font: FontInfo, options: { nameOnly?: boolean } = {}): SpecSheet {
   const specColors: SpecColor[] = rolesIn(colors).map((role) => {
     const hex = resolve(colors, role);
     const steps = ladder(hex);
@@ -104,8 +105,9 @@ export function buildSpec(name: string, colors: Colors, colorway: Colorway, font
   return {
     version: 1,
     name,
-    clearSpace: { basis: "markHeight", ratio: CLEAR_SPACE_RATIO },
-    minimumSizes: MINIMUM_SIZES.map((m) => ({ ...m })),
+    clearSpace: { basis: options.nameOnly ? "wordmarkHeight" : "markHeight", ratio: CLEAR_SPACE_RATIO },
+    // A logo of the name alone has no icon and no lock-up to size.
+    minimumSizes: MINIMUM_SIZES.filter((m) => !options.nameOnly || m.key === "wordmark").map((m) => ({ ...m })),
     type: { ...font, sample: TYPE_SAMPLE },
     colors: specColors,
     pairs,

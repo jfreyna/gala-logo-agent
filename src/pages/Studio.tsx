@@ -17,9 +17,12 @@ const PHASES: { key: string; name: string; stages: Stage[] }[] = [
   { key: "brief", name: "Brief", stages: ["brief"] },
   { key: "research", name: "Research", stages: ["research"] },
   { key: "type", name: "Type", stages: ["type"] },
-  { key: "directions", name: "Directions", stages: ["directions"] },
+  { key: "wordmark", name: "Wordmark", stages: ["wordmark"] },
+  // The symbol opener is where the directions begin: Gala asks what to draw before drawing three.
+  { key: "directions", name: "Directions", stages: ["symbolOpener", "directions"] },
   { key: "variations", name: "Variations", stages: ["variations"] },
   { key: "stressTest", name: "Stress test", stages: ["stressTest"] },
+  { key: "lockup", name: "Lockup", stages: ["lockup"] },
   { key: "color", name: "Color", stages: ["pickColors", "colorways"] },
   { key: "kit", name: "Kit", stages: ["kit", "picks", "done"] },
 ];
@@ -59,12 +62,18 @@ function placeholders(stage: Stage, hasBrief: boolean, chosenMark: string | null
       return ["Or tell me what to change in the direction.", "Or tell me what to change in the direction."];
     case "type":
       return ["Pick A, B or C, or name a font you like.", "Pick A, B or C."];
+    case "wordmark":
+      return ["Approve the wordmark, or ask for a change.", "Approve, or ask for a change."];
+    case "symbolOpener":
+      return ["Describe a symbol, or say go ahead.", "Describe a symbol, or say go ahead."];
     case "directions":
       return ["Pick A, B or C, or tell me what to change.", "Pick A, B or C."];
     case "variations":
       return ["Pick 1, 2 or 3, or ask for a change.", "Pick 1, 2 or 3."];
     case "stressTest":
       return [chosenMark !== null ? `Approve ${chosenMark}, or ask for a change.` : "Approve, or change it.", "Approve, or change it."];
+    case "lockup":
+      return ["Approve the lockup, or ask for a change.", "Approve, or ask for a change."];
     case "pickColors":
       return ["Or describe your colors in words.", "Or describe your colors in words."];
     case "colorways":
@@ -74,6 +83,9 @@ function placeholders(stage: Stage, hasBrief: boolean, chosenMark: string | null
   }
 }
 
+/** How the Wordmark row says the case ("Ember & Rye in Young Serif, as typed"). */
+const CASE_WORDS: Record<string, string> = { asTyped: "as typed", allCaps: "all caps", lowercase: "lowercase" };
+
 /** The line under each step in the History view. */
 function summaries(cards: Card[], stage: Stage): Record<string, { summary: string; thumbs?: string[] }> {
   const latest = (kind: ArtifactKind) => cards.findLast((card) => card.kind === kind)?.data;
@@ -81,6 +93,7 @@ function summaries(cards: Card[], stage: Stage): Record<string, { summary: strin
   const result: Record<string, { summary: string; thumbs?: string[] }> = {
     variations: { summary: "Three refinements of your pick" },
     stressTest: { summary: "16px, circle, inverted, poster" },
+    lockup: { summary: "Symbol and wordmark, side by side and stacked" },
     color: { summary: "Palette and three colorways" },
     kit: { summary: "SVG, EPS, PNG, square and social images" },
   };
@@ -95,6 +108,10 @@ function summaries(cards: Card[], stage: Stage): Record<string, { summary: strin
   const typeface = chosen(type, "directions");
   if (typeface && type?.saved) result.type = { summary: `${typeface.family} · ${String(typeface.category).replace(" · ", ", ")}` };
   else if (type) result.type = { summary: "3 typefaces, waiting on your pick" };
+  const wordmark = latest("wordmark");
+  if (wordmark) result.wordmark = { summary: `${wordmark.brandName} in ${wordmark.family}, ${CASE_WORDS[wordmark.case as string] ?? CASE_WORDS.asTyped}` };
+  const lockup = latest("lockup");
+  if (lockup && lockup.approved) result.lockup = { summary: `${lockup.markName} with ${lockup.brandName}, ${lockup.layout === "stacked" ? "stacked" : "side by side"}` };
   const concepts = latest("conceptSet");
   if (concepts) {
     const pick = chosen(concepts, "concepts");
@@ -224,6 +241,15 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
     if (entry?.url) void download(entry.url, entry.fileName);
   }
 
+  /** Goes back to a step: the same move as a spoken "go back". The engine returns the project to it, and Gala picks up in the chat. */
+  function goBack(step: Stage) {
+    if (working !== null || asking.current) return;
+    asking.current = true;
+    void requestTurn(projectId, step).finally(() => {
+      asking.current = false;
+    });
+  }
+
   function onAction(action: ArtifactAction, itemId: string) {
     const messageId = itemId as Id<"messages">;
     const record = (recorded: Parameters<typeof act>[0]["action"]) => void act({ projectId, messageId, action: recorded });
@@ -238,6 +264,11 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
         return;
       case "changeType":
         return setPanel({ view: "type", messageId, cardId: action.id, group: "All", moods: null });
+      // "Change typeface" and "Change symbol" take the same path as going back to that step.
+      case "changeTypeface":
+        return goBack("type");
+      case "changeSymbol":
+        return goBack("directions");
       case "saveColors":
         return record({ type: "saveColors", primary: action.colors.primary, secondary: action.colors.secondary, tertiary: action.colors.tertiary });
       case "downloadFormat":
@@ -277,19 +308,20 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
     }
   } else if (panel?.view === "kit" && kit != null) {
     const spec = kit.spec as {
-      clearSpace: { ratio: number };
+      clearSpace: { basis?: "markHeight" | "wordmarkHeight"; ratio: number };
       minimumSizes: { label: string; px: number; measure: "side" | "width" }[];
       type: { family: string; licenseName: string | null };
       colors: { role: string; hex: string; ladder: { step: string; hex: string }[] }[];
     };
-    const primary = kit.files.find((entry) => entry.label === "primary, color, SVG");
+    // A logo of the name alone has no primary lock-up: its wordmark stands in.
+    const primary = kit.files.find((entry) => entry.label === "primary, color, SVG") ?? kit.files.find((entry) => entry.label === "wordmark, color, SVG");
     view = {
       view: "kit",
       brandName: project.brandName,
       clearSpace: {
         previewUrl: primary?.url ?? "",
         zoneColor: spec.colors[0]?.hex ?? "#000000",
-        caption: `Keep clear space equal to ${Math.round(spec.clearSpace.ratio * 100)}% of the mark’s height on every side.`,
+        caption: `Keep clear space equal to ${Math.round(spec.clearSpace.ratio * 100)}% of the ${spec.clearSpace.basis === "wordmarkHeight" ? "wordmark" : "mark"}’s height on every side.`,
       },
       minimumSizes: spec.minimumSizes.map((size) => ({ item: size.label, value: size.measure === "width" ? `${size.px}px wide` : `${size.px}px` })),
       type: { family: spec.type.family, caption: `${spec.type.family} · the wordmark and headings.${spec.type.licenseName ? ` Free under the ${spec.type.licenseName}.` : ""}` },
@@ -341,13 +373,8 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
               if (key === "kit" && kit != null) setPanel({ view: "kit" });
             }}
             onGoBack={(key) => {
-              // The same move as a spoken "go back": the engine returns the project to the phase's first step, and Gala picks up in the chat.
               const step = PHASES.find((phase) => phase.key === key)?.stages[0];
-              if (step === undefined || working !== null || asking.current) return;
-              asking.current = true;
-              void requestTurn(projectId, step).finally(() => {
-                asking.current = false;
-              });
+              if (step !== undefined) goBack(step);
             }}
             onOpenMemory={() => setPanel({ view: "memory" })}
             onChooseArtifact={() => undefined}

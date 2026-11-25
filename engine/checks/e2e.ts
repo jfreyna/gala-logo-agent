@@ -81,9 +81,26 @@ h.check("type: approving the direction brings three typefaces, each a real Googl
   console.log(`        ${set.directions.map((direction: { letter: string; family: string; category: string }) => `${direction.letter} ${direction.family} (${direction.category})`).join("; ")}`);
 });
 
-h.check("directions: choosing a typeface brings three drawn marks, each traced to vector paths and checked", async () => {
+h.check("wordmark: choosing a typeface shows the name set in it, on its own, and waits for the sign-off", async () => {
   const set = store.latest("typeSet").artifact!;
   press("typeSet", { chosenId: set.directions[0].id, saved: true });
+  await turn();
+  assertEqual(store.project.stage, "wordmark", "stage");
+  const card = store.latest("wordmark").artifact!;
+  assertEqual([card.family, card.case, card.spacing, card.approved], [set.directions[0].family, "asTyped", "asDrawn", false], "the wordmark card");
+  assert(!store.messages.some((message) => message.kind === "conceptSet"), "a mark was drawn before the wordmark was signed off");
+});
+
+h.check("symbol opener: approving the wordmark opens the symbol with a question, and nothing is drawn", async () => {
+  press("wordmark", { approved: true });
+  await turn();
+  assertEqual(store.project.stage, "symbolOpener", "stage");
+  assertEqual(store.latest("symbolOpener").artifact!.answered, null, "answered");
+  assert(!store.messages.some((message) => message.kind === "conceptSet"), "a mark was drawn before the person answered");
+});
+
+h.check("directions: go ahead brings three drawn marks, each traced to vector paths and checked", async () => {
+  store.visitorSays("Go ahead and draw three.");
   await turn();
   const concepts = store.latest("conceptSet").artifact!;
   assertEqual(concepts.concepts.length, 3, "directions");
@@ -112,8 +129,17 @@ h.check("stress test: picking a variation runs the four tests on it", async () =
   console.log(`        ${JSON.stringify(checks)}`);
 });
 
-h.check("color: approving the mark in words brings the pick-your-colors card", async () => {
-  store.visitorSays("Approved. Let's move on to color.");
+h.check("lockup: approving the mark in words shows it with the wordmark, and color waits", async () => {
+  store.visitorSays("Approved. Use this mark.");
+  await turn();
+  assertEqual(store.project.stage, "lockup", "stage");
+  const card = store.latest("lockup").artifact!;
+  assertEqual([card.layout, card.spaceBetween, card.approved], ["sideBySide", "asSet", false], "the lockup card");
+  assert(!store.messages.some((message) => message.kind === "colorPicker"), "color opened before the lockup was signed off");
+});
+
+h.check("color: approving the lockup brings the pick-your-colors card", async () => {
+  press("lockup", { approved: true });
   await turn();
   assertEqual(store.project.stage, "pickColors", "stage");
   assertEqual(store.latest("colorPicker").artifact!.saved, false, "the picker starts unsaved");

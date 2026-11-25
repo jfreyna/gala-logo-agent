@@ -12,12 +12,15 @@ function roleColor(role: Role, colors: BrandColors): string {
 
 /**
  * gala-colorway-card (Figma 5541:5428): the chosen mark and name in one
- * application of the person's own colors. Roles are named, never hex.
+ * application of the person's own colors. Roles are named, never hex. With
+ * the card's Mark property off, for a logo of the name alone, the paper
+ * shows the wordmark by itself.
  */
 function ColorwayCard({
   colorway,
   brandName,
   family,
+  letterSpacingEm,
   colors,
   chosen,
   onChoose,
@@ -25,6 +28,7 @@ function ColorwayCard({
   colorway: Colorway;
   brandName: string;
   family: string;
+  letterSpacingEm: number;
   colors: BrandColors;
   chosen: boolean;
   onChoose: () => void;
@@ -43,8 +47,12 @@ function ColorwayCard({
         style={{ backgroundColor: colorway.ground }}
         data-name="paper"
       >
-        <img alt={`Colorway ${colorway.letter}: ${colorway.name}`} src={colorway.markUrl} className="size-[120px] shrink-0 object-contain" />
-        <p className="shrink-0 whitespace-nowrap text-[18px] leading-[normal]" style={{ color: colorway.wordmarkColor, fontFamily: `"${family}", serif` }}>
+        {colorway.markUrl !== undefined && <img alt={`Colorway ${colorway.letter}: ${colorway.name}`} src={colorway.markUrl} className="size-[120px] shrink-0 object-contain" />}
+        {/* Mark off (a logo of the name alone): the paper shows the wordmark alone at 30px. */}
+        <p
+          className={`max-w-full shrink-0 whitespace-nowrap leading-[normal] ${colorway.markUrl !== undefined ? "text-[18px]" : "text-[30px]"}`}
+          style={{ color: colorway.wordmarkColor, fontFamily: `"${family}", serif`, letterSpacing: `${letterSpacingEm}em` }}
+        >
           {brandName}
         </p>
       </div>
@@ -89,6 +97,7 @@ export function ColorwaySet({ data, onChoose }: { data: ColorwaySetArtifact; onC
             colorway={colorway}
             brandName={data.brandName}
             family={data.family}
+            letterSpacingEm={data.letterSpacingEm ?? 0}
             colors={data.colors}
             chosen={colorway.id === data.chosenId}
             onChoose={() => onChoose(colorway.id)}

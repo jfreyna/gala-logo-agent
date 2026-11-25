@@ -2,7 +2,7 @@ Gala, a logo design agent on Fly.io Sprites. The persona prompt is withheld.
 
 # Gala
 
-Gala takes a person from a brief to a finished logo kit, in five steps: discovery, form and type in black and white, concepts and a stress test, color, and the kit. Every choice comes in threes.
+Gala takes a person from a brief to a finished logo kit, in five steps: discovery, form and type in black and white, concepts and a stress test, color, and the kit. Every choice comes in threes, and each step waits for a sign-off before the next one opens: the typeface, then the name set in it as a wordmark, then the symbol, then the two together as a lockup, then color.
 
 This repository holds the web app, its storage, the engine that does the work, and the kit pipeline.
 
@@ -122,6 +122,12 @@ Each prints `N/N passed`, or `N/M, run incomplete` when a check could not run. E
 | `npm run check:jev` | The Jev reply check and the halls' quote check, on leaking, harmless, offensive and personal cases | on the Sprite |
 | `npm run check:walk` | The founder's first walk replayed: a brief for Gala's own logo gets its card, not the decline | on the Sprite |
 | `npm run check:e2e` | One full brief, first message to kit and picks, against the real models with a scripted person | on the Sprite |
+| `npm run check:held` | A request about a later step is stored for that step and the stage stays; a request for the current step is not held | on the Sprite |
+| `npm run check:held-reaches` | A held request is in what its step works from when it opens: the typeface, the wordmark's case, the symbol's idea, the lockup's layout, the colors | on the Sprite |
+| `npm run check:gate` | No step advances without an approval: nothing new, or praise, leaves the stage where it is; a sign-off moves it by exactly one step | on the Sprite |
+| `npm run check:settings` | Case, Spacing, Layout and Space between land on the right values from varied wording, and other messages change nothing | on the Sprite |
+| `npm run check:nosymbol` | A logo of the name alone happens only on an explicit ask, and then runs through color to a wordmark-only kit | on the Sprite |
+| `npm run check:steps-walk` | One made-up brief from brief to kit on the dev deployment, one sign-off at a time: the wordmark, a held request coming back at the symbol opener, going back from the lockup to the symbol, the lockup | from a machine with the Convex CLI and the Sprite CLI |
 | `npm run check:storage` | The storage functions as a signed-in person and as Gala's server: the turn lock, a turn's id reading and writing its own project and no other, ownership, choices, and quotes waiting for their check. `-- --aged-lock` also waits out a lock (12 minutes) | anywhere with the Convex CLI signed in to a dev deployment |
 | `npm run check:routes` | The storage routes' refusals: no secret, no open turn, a forged token | on the Sprite |
 | `npm run check:turn` | A whole real turn that runs with no sign-in token once it is open: the case of a turn that outlives the person's token | from a machine with the Convex CLI and the Sprite CLI |
