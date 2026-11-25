@@ -28,7 +28,8 @@ const BACKDROPS = {
  *   /preview/<screen>?panel=<view>   (history, artifact, color, type, kit, memory)
  *   add &working=1 or &attached=1 for those prompt bar states, &status=<line> for a working line of your own,
  *   &family=<Google family> sets the wordmark card in that typeface, and &name=<text> changes the name on it,
- *   &skip=N to leave out the first N items, &top=1 to show the start of a long conversation
+ *   &skip=N to leave out the first N items, &top=1 to show the start of a long conversation,
+ *   &attached=1&file=<name> for an attached file, &sendError=<reason> for the bar's Send failed state
  */
 export function Preview({ pathname, search }: { pathname: string; search: string }) {
   const name = pathname.replace(/^\/preview\/?/, "") || "studio";
@@ -130,7 +131,9 @@ export function Preview({ pathname, search }: { pathname: string; search: string
         working: working ? working[0] : null,
         workingMobile: working ? working[1] : null,
         onStop: noop,
-        attachment: params.get("attached") === "1" ? { fileName: "napkin-sketch.jpg", previewUrl: null } : null,
+        attachment: params.get("attached") === "1" ? { fileName: params.get("file") ?? "napkin-sketch.jpg", previewUrl: null } : null,
+        // &sendError=<message> shows the bar's Send failed state with that reason under it.
+        sendError: params.get("sendError"),
         onAttach: noop,
         onRemoveAttachment: noop,
         hints: ["Here’s what my business does and who it’s for", "Show me the logos my competitors use", "Keep it simple enough to work at 16px"],

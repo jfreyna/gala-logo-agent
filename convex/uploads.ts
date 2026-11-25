@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { requireOwnProject } from "./lib/owner";
 
@@ -27,10 +27,10 @@ export const finishUpload = mutation({
   handler: async (ctx, { projectId, fileId, fileName }) => {
     const { subject } = await requireOwnProject(ctx, projectId);
     const stored = await ctx.db.system.get(fileId);
-    if (stored === null) throw new Error("File not found.");
+    if (stored === null) throw new ConvexError("File not found.");
     if (stored.size > MAX_UPLOAD_BYTES) {
       await ctx.storage.delete(fileId);
-      throw new Error("That file is too large. The limit is 10 MB.");
+      throw new ConvexError("That file is too large. The limit is 10 MB.");
     }
     return ctx.db.insert("uploads", {
       ownerSubject: subject,

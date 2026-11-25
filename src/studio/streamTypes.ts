@@ -19,6 +19,7 @@ import type {
   WordmarkSpacing,
 } from "./artifacts/types";
 import type { Past } from "./history";
+import type { NoticeAction, NoticeData } from "./Feedback";
 
 /**
  * One thing in the conversation: a line from Gala, a line from the visitor
@@ -46,9 +47,13 @@ export type StreamItem = (
   | { id: string; kind: "picks"; data: PicksArtifact }
   /** A card action's line on the person's side (gala-action-echo). */
   | { id: string; kind: "action"; label: string; state: "Sending" | "Sent" }
+  /** Gala's answer when something didn't work (gala-notice). */
+  | { id: string; kind: "notice"; notice: NoticeData }
 ) & {
   /** Set on a card whose step is behind the project: its footer replaces its buttons and chips (history.ts). */
   past?: Past;
+  /** The server's message for an action on this card that failed (gala-inline-error), until the next action on it. */
+  error?: string;
 };
 
 /** The artifact kinds, as stored in a message's `kind`. */
@@ -99,4 +104,6 @@ export type ArtifactAction =
   | { type: "submitPicks"; hated: { draftId: string; quote: string } | null; loved: { quote: string } | null }
   | { type: "declinePicks" }
   /** "Back to this step" on a read-only card's footer. */
-  | { type: "backToStep" };
+  | { type: "backToStep" }
+  /** A button on one of Gala's notices. */
+  | { type: "notice"; action: NoticeAction };

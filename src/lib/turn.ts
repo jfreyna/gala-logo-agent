@@ -50,11 +50,11 @@ export function stopTurn(projectId: string): Promise<void> {
   );
 }
 
-/** Asks Gala to file a line the person added to memory under its heading. */
-export function fileMemoryLine(memoryId: string, text: string): Promise<void> {
+/** Asks Gala to file a line the person added to memory under its heading. True when it was filed. */
+export function fileMemoryLine(memoryId: string, text: string): Promise<boolean> {
   return post("/api/memory", { memoryId, text }).then(
-    () => undefined,
-    () => undefined,
+    (state) => state === "done",
+    () => false,
   );
 }
 

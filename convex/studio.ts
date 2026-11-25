@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -25,7 +25,7 @@ type Artifact = Record<string, unknown>;
 async function card(ctx: MutationCtx, projectId: Id<"projects">, messageId: Id<"messages">, kind: string): Promise<{ message: Doc<"messages">; artifact: Artifact }> {
   const message = await ctx.db.get(messageId);
   if (message === null || message.projectId !== projectId || message.author !== "gala" || message.kind !== kind) {
-    throw new Error("Card not found.");
+    throw new ConvexError("Card not found.");
   }
   return { message, artifact: (message.artifact ?? {}) as Artifact };
 }
@@ -64,7 +64,7 @@ function hasOption(options: unknown, id: string): boolean {
 /** "#b83a1b" or "#B3A" as "#B83A1B"-style six digits, or an error. */
 function hex(value: string): string {
   const match = /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.exec(value.trim());
-  if (match === null) throw new Error("Colors are written as hex, like #B83A1B.");
+  if (match === null) throw new ConvexError("Colors are written as hex, like #B83A1B.");
   const digits = match[1].length === 3 ? [...match[1]].map((digit) => digit + digit).join("") : match[1];
   return `#${digits.toUpperCase()}`;
 }
@@ -72,7 +72,7 @@ function hex(value: string): string {
 function quote(value: string | undefined): string | undefined {
   const trimmed = (value ?? "").trim();
   if (trimmed.length === 0) return undefined;
-  if (trimmed.length > MAX_QUOTE_LENGTH) throw new Error("Keep it to 280 characters.");
+  if (trimmed.length > MAX_QUOTE_LENGTH) throw new ConvexError("Keep it to 280 characters.");
   return trimmed;
 }
 
@@ -127,23 +127,23 @@ export const act = mutation({
       }
       case "chooseType": {
         // Once the project is past the type step, the type card is history: a change goes back to the step first (FRI-1713, gap C).
-        if (project.stage !== "type") throw new Error("That step is done.");
+        if (project.stage !== "type") throw new ConvexError("That step is done.");
         const { artifact } = await card(ctx, projectId, messageId, "typeSet");
-        if (!hasOption(artifact.directions, action.id)) throw new Error("That typeface is not on the card.");
+        if (!hasOption(artifact.directions, action.id)) throw new ConvexError("That typeface is not on the card.");
         await ctx.db.patch(messageId, { artifact: { ...artifact, chosenId: action.id, saved: true } });
         waitingOnGala = true;
         break;
       }
       case "editType": {
-        if (project.stage !== "type") throw new Error("That step is done.");
+        if (project.stage !== "type") throw new ConvexError("That step is done.");
         const { artifact } = await card(ctx, projectId, messageId, "typeSet");
         await ctx.db.patch(messageId, { artifact: { ...artifact, saved: false } });
         break;
       }
       case "useFamily": {
-        if (project.stage !== "type") throw new Error("That step is done.");
+        if (project.stage !== "type") throw new ConvexError("That step is done.");
         const { artifact } = await card(ctx, projectId, messageId, "typeSet");
-        if (!hasOption(artifact.directions, action.id)) throw new Error("That card is not in the set.");
+        if (!hasOption(artifact.directions, action.id)) throw new ConvexError("That card is not in the set.");
         const directions = (artifact.directions as Artifact[]).map((direction) =>
           direction.id === action.id
             ? { ...direction, family: action.family.slice(0, 80), category: action.category.slice(0, 80), moods: action.moods.slice(0, 120), pick: "person" }
@@ -153,7 +153,7 @@ export const act = mutation({
         break;
       }
       case "approveWordmark": {
-        if (project.stage !== "wordmark") throw new Error("That step is done.");
+        if (project.stage !== "wordmark") throw new ConvexError("That step is done.");
         const { artifact } = await card(ctx, projectId, messageId, "wordmark");
         await ctx.db.patch(messageId, { artifact: { ...artifact, approved: true } });
         waitingOnGala = true;
@@ -161,7 +161,7 @@ export const act = mutation({
       }
       case "setWordmark": {
         // A chip changes the card at once; Gala has nothing to answer until the sign-off.
-        if (project.stage !== "wordmark") throw new Error("That step is done.");
+        if (project.stage !== "wordmark") throw new ConvexError("That step is done.");
         const { artifact } = await card(ctx, projectId, messageId, "wordmark");
         const next = { ...artifact };
         if (action.case !== undefined) {
@@ -176,14 +176,14 @@ export const act = mutation({
         break;
       }
       case "approveLockup": {
-        if (project.stage !== "lockup") throw new Error("That step is done.");
+        if (project.stage !== "lockup") throw new ConvexError("That step is done.");
         const { artifact } = await card(ctx, projectId, messageId, "lockup");
         await ctx.db.patch(messageId, { artifact: { ...artifact, approved: true } });
         waitingOnGala = true;
         break;
       }
       case "setLockup": {
-        if (project.stage !== "lockup") throw new Error("That step is done.");
+        if (project.stage !== "lockup") throw new ConvexError("That step is done.");
         const { artifact } = await card(ctx, projectId, messageId, "lockup");
         const next = { ...artifact };
         if (action.layout !== undefined) next.layout = action.layout;
@@ -198,15 +198,15 @@ export const act = mutation({
       case "chooseVariation": {
         const kind = action.type === "chooseConcept" ? "conceptSet" : "variationSet";
         const stage = action.type === "chooseConcept" ? "directions" : "variations";
-        if (project.stage !== stage) throw new Error("That step is done.");
+        if (project.stage !== stage) throw new ConvexError("That step is done.");
         const { artifact } = await card(ctx, projectId, messageId, kind);
-        if (!hasOption(artifact.concepts, action.id)) throw new Error("That mark is not on the card.");
+        if (!hasOption(artifact.concepts, action.id)) throw new ConvexError("That mark is not on the card.");
         await ctx.db.patch(messageId, { artifact: { ...artifact, chosenId: action.id } });
         waitingOnGala = true;
         break;
       }
       case "saveColors": {
-        if (project.stage !== "pickColors") throw new Error("That step is done.");
+        if (project.stage !== "pickColors") throw new ConvexError("That step is done.");
         const { artifact } = await card(ctx, projectId, messageId, "colorPicker");
         const colors = { primary: hex(action.primary), secondary: hex(action.secondary), tertiary: action.tertiary === null ? null : hex(action.tertiary) };
         await ctx.db.patch(messageId, { artifact: { ...artifact, colors, saved: true } });
@@ -214,31 +214,31 @@ export const act = mutation({
         break;
       }
       case "editColors": {
-        if (project.stage !== "pickColors" && project.stage !== "colorways") throw new Error("That step is done.");
+        if (project.stage !== "pickColors" && project.stage !== "colorways") throw new ConvexError("That step is done.");
         const { artifact } = await card(ctx, projectId, messageId, "colorPicker");
         await ctx.db.patch(messageId, { artifact: { ...artifact, saved: false } });
         await ctx.db.patch(projectId, { stage: "pickColors" });
         break;
       }
       case "chooseColorway": {
-        if (project.stage !== "colorways") throw new Error("That step is done.");
+        if (project.stage !== "colorways") throw new ConvexError("That step is done.");
         const { artifact } = await card(ctx, projectId, messageId, "colorwaySet");
-        if (!hasOption(artifact.colorways, action.id)) throw new Error("That colorway is not on the card.");
+        if (!hasOption(artifact.colorways, action.id)) throw new ConvexError("That colorway is not on the card.");
         await ctx.db.patch(messageId, { artifact: { ...artifact, chosenId: action.id } });
         waitingOnGala = true;
         break;
       }
       case "submitPicks": {
-        if (project.stage !== "picks") throw new Error("That step is done.");
+        if (project.stage !== "picks") throw new ConvexError("That step is done.");
         const { artifact } = await card(ctx, projectId, messageId, "picks");
-        if (artifact.answered !== null && artifact.answered !== undefined) throw new Error("Your picks are already in.");
+        if (artifact.answered !== null && artifact.answered !== undefined) throw new ConvexError("Your picks are already in.");
         let sent = 0;
         if (action.hated !== null) {
           // Only a draft Gala drew for this project can go to the hall of shame.
           const draft = Array.isArray(artifact.drafts)
             ? (artifact.drafts as { id: string; markFileId: Id<"_storage"> }[]).find((entry) => entry.id === action.hated!.draftId)
             : undefined;
-          if (draft === undefined) throw new Error("That draft is not on the card.");
+          if (draft === undefined) throw new ConvexError("That draft is not on the card.");
           const text = quote(action.hated.quote);
           await ctx.db.insert("hallSubmissions", { ownerSubject: subject, projectId, hall: "shame", brandName: project.brandName, markFileId: draft.markFileId, quote: text, quoteCheck: "none" });
           sent++;
@@ -253,9 +253,9 @@ export const act = mutation({
         break;
       }
       case "declinePicks": {
-        if (project.stage !== "picks") throw new Error("That step is done.");
+        if (project.stage !== "picks") throw new ConvexError("That step is done.");
         const { artifact } = await card(ctx, projectId, messageId, "picks");
-        if (artifact.answered !== null && artifact.answered !== undefined) throw new Error("Your picks are already in.");
+        if (artifact.answered !== null && artifact.answered !== undefined) throw new ConvexError("Your picks are already in.");
         await ctx.db.patch(messageId, { artifact: { ...artifact, answered: "declined" } });
         waitingOnGala = true;
         break;

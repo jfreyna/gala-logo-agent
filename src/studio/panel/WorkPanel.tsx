@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { InlineError } from "../Feedback";
 import { CheckBadge } from "../../components/CheckBadge";
 import { Icon } from "../../components/Icon";
 import { useGoogleFont } from "../../lib/googleFont";
@@ -334,7 +335,7 @@ function KitSpec({ data, onBack, onClose }: { data: KitView; onBack: () => void;
   );
 }
 
-function MemoryRow({ line, onEdit, onRemove }: { line: MemoryLine; onEdit: (text: string) => void; onRemove: () => void }) {
+function MemoryRow({ line, error, onEdit, onRemove }: { line: MemoryLine; error?: string; onEdit: (text: string) => void; onRemove: () => void }) {
   const [draft, setDraft] = useState<string | null>(null);
   const editing = draft !== null;
 
@@ -344,6 +345,7 @@ function MemoryRow({ line, onEdit, onRemove }: { line: MemoryLine; onEdit: (text
   }
 
   return (
+    <>
     <div className="relative flex w-full shrink-0 items-start gap-[8px] overflow-clip rounded-[8px] border border-solid border-stroke-1-light p-[12px] dark:border-stroke-1-dark" data-name="memory-row">
       {editing ? (
         <textarea
@@ -374,6 +376,8 @@ function MemoryRow({ line, onEdit, onRemove }: { line: MemoryLine; onEdit: (text
         </button>
       </div>
     </div>
+    {error !== undefined && <InlineError>{error}</InlineError>}
+    </>
   );
 }
 
@@ -398,10 +402,11 @@ function Memory({ data, onBack, onClose, onAddMemory, onEditMemory, onRemoveMemo
             {data.lines
               .filter((line) => line.group === group)
               .map((line) => (
-                <MemoryRow key={line.id} line={line} onEdit={(text) => onEditMemory(line.id, text)} onRemove={() => onRemoveMemory(line.id)} />
+                <MemoryRow key={line.id} line={line} error={data.errors?.[line.id]} onEdit={(text) => onEditMemory(line.id, text)} onRemove={() => onRemoveMemory(line.id)} />
               ))}
           </section>
         ))}
+        <div className="relative flex w-full shrink-0 flex-col items-start gap-[8px]" data-name="add">
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -421,6 +426,8 @@ function Memory({ data, onBack, onClose, onAddMemory, onEditMemory, onRemoveMemo
             <Icon name="plus" />
           </button>
         </form>
+        {data.errors?.add !== undefined && <InlineError>{data.errors.add}</InlineError>}
+        </div>
         <div className="min-h-px w-full flex-[1_0_0]" data-name="spacer" />
         {confirming ? (
           <div className="relative flex w-full shrink-0 flex-col items-start gap-[8px] rounded-[8px] border border-solid border-stroke-1-light p-[12px] dark:border-stroke-1-dark" data-name="clear-confirm">
@@ -446,6 +453,7 @@ function Memory({ data, onBack, onClose, onAddMemory, onEditMemory, onRemoveMemo
             Clear all memory
           </button>
         )}
+        {data.errors?.clear !== undefined && <InlineError>{data.errors.clear}</InlineError>}
       </div>
     </Shell>
   );

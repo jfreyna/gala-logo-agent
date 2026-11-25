@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
@@ -74,15 +74,15 @@ export const send = mutation({
     const { subject } = await requireOwnProject(ctx, projectId);
     const trimmed = text.trim();
     if (trimmed.length === 0 && uploadId === undefined) {
-      throw new Error("Write a message or attach a file.");
+      throw new ConvexError("Write a message or attach a file.");
     }
     if (trimmed.length > MAX_MESSAGE_LENGTH) {
-      throw new Error("That message is too long.");
+      throw new ConvexError("That message is too long.");
     }
     if (uploadId !== undefined) {
       const upload = await ctx.db.get(uploadId);
       if (upload === null || upload.ownerSubject !== subject || upload.projectId !== projectId) {
-        throw new Error("File not found.");
+        throw new ConvexError("File not found.");
       }
     }
     const messageId = await ctx.db.insert("messages", {

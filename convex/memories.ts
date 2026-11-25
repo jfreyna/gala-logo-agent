@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -13,14 +13,14 @@ async function requireOwnMemory(
 ): Promise<Doc<"memories">> {
   const subject = await requireSubject(ctx);
   const memory = await ctx.db.get(memoryId);
-  if (memory === null || memory.ownerSubject !== subject) throw new Error("Line not found.");
+  if (memory === null || memory.ownerSubject !== subject) throw new ConvexError("Line not found.");
   return memory;
 }
 
 function cleanLine(text: string): string {
   const trimmed = text.trim();
-  if (trimmed.length === 0) throw new Error("Write something to remember.");
-  if (trimmed.length > MAX_LINE_LENGTH) throw new Error("That line is too long.");
+  if (trimmed.length === 0) throw new ConvexError("Write something to remember.");
+  if (trimmed.length > MAX_LINE_LENGTH) throw new ConvexError("That line is too long.");
   return trimmed;
 }
 

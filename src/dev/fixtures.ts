@@ -293,6 +293,85 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholderMobile: "Pick A, B or C.",
   },
   wordmark: { items: [{ id: "pick", kind: "visitor", text: "A, Young Serif." }, wordmark], placeholder: "Approve the wordmark, or ask for a change.", placeholderMobile: "Approve, or ask for a change." },
+  // Feedback loops (FRI-1712), failures answered (FRI-1714).
+  couldntDraw: {
+    items: [
+      {
+        id: "type-alata",
+        kind: "typeSet",
+        data: {
+          say: "Three typefaces, chosen from Google’s own categories. You picked Alata.",
+          brandName: BRAND,
+          saved: true,
+          chosenId: "a",
+          directions: [{ id: "a", letter: "A", family: "Alata", category: "Sans · Geometric", moods: "Calm, competent", rationale: "", pick: "person" }],
+        },
+        past: { signedOff: true, backTo: "type" },
+      },
+      { id: "echo-alata", kind: "action", label: "Picked Alata", state: "Sent" },
+      {
+        id: "notice",
+        kind: "notice",
+        notice: {
+          kind: "Couldn't",
+          title: "Couldn’t draw the wordmark",
+          say: "I can’t draw the name in Alata yet: its letters use a font feature my drawing tools don’t read. Choose another typeface and I’ll set the wordmark right away.",
+          actions: [{ label: "Choose another typeface", do: "back", step: "type" }],
+        },
+      },
+    ],
+    placeholder: "Choose another typeface, or name one you like.",
+    placeholderMobile: "Choose another typeface, or name one you like.",
+  },
+  repeated: {
+    items: [
+      { id: "first", kind: "gala", text: "I can’t draw the name in Alata yet. Choose another typeface and I’ll set the wordmark right away." },
+      { id: "again", kind: "visitor", text: "Try Alata again please" },
+      {
+        id: "notice",
+        kind: "notice",
+        notice: {
+          kind: "Repeated",
+          title: "Same problem twice",
+          say: "That failed the same way twice, so another try won’t help. We can go back a step, or you can tell me something different to try here.",
+          actions: [
+            { label: "Go back to Type", do: "back", step: "type" },
+            { label: "Tell me what to try", do: "prompt" },
+          ],
+        },
+      },
+    ],
+    placeholder: "Tell me what to try, or go back a step.",
+    placeholderMobile: "Tell me what to try, or go back a step.",
+  },
+  couldntStart: {
+    items: [
+      { id: "echo", kind: "action", label: "Used this wordmark", state: "Sent" },
+      {
+        id: "notice",
+        kind: "notice",
+        notice: {
+          kind: "Couldn't start",
+          title: "Couldn’t start",
+          say: "I couldn’t start on that: the connection to my studio dropped. Your choice is saved, so nothing is lost.",
+          actions: [{ label: "Try again", do: "retry" }],
+        },
+      },
+    ],
+    placeholder: "Approve the wordmark, or ask for a change.",
+    placeholderMobile: "Approve, or ask for a change.",
+  },
+  // A card action the server refused, its words under the card (FRI-1714).
+  cardError: {
+    items: [{ ...wordmark, error: "That step is done." } as StreamItem],
+    placeholder: "Approve the wordmark, or ask for a change.",
+    placeholderMobile: "Approve, or ask for a change.",
+  },
+  sendFailed: {
+    items: [{ id: "ask", kind: "gala", text: "Tell me who you’re building this for, and give me a sense of the place. A photo or a sketch helps." }],
+    placeholder: "Tell me about the brand you're building.",
+    placeholderMobile: "Tell me about your brand.",
+  },
   // Feedback loops (FRI-1712): a card action heard at once, then done; past cards read-only.
   heard: {
     items: [wordmark, { id: "echo", kind: "action", label: "Using this wordmark", state: "Sending" }],
@@ -538,6 +617,15 @@ export const panels: Record<string, PanelView> = {
       { id: "4", group: "Your taste", text: "Avoids script lettering and gradients." },
       { id: "5", group: "From past projects", text: "Ember & Rye: picked the hearth mark, set in Young Serif." },
     ],
+  },
+  // A memory edit and an add that the server refused (FRI-1714): the server's words under each.
+  memoryErrors: {
+    view: "memory",
+    lines: [
+      { id: "1", group: "About you", text: "Designs for food and hospitality brands in the Midwest." },
+      { id: "2", group: "About you", text: "Likes to see three directions at a time, not more." },
+    ],
+    errors: { "2": "That line is too long.", add: "Write something to remember." },
   },
 };
 

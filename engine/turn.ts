@@ -196,7 +196,9 @@ export class Turn {
       const role = message.author === "visitor" ? "user" : "model";
       let text = message.text ?? "";
       if (message.upload !== null) text = `${text}\n[attached a reference: ${message.upload.fileName}]`.trim();
-      if (message.kind === "action" && message.author === "visitor") text = typeof message.artifact?.sent === "string" ? `[pressed a button on the card: ${message.artifact.sent}]` : "";
+      // A notice is Gala's line about what failed; the model reads its words.
+      if (message.kind === "notice" && message.author === "gala") text = typeof message.artifact?.say === "string" ? message.artifact.say : "";
+      else if (message.kind === "action" && message.author === "visitor") text = typeof message.artifact?.sent === "string" ? `[pressed a button on the card: ${message.artifact.sent}]` : "";
       else if (message.artifact !== null) text = `${message.artifact.say ?? ""}\n[showed the ${message.kind} card]`.trim();
       if (text === "") continue;
       const previous = spoken[spoken.length - 1];

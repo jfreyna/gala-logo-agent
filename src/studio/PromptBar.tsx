@@ -25,6 +25,7 @@ export function PromptBar({
   hints,
   hintsOpen = false,
   focusRequest = 0,
+  failed = false,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -44,6 +45,8 @@ export function PromptBar({
   hintsOpen?: boolean;
   /** Change this number to move the cursor into the prompt. */
   focusRequest?: number;
+  /** Send failed (FRI-1712): the words and the file are kept, and the border says so. */
+  failed?: boolean;
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const form = useRef<HTMLFormElement>(null);
@@ -94,8 +97,11 @@ export function PromptBar({
     <form
       ref={form}
       onSubmit={submit}
-      className="relative flex w-full shrink-0 items-stretch rounded-[20px] border border-solid border-form-stroke-light bg-neutral-0 dark:border-form-background-dark dark:bg-background-1-dark"
+      className={`relative flex w-full shrink-0 items-stretch rounded-[20px] border border-solid bg-neutral-0 dark:bg-background-1-dark ${
+        failed ? "border-error-text-light dark:border-error-text-dark" : "border-form-stroke-light dark:border-form-background-dark"
+      }`}
       data-name="gala-prompt-bar"
+      data-state={failed ? "Send failed" : undefined}
     >
       {showHints && hints.length > 0 && (
         <div

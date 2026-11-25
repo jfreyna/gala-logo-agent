@@ -32,6 +32,8 @@
     "check:cards-drawn": "node scripts/check-cards.mjs",
     "check:weight": "node --experimental-strip-types --no-warnings engine/checks/weight.check.ts",
     "check:feedback-walk": "node --experimental-strip-types --no-warnings scripts/check-feedback-walk.mjs",
+    "check:failures": "node --experimental-strip-types --no-warnings engine/checks/failures.check.ts",
+    "check:failures-drawn": "node scripts/check-failures.mjs",
     "check:routes": "node --experimental-strip-types --no-warnings engine/checks/routes.check.ts",
     "sweep:fonts": "node --experimental-strip-types --no-warnings engine/checks/font-sweep.ts",
     "check:backdrops": "node scripts/check-backdrops.mjs",

@@ -13,6 +13,10 @@ import { download, fileMemoryLine, requestTurn, stopTurn } from "../lib/turn";
 import { groupsOf, mainClass, rankFamilies, topMoods, useTrayData } from "../lib/typeTray";
 import { pastCards } from "../studio/history";
 import { ECHO_KIND, echoFor, type EchoAction } from "../../convex/lib/echo";
+import { messageOf } from "../lib/errors";
+import { ConvexError } from "convex/values";
+import type { NoticeAction } from "../studio/Feedback";
+import { afterRequest, couldNotStart, noticeOf, sendKeepingInput } from "../studio/failures";
 
 /** The steps the History view lists, in order, with the stages each covers. */
 const PHASES: { key: string; name: string; stages: Stage[] }[] = [
@@ -41,6 +45,7 @@ const TURN_RETRIES = 3;
 const TRAY_LENGTH = 40;
 
 type Card = { id: string; kind: ArtifactKind; data: Record<string, any> };
+
 
 /** Which panel is open, and for the type tray, which card it is changing. */
 type Open =
@@ -165,6 +170,12 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
   const [focusRequest, setFocusRequest] = useState(0);
   // The line a card action leaves, shown the instant the click lands, until `act` has stored it (gala-action-echo, Sending).
   const [pending, setPending] = useState<{ key: number; label: string }[]>([]);
+  // The server's own message for what failed, under the control it came from (gala-inline-error), until the next action there.
+  const [cardErrors, setCardErrors] = useState<Record<string, string>>({});
+  const [memoryErrors, setMemoryErrors] = useState<Record<string, string>>({});
+  const [sendError, setSendError] = useState<string | null>(null);
+  // How the last request for a turn ended, once the retries ran out without a turn starting.
+  const [startFailed, setStartFailed] = useState<string | null>(null);
   const nextEcho = useRef(0);
   const tray = useTrayData(panel?.view === "type");
 
@@ -190,17 +201,21 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
   useEffect(() => {
     if (!owed) {
       setAttempt(0);
+      setStartFailed(null);
       return;
     }
-    if (asking.current) return;
+    if (asking.current || startFailed !== null) return;
     asking.current = true;
     let retry: number | undefined;
     void requestTurn(projectId).then((state) => {
       asking.current = false;
-      if (state !== "done" && state !== "stopped" && attempt < TURN_RETRIES) retry = window.setTimeout(() => setAttempt(attempt + 1), 2000 * (attempt + 1));
+      // Out of retries and no turn began: say so, with Try again, instead of stopping without a word.
+      const next = afterRequest(state, attempt, TURN_RETRIES);
+      if (next.next === "retry") retry = window.setTimeout(() => setAttempt(attempt + 1), next.afterMs);
+      if (next.next === "couldNotStart") setStartFailed(next.reason);
     });
     return () => window.clearTimeout(retry);
-  }, [owed, projectId, attempt]);
+  }, [owed, projectId, attempt, startFailed]);
 
   const cards = useMemo<Card[]>(
     () => (messages ?? []).flatMap((message) => (isArtifactKind(message.kind) && message.artifact !== null ? [{ id: message._id, kind: message.kind, data: message.artifact as Record<string, any> }] : [])),
@@ -214,6 +229,9 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
     const past = stage === undefined ? {} : pastCards(all.map((message) => ({ id: message._id, author: message.author, kind: message.kind, artifact: message.artifact as Record<string, any> | null })), stage);
     const stream = all.flatMap((message, at): StreamItem[] => {
       const id = message._id;
+      if (message.kind === "notice" && message.author === "gala" && message.artifact !== null) {
+        return [{ id, kind: "notice", notice: noticeOf(message.artifact as Record<string, any>) }];
+      }
       if (message.kind === ECHO_KIND && message.artifact !== null) {
         // Sending until Gala's working line appears or Gala answers; Sent after. An action that wakes no one is done at once.
         const echo = message.artifact as { sending: string; sent: string; wakes: boolean };
@@ -226,31 +244,53 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
       }
       if (isArtifactKind(message.kind) && message.artifact !== null) {
         // The engine writes each artifact in the shape its kind names.
-        return [{ id, kind: message.kind, data: message.artifact, past: past[id] } as unknown as StreamItem];
+        return [{ id, kind: message.kind, data: message.artifact, past: past[id], error: cardErrors[id] } as unknown as StreamItem];
       }
       return [{ id, kind: message.author === "gala" ? "gala" : "visitor", text: message.text ?? "" }];
     });
     for (const echo of pending) stream.push({ id: `echo-${echo.key}`, kind: "action", label: echo.label, state: "Sending" });
+    if (startFailed !== null) {
+      const lastSaid = all.findLast((message) => message.author === "visitor");
+      stream.push({ id: "couldnt-start", kind: "notice", notice: couldNotStart(startFailed, lastSaid?.kind === ECHO_KIND ? "choice" : "message") });
+    }
     // Gala's "working" line, while a turn runs.
     if (working !== null) stream.push({ id: "working", kind: "working", text: working });
     return stream;
-  }, [messages, working, pending, stage]);
+  }, [messages, working, pending, stage, cardErrors, startFailed]);
 
+  /**
+   * Sends the message and the file. The box and the attachment are cleared
+   * only once the send went through; if it fails, both stay, the bar shows
+   * Send failed, and the reason is under it (FRI-1712 pattern 6).
+   */
   async function sendMessage() {
     const words = text.trim();
     const attached = file;
     if (words.length === 0 && attached === null) return;
-    setText("");
-    setFile(null);
-    let uploadId: Id<"uploads"> | undefined;
-    if (attached !== null) {
-      const address = await startUpload({ projectId });
-      const response = await fetch(address, { method: "POST", headers: { "Content-Type": attached.file.type }, body: attached.file });
-      const { storageId } = (await response.json()) as { storageId: Id<"_storage"> };
-      uploadId = await finishUpload({ projectId, fileId: storageId, fileName: attached.file.name });
-      if (attached.previewUrl !== null) URL.revokeObjectURL(attached.previewUrl);
+    setSendError(null);
+    const failed = await sendKeepingInput({
+      words,
+      attached: attached === null ? null : { name: attached.file.name },
+      upload: async () => {
+        const address = await startUpload({ projectId });
+        const response = await fetch(address, { method: "POST", headers: { "Content-Type": attached!.file.type }, body: attached!.file });
+        if (!response.ok) throw new Error("The file did not upload.");
+        const { storageId } = (await response.json()) as { storageId: Id<"_storage"> };
+        return finishUpload({ projectId, fileId: storageId, fileName: attached!.file.name });
+      },
+      send: (uploadId) => send({ projectId, text: words, uploadId: uploadId as Id<"uploads"> | undefined }),
+      messageOf,
+    });
+    if (failed !== null) {
+      setSendError(failed);
+      return;
     }
-    await send({ projectId, text: words, uploadId });
+    setText((current) => (current.trim() === words ? "" : current));
+    setFile((current) => {
+      if (current !== attached) return current;
+      if (attached?.previewUrl) URL.revokeObjectURL(attached.previewUrl);
+      return null;
+    });
   }
 
   function saveFile(label: string) {
@@ -276,15 +316,50 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
     const echo = echoFor(recorded as EchoAction, card);
     const key = nextEcho.current++;
     if (echo !== null) setPending((list) => [...list, { key, label: echo.sending }]);
+    // A new action on the card clears its last error; a refusal shows the server's words under the card.
+    setCardErrors(({ [messageId]: _, ...rest }) => rest);
     void act({ projectId, messageId, action: recorded })
-      .catch(() => undefined)
+      .catch((error) => setCardErrors((errors) => ({ ...errors, [messageId]: messageOf(error) })))
       .finally(() => setPending((list) => list.filter((entry) => entry.key !== key)));
+  }
+
+  /** Try again, on a notice: asks for the turn once more. A turn still owed starts its requests over. */
+  function retry() {
+    if (startFailed !== null) {
+      setStartFailed(null);
+      setAttempt(0);
+      return;
+    }
+    if (working !== null || asking.current) return;
+    asking.current = true;
+    void requestTurn(projectId).finally(() => {
+      asking.current = false;
+    });
+  }
+
+  /** A notice's button: go back a step, show the type card waiting for a pick, try again, or hand the next move to the message box. */
+  function onNotice(action: NoticeAction) {
+    if (action.do === "back") return goBack(action.step as Stage);
+    if (action.do === "retry") return retry();
+    if (action.do === "showType") {
+      const cardsOnPage = document.querySelectorAll('[data-name="gala-type-set"]');
+      return cardsOnPage[cardsOnPage.length - 1]?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    setFocusRequest((value) => value + 1);
+  }
+
+  /** Runs a memory action; its failure shows under the control it came from, until the next action there. */
+  function remember(control: string, run: () => Promise<unknown>) {
+    setMemoryErrors(({ [control]: _, ...rest }) => rest);
+    void run().catch((error) => setMemoryErrors((errors) => ({ ...errors, [control]: messageOf(error) })));
   }
 
   function onAction(action: ArtifactAction, itemId: string) {
     const messageId = itemId as Id<"messages">;
     switch (action.type) {
       // "Back to this step" on a past card's footer: the same path as the Work panel's link.
+      case "notice":
+        return onNotice(action.action);
       case "backToStep": {
         const step = items.find((item) => item.id === itemId)?.past?.backTo;
         if (step != null) goBack(step);
@@ -329,7 +404,7 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
   if (panel?.view === "history") {
     view = { view: "history", projectName: projectName(project.brandName), phases: phasesFor(project.stage, summaries(cards, project.stage)), formats: KIT_FORMATS, kitReady: hasKit && kit != null };
   } else if (panel?.view === "memory") {
-    view = { view: "memory", lines: (memories ?? []).map((memory) => ({ id: memory._id, group: memory.group, text: memory.text })) };
+    view = { view: "memory", lines: (memories ?? []).map((memory) => ({ id: memory._id, group: memory.group, text: memory.text })), errors: memoryErrors };
   } else if (panel?.view === "color") {
     const colors = latest("colorPicker")?.data.colors as { primary: string; secondary: string; tertiary: string | null } | null | undefined;
     if (colors) {
@@ -432,19 +507,26 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
               setPanel(null);
             }}
             onDownloadFormat={saveFile}
-            onAddMemory={(line) => {
+            onAddMemory={(line) =>
               // The line shows at once; Gala's server then files it under the heading it belongs to.
-              void addMemory({ group: "About you", text: line }).then((memoryId) => fileMemoryLine(memoryId, line));
-            }}
-            onEditMemory={(id, line) => void editMemory({ memoryId: id as Id<"memories">, text: line })}
-            onRemoveMemory={(id) => void removeMemory({ memoryId: id as Id<"memories"> })}
-            onClearMemory={() => void clearMemory({})}
+              remember("add", async () => {
+                const memoryId = await addMemory({ group: "About you", text: line });
+                if (!(await fileMemoryLine(memoryId, line))) throw new ConvexError("I kept that line, but couldn’t file it under its heading, so it sits under About you for now.");
+              })
+            }
+            onEditMemory={(id, line) => remember(id, () => editMemory({ memoryId: id as Id<"memories">, text: line }))}
+            onRemoveMemory={(id) => remember(id, () => removeMemory({ memoryId: id as Id<"memories"> }))}
+            onClearMemory={() => remember("clear", () => clearMemory({}))}
           />
         ) : null
       }
       prompt={{
         value: text,
-        onChange: setText,
+        onChange: (value) => {
+          setText(value);
+          setSendError(null);
+        },
+        sendError,
         onSend: () => void sendMessage(),
         placeholder,
         placeholderMobile,
@@ -453,8 +535,12 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
         workingMobile: working === null || working === "" ? working : `${working}…`,
         onStop: () => void stopTurn(projectId),
         attachment: file !== null ? { fileName: file.file.name, previewUrl: file.previewUrl } : null,
-        onAttach: (picked) => setFile({ file: picked, previewUrl: picked.type.startsWith("image/") ? URL.createObjectURL(picked) : null }),
+        onAttach: (picked) => {
+          setSendError(null);
+          setFile({ file: picked, previewUrl: picked.type.startsWith("image/") ? URL.createObjectURL(picked) : null });
+        },
         onRemoveAttachment: () => {
+          setSendError(null);
           if (file?.previewUrl) URL.revokeObjectURL(file.previewUrl);
           setFile(null);
         },

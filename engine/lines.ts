@@ -15,6 +15,11 @@ export const TROUBLE_LINE = "Something went wrong on my side. Send that again an
  * where the person can pick again right there.
  */
 export function cannotDrawLine(name: string, problem: { family: string; why: string; letters: string[] }, atType: boolean): string {
+  // A color typeface draws, but not as a logo: the kit draws it in one color, so Gala doesn't use them.
+  if (problem.why === "color") {
+    const next = atType ? "Pick another typeface and I’ll set the name in it." : "Want to go back to type and pick another?";
+    return `${problem.family} is a color typeface, and I don’t use those: your logo is drawn in one color, so its colors would be lost. ${next}`;
+  }
   const drawn = [...new Set([...name].filter((letter) => letter.trim() !== ""))];
   const lacksAll = problem.letters.length > 0 && drawn.every((letter) => problem.letters.some((missing) => missing.includes(letter)));
   const reason =

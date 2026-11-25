@@ -78,7 +78,7 @@ type Body = Record<string, unknown>;
  */
 function shortMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : "";
-  const sentence = /(?:Uncaught Error: )?([A-Z][^\n]{0,60}\.)(?:\n|$)/.exec(message);
+  const sentence = /(?:Uncaught (?:Convex)?Error: )?([A-Z][^\n]{0,60}\.)(?:\n|$)/.exec(message);
   if (sentence !== null && !message.includes("ArgumentValidationError")) return sentence[1];
   console.warn(`A call was not accepted: ${message.split("\n")[0]}`);
   return "Not accepted.";

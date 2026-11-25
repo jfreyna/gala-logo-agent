@@ -81,6 +81,19 @@ const screens = [
   { name: "fb-heard-desktop-light", path: "/preview/heard?top=1", w: 1440, h: 948, scheme: "light" },
   { name: "fb-heardworking-desktop-light", path: "/preview/heardWorking?top=1", w: 1440, h: 995, scheme: "light" },
   { name: "fb-history-desktop-light", path: "/preview/history", w: 1440, h: 1040, scheme: "light" },
+  // Failures answered (FRI-1714). Couldn't draw is also drawn in desktop dark and on a phone.
+  { name: "fb-couldntdraw-desktop-light", path: "/preview/couldntDraw?top=1", w: 1440, h: 900, scheme: "light" },
+  { name: "fb-couldntdraw-desktop-dark", path: "/preview/couldntDraw?top=1", w: 1440, h: 900, scheme: "dark" },
+  { name: "fb-couldntdraw-mobile-light", path: "/preview/couldntDraw?top=1", w: 380, h: 812, scheme: "light" },
+  { name: "fb-repeated-desktop-light", path: "/preview/repeated?top=1", w: 1440, h: 900, scheme: "light" },
+  { name: "fb-couldntstart-desktop-light", path: "/preview/couldntStart?top=1", w: 1440, h: 900, scheme: "light" },
+  {
+    name: "fb-sendfailed-desktop-light",
+    path: `/preview/sendFailed?top=1&attached=1&file=storefront.jpg&typing=${encodeURIComponent("Here’s our storefront, and the street it’s on")}&sendError=${encodeURIComponent("That file is too large. The limit is 10 MB. Your words are still here; attach a smaller file or send without it.")}`,
+    w: 1440,
+    h: 900,
+    scheme: "light",
+  },
   // The join card's three sign-in states, drawn in Figma as component variants: the card alone, 340 wide on desktop and 348 on a phone.
   ...[
     ["signin", "signIn", 450],

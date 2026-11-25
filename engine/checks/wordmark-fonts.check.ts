@@ -37,7 +37,7 @@ for (const [family, why] of [
     typeCard.artifact = { ...typeCard.artifact!, directions: typeCard.artifact!.directions.map((entry: { id: string }) => (entry.id === typeCard.artifact!.chosenId ? { ...entry, family } : entry)) };
     const result = await runTurn(store, prompt, new AbortController().signal);
     assertEqual(result, "done", "the turn's result");
-    assert(!store.messages.some((message) => message.text === TROUBLE_LINE), "Gala said the trouble line");
+    assert(!store.messages.some((message) => message.text === TROUBLE_LINE || message.kind === "notice"), "Gala said the trouble line or wrote a notice");
     const card = store.latest("wordmark").artifact!;
     assertEqual([card.family, card.brandName, card.approved], [family, "Ember & Rye", false], "the card");
     assertEqual(typeof card.readsAt16, "boolean", "the 16px reading");

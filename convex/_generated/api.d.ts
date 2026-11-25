@@ -13,6 +13,7 @@ import type * as halls from "../halls.js";
 import type * as http from "../http.js";
 import type * as identity from "../identity.js";
 import type * as kits from "../kits.js";
+import type * as lib_echo from "../lib/echo.js";
 import type * as lib_owner from "../lib/owner.js";
 import type * as lib_turn from "../lib/turn.js";
 import type * as memories from "../memories.js";
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   identity: typeof identity;
   kits: typeof kits;
+  "lib/echo": typeof lib_echo;
   "lib/owner": typeof lib_owner;
   "lib/turn": typeof lib_turn;
   memories: typeof memories;

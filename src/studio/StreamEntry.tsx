@@ -12,11 +12,21 @@ import { ColorPicker } from "./artifacts/ColorPicker";
 import { ColorwaySet } from "./artifacts/ColorwaySet";
 import { Kit } from "./artifacts/Kit";
 import { Picks } from "./artifacts/Picks";
-import { ActionEcho } from "./Feedback";
+import { ActionEcho, InlineError, Notice } from "./Feedback";
 import type { ArtifactAction, StreamItem } from "./streamTypes";
 
-/** Draws one item of the conversation. */
+/** Draws one item of the conversation, and under a card, the message for an action on it that failed. */
 export function StreamEntry({ item, onAction }: { item: StreamItem; onAction: (action: ArtifactAction) => void }) {
+  if (item.error === undefined) return <Entry item={item} onAction={onAction} />;
+  return (
+    <div className="relative flex w-full shrink-0 flex-col items-start gap-[8px]" data-name="with-error">
+      <Entry item={item} onAction={onAction} />
+      <InlineError>{item.error}</InlineError>
+    </div>
+  );
+}
+
+function Entry({ item, onAction }: { item: StreamItem; onAction: (action: ArtifactAction) => void }) {
   // A card whose step is past shows its footer in place of its buttons and chips; "Back to this step" goes back to it.
   const history = { past: item.past, onBack: () => onAction({ type: "backToStep" }) };
   switch (item.kind) {
@@ -28,6 +38,8 @@ export function StreamEntry({ item, onAction }: { item: StreamItem; onAction: (a
       return <WorkingMessage>{item.text}</WorkingMessage>;
     case "action":
       return <ActionEcho label={item.label} state={item.state} />;
+    case "notice":
+      return <Notice notice={item.notice} onAction={(action) => onAction({ type: "notice", action })} />;
     case "upload":
       return <Upload fileName={item.fileName} sizeLabel={item.sizeLabel} imageUrl={item.imageUrl} text={item.text} />;
     case "brief":

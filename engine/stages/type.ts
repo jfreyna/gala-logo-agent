@@ -10,6 +10,7 @@ import { classLabel, fontData, rank, topMoods } from "../fonts.ts";
 import type { Shape } from "../gemini.ts";
 import { ask, SURE, type Choice, type Score } from "../jev.ts";
 import { cannotDrawLine, NO_TYPEFACE_LINE, WORKING } from "../lines.ts";
+import { NOTICE_KIND, noticeFor } from "../notice.ts";
 import { googleFamily } from "../steer.ts";
 import { optionId, requestsOf, type Outcome, type Request, type Turn } from "../turn.ts";
 import { CannotSet } from "../../kit/src/font.ts";
@@ -149,9 +150,10 @@ export async function type(turn: Turn): Promise<Outcome> {
     const verdict = await whyNot(family, namesToSet(turn.nameAsTyped));
     if (verdict instanceof CannotSet) {
       console.log(`Type: the chosen typeface can't draw the name (${verdict.why})`);
+      const previous = turn.state.messages.findLast((message) => message.author === "gala") ?? null;
       await turn.write([
         { op: "patchArtifact", messageId: card.id, artifact: { ...set, chosenId: null, saved: false } },
-        { op: "say", text: cannotDrawLine(turn.nameAsTyped, verdict, true) },
+        { op: "artifact", kind: NOTICE_KIND, artifact: noticeFor(verdict, "type", turn.nameAsTyped, previous) },
       ]);
       return "wait";
     }

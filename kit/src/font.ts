@@ -55,7 +55,7 @@ export type FontInfo = {
  */
 export class CannotSet extends Error {
   readonly family: string;
-  readonly why: "notOnGoogle" | "unreadable" | "missingLetters" | "noOutline";
+  readonly why: "notOnGoogle" | "unreadable" | "missingLetters" | "noOutline" | "color";
   /** The letters the typeface cannot draw, when that is the reason. */
   readonly letters: string[];
   constructor(family: string, why: CannotSet["why"], message: string, letters: string[] = []) {

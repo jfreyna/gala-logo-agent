@@ -105,7 +105,7 @@ function SavedType({ direction, brandName, onEdit, past, onBack }: { direction: 
     >
       <div className="relative flex min-w-px flex-wrap items-center gap-[16px]" data-name="chosen">
         <div className="relative flex shrink-0 items-center justify-center rounded-[8px] bg-neutral-0 px-[16px] py-[10px]" data-name="paper">
-          <p className="shrink-0 whitespace-nowrap text-[24px] leading-[normal] text-[#000000]" style={{ fontFamily: `"${direction.family}", serif` }}>
+          <p className="shrink-0 whitespace-nowrap text-[20px] leading-[normal] text-[#000000] desktop:text-[24px]" style={{ fontFamily: `"${direction.family}", serif` }}>
             {brandName}
           </p>
         </div>

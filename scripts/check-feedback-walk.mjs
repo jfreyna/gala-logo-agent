@@ -3,6 +3,9 @@
  * Cards and history on the dev deployment (FRI-1713): every card action
  * leaves its line and wakes Gala; past cards refuse changes; a typeface
  * change after the type step goes back through a turn and redraws.
+ * Failures answered (FRI-1714): refusals come back in the server's own
+ * words; a color typeface is answered with a notice, and the same failure
+ * twice with Repeated.
  *
  *   node --experimental-strip-types --no-warnings scripts/check-feedback-walk.mjs
  *
@@ -167,9 +170,61 @@ check("picking another typeface redraws the wordmark in it; the first wordmark s
   expect(messages().some((message) => message._id === firstWordmark._id), "the first wordmark was removed");
 });
 
+/** Runs a call that should be refused, and returns the words it was refused with ("" when it went through). */
+function refused(call) {
+  try {
+    call();
+  } catch (error) {
+    return error.message;
+  }
+  return "";
+}
+
+// Failures answered (FRI-1714): the server's own words, thrown so a production deployment passes them on.
+
+check("a refused card action comes back in the server's own words, as a ConvexError", async () => {
+  const oldType = messages().find((message) => message.kind === "typeSet");
+  const words = refused(() => press(oldType._id, { type: "chooseType", id: oldType.artifact.directions[2].id }));
+  expect(/ConvexError/.test(words) && /That step is done\./.test(words), `refused with: ${words || "it went through"}`);
+});
+
+check("a message over 4,000 characters is refused in plain words, and nothing is stored", async () => {
+  const before = messages().length;
+  const words = refused(() => say("x".repeat(4001)));
+  expect(/That message is too long\./.test(words), `refused with: ${words || "it went through"}`);
+  expect(messages().length === before, "something was stored");
+});
+
+check("a memory line over the limit is refused in plain words", async () => {
+  const words = refused(() => run("memories:add", { group: "About you", text: "x".repeat(2000) }, person));
+  expect(/That line is too long\./.test(words), `refused with: ${words || "it went through"}`);
+});
+
+check("a color typeface picked from the tray is un-picked, with a Couldn't notice and Choose another typeface", async () => {
+  await turn("type");
+  expect(stage() === "type", `stage is ${stage()}`);
+  const set = newest("typeSet");
+  const a = set.artifact.directions[0].id;
+  press(set._id, { type: "useFamily", id: a, family: "Noto Color Emoji", category: "Display", moods: "" });
+  press(set._id, { type: "chooseType", id: a });
+  await turn();
+  const notice = newest("notice");
+  expect(notice?.author === "gala" && notice.artifact.cause === "color" && notice.artifact.kind === "couldnt", `the notice: ${JSON.stringify(notice?.artifact)}`);
+  expect(notice.artifact.actions[0].label === "Choose another typeface" && /color typeface/.test(notice.artifact.say), `the notice: ${JSON.stringify(notice.artifact)}`);
+  expect(stage() === "type" && newest("typeSet").artifact.chosenId === null, "the pick was not undone");
+});
+
+check("the same failure again at the type step is Repeated: a step back, and no retry", async () => {
+  const set = newest("typeSet");
+  press(set._id, { type: "chooseType", id: set.artifact.directions[0].id });
+  await turn();
+  const notice = newest("notice").artifact;
+  expect(notice.kind === "repeated" && notice.actions.map((action) => action.label).join() === "Go back to Research,Tell me what to try", `the notice: ${JSON.stringify(notice)}`);
+});
+
 let passed = 0;
 let ran = 0;
-console.log(`Cards and history on dev: ${checks.length} checks (engine: ${engineDir} on Sprite "${spriteName}")`);
+console.log(`Cards, history and failures on dev: ${checks.length} checks (engine: ${engineDir} on Sprite "${spriteName}")`);
 for (const { name, fn } of checks) {
   ran++;
   try {

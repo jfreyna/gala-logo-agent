@@ -1,3 +1,4 @@
+import { ConvexError } from "convex/values";
 import type { QueryCtx, MutationCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 
@@ -7,7 +8,7 @@ import type { Doc, Id } from "../_generated/dataModel";
  */
 export async function requireSubject(ctx: QueryCtx | MutationCtx): Promise<string> {
   const identity = await ctx.auth.getUserIdentity();
-  if (identity === null) throw new Error("Sign in to continue.");
+  if (identity === null) throw new ConvexError("Sign in to continue.");
   return identity.subject;
 }
 
@@ -23,7 +24,7 @@ export async function requireOwnProject(
   const subject = await requireSubject(ctx);
   const project = await ctx.db.get(projectId);
   if (project === null || project.ownerSubject !== subject) {
-    throw new Error("Project not found.");
+    throw new ConvexError("Project not found.");
   }
   return { subject, project };
 }

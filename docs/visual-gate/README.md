@@ -172,3 +172,11 @@ Run on 2026-11-25, port 3004, on `feature/FRI-1713-cards-history`. The three Fee
 The other 80 screens were not compared with their frames this run (the exports are not on this machine). Instead each was compared with the same screen built from `main` at `1399a18`: all 80 are unchanged (no screen over 0.05% of pixels).
 
 `fri1713/` holds the built screens with no frame: the same three in desktop dark and on a phone, light and dark, drawn from the components' Dark and Mobile modes.
+
+## Failures answered (FRI-1714)
+
+Run on 2026-11-25, port 3004, on `feature/FRI-1714-failures`, with the six frames this issue builds exported that day: `fb-couldntdraw-*` (Couldn't draw 5663:16958, Dark 5663:18899, Mobile 5663:19036), `fb-repeated-*` (Same problem twice 5663:17106), `fb-couldntstart-*` (Couldn't start 5663:17225) and `fb-sendfailed-*` (Send failed 5663:18092). All six are within 0.4 to 2.8%. The signed-off type card's specimen is 20px on a phone, as Couldn't draw Mobile draws it.
+
+The other 80 screens were again compared with `main` at `1399a18`: all unchanged.
+
+`fri1714/` holds the built screens with no frame: the same four in the modes the file leaves to the components, and two with no frame of their own: `carderror-*` (a refused card action, its words under the card) and `memoryerrors-*` (refused memory actions, under the line and under Add), both built from `gala-inline-error`.

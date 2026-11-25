@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { Header } from "../components/Header";
 import { PromptBar, type Attachment } from "./PromptBar";
 import { StreamEntry } from "./StreamEntry";
+import { InlineError } from "./Feedback";
 import type { ArtifactAction, StreamItem } from "./streamTypes";
 
 /**
@@ -48,6 +49,8 @@ export function StudioView({
     hints: string[];
     hintsOpen?: boolean;
     focusRequest?: number;
+    /** Why the last send failed (Send failed): shown under the bar, with the words and the file kept. */
+    sendError?: string | null;
   };
 }) {
   const conversation = useRef<HTMLDivElement>(null);
@@ -76,8 +79,9 @@ export function StudioView({
               </div>
             </div>
           </div>
-          <div className="relative flex w-full max-w-[768px] shrink-0 flex-col items-start" data-name="composer">
-            <PromptBar {...prompt} />
+          <div className="relative flex w-full max-w-[768px] shrink-0 flex-col items-start gap-[8px]" data-name="composer">
+            <PromptBar {...prompt} failed={prompt.sendError != null} />
+            {prompt.sendError != null && <InlineError>{prompt.sendError}</InlineError>}
           </div>
         </div>
         {panel}

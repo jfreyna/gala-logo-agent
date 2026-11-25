@@ -44,6 +44,8 @@ const colors = {
   "neutral-300": "#d4d4d4",
   "neutral-500": "#737373",
   "neutral-900": "#171717",
+  /** The left rule on gala-notice (FRI-1712), the same in both modes. */
+  "warning-400": "#f0c000",
   "brand-secondary-50": "#f4f7e3",
   "brand-tertiary-50": "#f6fafc",
   "brand-tertiary-200": "#d6e8f0",

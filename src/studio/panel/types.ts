@@ -64,6 +64,8 @@ export type MemoryView = {
   lines: MemoryLine[];
   /** Shows the clear-all confirmation from the start. Used by the dev preview only. */
   confirming?: boolean;
+  /** The server's message for a memory action that failed, under the control it came from: a line's id, "add" or "clear". */
+  errors?: Record<string, string>;
 };
 
 export type PanelView = HistoryView | ArtifactView | ColorView | TypeView | KitView | MemoryView;

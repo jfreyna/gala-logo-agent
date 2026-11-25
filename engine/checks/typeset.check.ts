@@ -51,7 +51,11 @@ async function open(store: MemoryStore): Promise<Turn> {
   await turn.read();
   return turn;
 }
-const lastLine = (store: MemoryStore) => store.messages.findLast((message) => message.author === "gala" && message.kind === "text")?.text ?? "";
+/** Gala's last words: a plain line, or a notice's (FRI-1714: a failure is answered in a notice). */
+const lastLine = (store: MemoryStore) => {
+  const last = store.messages.findLast((message) => message.author === "gala" && (message.kind === "text" || message.kind === "notice"));
+  return last?.kind === "notice" ? (last.artifact?.say ?? "") : (last?.text ?? "");
+};
 /** The type card with one family picked, as a press on "Use this typeface" leaves it. */
 function pick(store: MemoryStore, family: string): void {
   const card = store.latest("typeSet");

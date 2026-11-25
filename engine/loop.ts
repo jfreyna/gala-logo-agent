@@ -12,7 +12,7 @@
  * one opens: a stage returns "continue" only after its own sign-off.
  */
 import { CannotSet } from "../kit/src/font.ts";
-import { cannotDrawLine, TROUBLE_LINE } from "./lines.ts";
+import { NOTICE_KIND, noticeFor } from "./notice.ts";
 import type { Prompt } from "./prompt.ts";
 import { brief } from "./stages/brief.ts";
 import { colorways, pickColors } from "./stages/color.ts";
@@ -66,11 +66,13 @@ export async function runTurn(store: Store, prompt: Prompt, signal: AbortSignal,
     throw new Error(`The turn did not settle at stage ${turn.stage}.`);
   } catch (error) {
     if (signal.aborted) return "stopped";
-    // The cause goes to the server log; the person gets a plain line.
+    // The cause goes to the server log; the person gets a notice that names it in plain words, with a way forward (notice.ts).
     console.error(`Turn failed at stage ${turn.stage}: ${error instanceof Error ? error.message : "unknown error"}`);
-    // A typeface that cannot draw the name is not trouble that passes: sending the message again would fail the same way, so Gala says what is wrong.
-    const line = error instanceof CannotSet ? cannotDrawLine(turn.nameAsSet, error, false) : TROUBLE_LINE;
-    await store.write([{ op: "say", text: line }]).catch(() => undefined);
+    // The same cause twice in a row at this step changes the answer: Gala's last message says what failed last time.
+    const previous = turn.state.messages.findLast((message) => message.author === "gala") ?? null;
+    const notice = noticeFor(error, turn.stage, turn.nameAsSet, previous);
+    await store.write([{ op: "artifact", kind: NOTICE_KIND, artifact: notice }]).catch(() => undefined);
+    // A typeface that cannot draw the name is not trouble that passes: the turn is done, and the notice says what to do.
     return error instanceof CannotSet ? "done" : "trouble";
   } finally {
     await store.end().catch(() => undefined);
