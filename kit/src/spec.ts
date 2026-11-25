@@ -23,7 +23,13 @@ export const MINIMUM_SIZES = [
 ] as const;
 
 export type Colors = { primary: string; secondary: string; tertiary?: string };
-export type Ground = Role | "white";
+/**
+ * What the square and the social image sit on: a neutral light gray by
+ * default, white, or one of the brand colors.
+ */
+export type Ground = Role | "white" | "neutral";
+/** The neutral ground: a light gray, so a white mark edge still shows in a feed or an avatar. */
+export const NEUTRAL_GROUND = "#F5F5F5";
 export type Colorway = { mark: Role; wordmark: Role; ground?: Ground };
 
 export type SpecColor = {
@@ -36,7 +42,7 @@ export type SpecColor = {
   contrast: { onWhite: Contrast; onBlack: Contrast };
 };
 
-export type SpecPair = { foreground: Role | "white" | "black"; background: Role | "white" | "black"; contrast: Contrast };
+export type SpecPair = { foreground: Role | "white" | "black"; background: Role | "white" | "black" | "neutral"; contrast: Contrast };
 
 export type SpecSheet = {
   version: 1;
@@ -56,8 +62,9 @@ export function rolesIn(colors: Colors): Role[] {
   return colors.tertiary === undefined ? ["primary", "secondary"] : ["primary", "secondary", "tertiary"];
 }
 
-export function resolve(colors: Colors, key: Role | "white" | "black"): string {
+export function resolve(colors: Colors, key: Role | "white" | "black" | "neutral"): string {
   if (key === "white") return WHITE;
+  if (key === "neutral") return NEUTRAL_GROUND;
   if (key === "black") return BLACK;
   const hex = colors[key];
   if (hex === undefined) throw new Error(`kit: the colorway uses ${key}, but no ${key} color was given`);
@@ -79,7 +86,7 @@ export function buildSpec(name: string, colors: Colors, colorway: Colorway, font
     };
   });
 
-  const ground = colorway.ground ?? "white";
+  const ground = colorway.ground ?? "neutral";
   const seen = new Set<string>();
   const pairs: SpecPair[] = [];
   const addPair = (foreground: SpecPair["foreground"], background: SpecPair["background"]) => {

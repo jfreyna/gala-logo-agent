@@ -1,6 +1,26 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import type { QueryCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { requireOwnProject } from "./lib/owner";
+
+/**
+ * A card stores each of its images as a file id, under a key that ends in
+ * "FileId" (`markFileId`, `previewFileId`). For the owner, every such key
+ * gains a sibling that ends in "Url" with an address the browser can load.
+ */
+async function withFileAddresses(ctx: QueryCtx, value: unknown): Promise<unknown> {
+  if (Array.isArray(value)) return Promise.all(value.map((entry) => withFileAddresses(ctx, entry)));
+  if (value === null || typeof value !== "object") return value;
+  const result: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    result[key] = await withFileAddresses(ctx, entry);
+    if (key.endsWith("FileId") && typeof entry === "string") {
+      result[`${key.slice(0, -"FileId".length)}Url`] = await ctx.storage.getUrl(entry as Id<"_storage">);
+    }
+  }
+  return result;
+}
 
 /** A project's conversation, oldest first. Owner only. */
 export const list = query({
@@ -21,7 +41,7 @@ export const list = query({
           author: message.author,
           kind: message.kind,
           text: message.text ?? null,
-          artifact: message.artifact ?? null,
+          artifact: message.artifact === undefined ? null : await withFileAddresses(ctx, message.artifact),
           upload: upload
             ? {
                 fileName: upload.fileName,
@@ -73,7 +93,7 @@ export const send = mutation({
       text: trimmed,
       uploadId,
     });
-    await ctx.db.patch(projectId, { updatedAt: Date.now() });
+    await ctx.db.patch(projectId, { updatedAt: Date.now(), waitingOnGala: true });
     return messageId;
   },
 });

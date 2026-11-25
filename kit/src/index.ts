@@ -32,7 +32,7 @@ export type KitInput = {
   fontWeight?: number;
   /** #rrggbb. */
   colors: Colors;
-  /** The chosen colorway: which color fills the mark and the wordmark, and the square and social ground (default white). */
+  /** The chosen colorway: which color fills the mark and the wordmark, and the ground of the square and the social image (default: the neutral light gray). */
   colorway: Colorway;
 };
 
@@ -93,7 +93,7 @@ function validate(input: KitInput): void {
     if (!roles.includes(input.colorway[key])) throw new Error(`kit: colorway.${key} must be primary, secondary or tertiary`);
   }
   const ground = input.colorway.ground;
-  if (ground !== undefined && ground !== "white" && !roles.includes(ground)) throw new Error("kit: colorway.ground must be white or a role");
+  if (ground !== undefined && ground !== "white" && ground !== "neutral" && !roles.includes(ground)) throw new Error("kit: colorway.ground must be neutral, white or a role");
 }
 
 export async function buildKit(input: KitInput, options: KitOptions = {}): Promise<KitResult> {
@@ -112,7 +112,7 @@ export async function buildKit(input: KitInput, options: KitOptions = {}): Promi
 
   const markColor = resolve(input.colors, input.colorway.mark);
   const wordColor = resolve(input.colors, input.colorway.wordmark);
-  const groundColor = resolve(input.colors, input.colorway.ground ?? "white");
+  const groundColor = resolve(input.colors, input.colorway.ground ?? "neutral");
   const fills: Record<Variant, Fills> = {
     color: { mark: markColor, wordmark: wordColor },
     black: { mark: "#000000", wordmark: "#000000" },

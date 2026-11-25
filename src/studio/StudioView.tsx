@@ -22,7 +22,8 @@ export function StudioView({
 }: {
   projectName: string;
   items: StreamItem[];
-  onAction: (action: ArtifactAction) => void;
+  /** What the person did on a card, and the id of the card it was done on. */
+  onAction: (action: ArtifactAction, itemId: string) => void;
   /** The work panel, or null when it is closed. */
   panel: ReactNode | null;
   onOpenWork: () => void;
@@ -68,7 +69,7 @@ export function StudioView({
           <div ref={conversation} className="conversation relative flex min-h-px w-full max-w-[768px] flex-[1_0_0] flex-col items-start overflow-y-auto" data-name="conversation">
             <div className={`relative flex w-full shrink-0 flex-col items-start gap-[20px] desktop:gap-[28px] ${restAtBottom ? "mt-auto" : ""}`}>
               {items.map((item) => (
-                <StreamEntry key={item.id} item={item} onAction={onAction} />
+                <StreamEntry key={item.id} item={item} onAction={(action) => onAction(action, item.id)} />
               ))}
             </div>
           </div>

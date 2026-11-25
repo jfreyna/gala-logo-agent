@@ -1,8 +1,9 @@
 /**
  * Gala's server, as it runs on the Sprite.
  *
- * It serves the built web app and nothing else yet; the agent loop joins it
- * under /api. It has no dependencies beyond Node.
+ * It serves the built web app, and under /api it runs the engine: the
+ * agent loop in engine/. The server itself has no dependencies beyond
+ * Node; the engine adds only the kit's.
  *
  * Because Frilly trusts this origin with sign-ins, three rules hold here:
  *   1. It never redirects. No response sends a browser to an address taken
@@ -15,6 +16,7 @@ import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { handleApi, startEngine } from "../engine/api.ts";
 
 const PORT = Number(process.env.PORT ?? 8080);
 const BUILD_DIR = resolve(fileURLToPath(new URL("../dist", import.meta.url)));
@@ -90,6 +92,11 @@ const server = createServer(async (request, response) => {
     return send(response, 200, { "Content-Type": "text/plain; charset=utf-8" }, "ok");
   }
 
+  if (pathname.startsWith("/api/")) {
+    if (await handleApi(request, response, pathname)) return;
+    return send(response, 404, { "Content-Type": "text/plain; charset=utf-8" }, "Not found");
+  }
+
   if (request.method !== "GET" && request.method !== "HEAD") {
     return send(response, 405, { Allow: "GET, HEAD" }, "Method not allowed");
   }
@@ -130,6 +137,15 @@ const server = createServer(async (request, response) => {
     request.method === "HEAD" ? undefined : index,
   );
 });
+
+// The prompt is fetched from storage into memory before the first request
+// is answered. It is never written to disk. Without the engine's
+// environment the app is still served, and /api answers "unavailable".
+try {
+  console.log(`Engine ready (prompt: ${await startEngine()})`);
+} catch (error) {
+  console.warn(`Engine not started: ${error instanceof Error ? error.message : "unknown error"}`);
+}
 
 server.listen(PORT, () => {
   console.log(`Gala is listening on port ${PORT}`);

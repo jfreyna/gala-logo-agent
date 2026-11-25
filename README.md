@@ -4,23 +4,65 @@ Gala, a logo design agent on Fly.io Sprites. The persona prompt is withheld.
 
 Gala takes a person from a brief to a finished logo kit, in five steps: discovery, form and type in black and white, concepts and a stress test, color, and the kit. Every choice comes in threes.
 
-This repository holds the web app and its storage. The agent's engine lands in a later change.
+This repository holds the web app, its storage, the engine that does the work, and the kit pipeline.
 
 ## How it is put together
 
 ```
-Browser ──────────────► Gala's server on a Fly.io Sprite     serves the built web app
+Browser ──────────────► Gala's server on a Fly.io Sprite
+   │                       serves the web app
+   │                       runs the engine: POST /api/turn
+   │                          │
+   │                          ├──► Gemini, through a Sprites connector    words, research, drawing
+   │                          ├──► Jev, through a Sprites connector       every choice and every check
+   │                          └──► the kit pipeline (kit/)                lock-ups, SVG, EPS, PNG, spec
    │
-   ├── sign-in ───────► Frilly (accounts)                    Google, or email and password
+   ├── sign-in ───────► Frilly (accounts)                      Google, or email and password
    │
-   └── data ──────────► Gala's own Convex project            projects, chat, memory, uploads, kits
-                          trusts Frilly's sign-in tokens
+   └── data ──────────► Gala's own Convex project              projects, chat, memory, uploads, kits
+                          trusts Frilly's sign-in tokens          and, in its environment, the prompt
 ```
 
 - **The web app** (`src/`) is React and TypeScript, built with Vite and styled with Tailwind. The screens are a one-to-one build of the design frames: the colors, type and spacing in `tailwind.config.js` and `src/index.css` carry the design system's own names.
 - **Sign-in is Frilly's.** Gala has no accounts of its own. `src/lib/auth.ts` talks to Frilly's sign-in from Gala's address, which Frilly trusts by name.
 - **Storage is Gala's own Convex project** (`convex/`). `convex/auth.config.ts` trusts the tokens Frilly's sign-in issues, so no key of Frilly's is stored here or on the Sprite. Every table row carries its owner, and every function checks the caller against it (`convex/lib/owner.ts`). The one public read is the halls on the front page (`convex/halls.ts`), which returns only what a person chose to submit.
-- **The server** (`server/index.mjs`) is a small Node program with no dependencies. It serves the built app. Because Frilly trusts its address with sign-ins, it never redirects, never logs a query string, and reads files only from the build folder.
+- **The server** (`server/index.mjs`) is a small Node program. It serves the built app and runs the engine under `/api`. Because Frilly trusts its address with sign-ins, it never redirects, never logs a query string or a token, and reads files only from the build folder.
+- **No model key is anywhere in this project.** The two model gateways are Sprites connectors: they answer only from inside the Sprite and take no auth header.
+
+## The engine
+
+**Code owns the process, the model owns the words and the drawings, and Jev owns every pick from a known set.** The order of the steps, "always three", the checks, the contrast numbers and the kit are code (`engine/loop.ts`, `engine/stages/`). No model decides what happens next, so a model's reply can't skip a step or add a fourth option.
+
+How a turn runs:
+
+1. The person does something: sends a message, or presses a button on a card. That writes straight to storage (`convex/messages.ts`, `convex/studio.ts`), as the person, and never as Gala.
+2. The page asks Gala's server for a turn (`POST /api/turn`), carrying the person's own sign-in token.
+3. The server opens the turn in storage, which takes a lock so a project has one turn at a time, and reads the project.
+4. It runs the current stage, and keeps going through stages until one needs the person.
+5. Everything Gala is about to say passes the prompt-protection checks, then is written to storage. The page sees it through its live queries. The browser receives Gala's replies and nothing else.
+
+| Stage | What happens |
+|---|---|
+| Brief | Gala interviews; one brief card is kept up to date. A reference image the person attaches is read and acknowledged. |
+| Research | One search-grounded call finds real competitors and neighbors; Gala proposes a direction and waits for approval. |
+| Type | Jev picks the type classes and scores the moods that fit the brief, from Google's own tag file; code ranks every family (`engine/fonts.ts`). |
+| Directions, variations | Three marks are drawn, traced to vector paths and judged. A draft that fails a check is set aside with its reason and drawn again (`engine/drafting.ts`, `engine/marks.ts`). |
+| Stress test | Code renders the mark at 16px, in a circle, inverted and at poster size; Jev judges each render. |
+| Color | The person picks their colors. Code lists every way to apply them, with contrast computed; the model picks three and says why, and what it says is checked against the numbers (`engine/colorways.ts`). |
+| Kit, picks | The kit pipeline builds the files; quotes sent to the halls are checked before they can show. |
+
+**Who may write what.** The engine reaches storage through a handful of HTTP routes (`convex/http.ts`) that require two proofs together: the person's sign-in token, which says whose project it is, and a secret shared between the server and storage, which says the caller is Gala's server. Without the secret, a signed-in person could write as Gala and put an unchecked image or quote in the public halls. Without the token, the secret alone can't touch a project.
+
+**The seam.** The engine talks to storage through one interface (`engine/store.ts`). On the server it is backed by Convex; in checks it is backed by memory, which is how a whole brief runs against the real models with no sign-in.
+
+## What is withheld, and how it is guarded
+
+The persona prompt, the instructions for each step and the hall rules are not in this repository and never were. `engine/standin-prompt.ts` is a short stand-in with the same sections, so the code runs from a fresh clone.
+
+- **Where the real prompt lives:** in the environment of Gala's Convex project, split across numbered values (one value holds 8 KiB). One internal function joins them (`convex/prompt.ts`), and one route returns it to a caller holding the shared secret.
+- **On the Sprite:** the server fetches it once at boot and keeps it in memory (`engine/prompt.ts`). It is never written to disk.
+- **Before anything Gala says is stored or shown** (`engine/guard.ts`): the persona is told never to reveal its instructions; a code check refuses any reply that repeats a 48-character run of the prompt, ignoring case, spacing and punctuation; and Jev is asked whether the reply reveals or describes its instructions. A reply that fails is replaced by a short decline. There is no list of forbidden phrases.
+- **What this does not prove:** a paraphrase that Jev scores low, or a leak spread thinly across many replies, would get through.
 
 ## Where things are
 
@@ -31,9 +73,11 @@ Browser ──────────────► Gala's server on a Fly.io 
 | `src/studio/` | The conversation, the prompt bar, each artifact Gala places in the chat, and the work panel |
 | `src/lib/` | Sign-in, joining, color maths, theme, the small router |
 | `src/dev/` | Development only: sample content and preview routes. Compiled out of production builds |
-| `convex/` | Schema and functions for Gala's Convex project |
+| `convex/` | Schema and functions for Gala's Convex project, and the routes the engine calls |
+| `engine/` | The agent loop, its stages, the model and Jev clients, prompt protection, and the checks |
+| `kit/` | The kit pipeline: a mark, a typeface and colors in; the lock-up files and spec sheet out |
 | `server/` | The server that runs on the Sprite |
-| `scripts/` | Deploy to the Sprite; the visual gate |
+| `scripts/` | Deploy to the Sprite; the visual gate; the behavior checks; the prompt loader and the history check |
 | `public/backdrops/` | The page backdrops, one file per backdrop and mode |
 | `docs/visual-gate/` | Each built screen beside its design frame |
 
@@ -41,17 +85,27 @@ Browser ──────────────► Gala's server on a Fly.io 
 
 ```bash
 npm install
-cp env.example .env.local   # then fill in the three addresses
+cp env.example .env.local   # then fill in the addresses
 npx convex dev --once       # pushes the functions to your Convex dev deployment
 npm run dev                 # http://localhost:3000
 ```
 
-`npm run typecheck` checks the app and the Convex functions. `npm run build` makes the production build in `dist/`; `npm start` serves it.
+`npm run typecheck` checks the app, the Convex functions and the engine. `npm run build` makes the production build in `dist/`; `npm start` serves it.
+
+The engine needs the two connectors, so it runs only on a Sprite. `./scripts/deploy-sprite.sh` builds and deploys; the server reads its settings from `/home/sprite/gala.env` (see `env.example`), a file the deploy never touches. With `sprite proxy 8080` running, the dev server passes `/api` through to the Sprite.
 
 ## Checks
 
-- **Visual gate:** `node scripts/visual-gate.mjs <folder of frame PNGs> docs/visual-gate` puts every screen beside its design frame and counts differing pixels. It needs the dev server running and the frames exported from the design file at their own size. Results and what the gate does and does not prove are in `docs/visual-gate/README.md`.
+Each prints `N/N passed`, or `N/M, run incomplete` when a check could not run. Each file says at the top what it proves and what it does not.
 
-## What is withheld
-
-The persona prompt, the phase instructions and the hall rules are not in this repository and never were. `.gitignore` covers local drafts.
+| Command | What it checks | Runs |
+|---|---|---|
+| `npm run check:guard` | The code half of prompt protection: copies of the prompt are caught, reformatted or not; ordinary replies are not | anywhere |
+| `npm run check:jev` | The Jev reply check and the halls' quote check, on leaking, harmless, offensive and personal cases | on the Sprite |
+| `npm run check:e2e` | One full brief, first message to kit and picks, against the real models with a scripted person | on the Sprite |
+| `npm run check:storage` | The storage functions as a signed-in person and as Gala's server: the turn lock, Gala's writes, ownership, choices, and quotes waiting for their check | anywhere with the Convex CLI signed in to a dev deployment |
+| `npm run check:history -- <local prompt draft>` | No line of the real prompt is in any commit, as written or re-wrapped | anywhere, by whoever holds the draft |
+| `node scripts/check-sprite-disk.mjs <local prompt draft>` | No line of the real prompt is in any file on the Sprite | from a machine with the Sprite CLI |
+| `node scripts/smoke.mjs` | What the screens do: the join card's states, the halls, the studio's controls | with the dev server running |
+| `node scripts/visual-gate.mjs <frames> docs/visual-gate` | Every screen beside its design frame | with the dev server running |
+| `cd kit && npm run verify` | The kit's color maths and every file it writes | anywhere; the EPS checks need Ghostscript |

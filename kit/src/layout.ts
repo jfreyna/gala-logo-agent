@@ -6,8 +6,11 @@
  * - Primary: mark box 48, gap 10, type 22 (mark left, type right).
  * - Stacked: mark box 56, gap 6, type 16 (mark above, type below, centered).
  * - Icon: the mark alone. Wordmark: the type alone.
- * The type is centered on its cap height, so descenders do not pull it off
- * the mark's center line. Every artwork is cropped tight to its ink; clear
+ * In the primary lock-up the type is centered on its cap height, so
+ * descenders do not pull it off the mark's center line; its gap is
+ * horizontal and measured from the glyphs' own left edge. In the stacked
+ * lock-up the type hangs from its cap height and is pushed down when its
+ * real ink would come closer to the mark than the gap. Every artwork is cropped tight to its ink; clear
  * space is a rule in the spec sheet, not padding in the file.
  *
  * The square (1024x1024) and the social image (1200x630) are not drawn in
@@ -71,7 +74,13 @@ export function stackedLockup(mark: TracedMark, setType: TypeSetter): Artwork {
   const markShape = place(m, -mb.width / 2, 0);
   const type = setType(UNIT * LOCKUP_RATIOS.stacked.type);
   const tb = bounds(type.segments);
-  const baseline = mb.height + UNIT * LOCKUP_RATIOS.stacked.gap + type.capHeight;
+  const gap = UNIT * LOCKUP_RATIOS.stacked.gap;
+  // The name hangs from its cap height, the way the design draws it. But a
+  // typeface can draw letters taller than the cap height it states, and
+  // ascenders rise above capitals, so the gap is also held against the
+  // glyphs' real top (`tb.y`, measured from the outlines, negative above the
+  // baseline): the name moves down until its ink clears the mark by the gap.
+  const baseline = mb.height + gap + Math.max(type.capHeight, -tb.y);
   const word: Shape = { part: "wordmark", segments: transform(type.segments, 1, -tb.x - tb.width / 2, baseline), fillRule: "nonzero" };
   return crop([markShape, word]);
 }

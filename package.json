@@ -3,14 +3,19 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Gala, a logo design agent on Fly.io Sprites.",
+  "description": "Gala, a logo design agent on Fly.io Sprites. The persona prompt is withheld.",
   "scripts": {
     "dev": "vite --port 3000 --strictPort",
     "build": "tsc --noEmit -p tsconfig.json && vite build",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p convex/tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p convex/tsconfig.json && tsc -p engine/tsconfig.json",
     "start": "node server/index.mjs",
     "smoke": "node scripts/smoke.mjs",
-    "gate": "node scripts/visual-gate.mjs"
+    "gate": "node scripts/visual-gate.mjs",
+    "check:guard": "node --experimental-strip-types --no-warnings engine/checks/guard.check.ts",
+    "check:jev": "node --experimental-strip-types --no-warnings engine/checks/jev.check.ts",
+    "check:e2e": "node --experimental-strip-types --no-warnings engine/checks/e2e.ts",
+    "check:history": "node scripts/check-history.mjs",
+    "check:storage": "node scripts/check-storage.mjs"
   },
   "dependencies": {
     "@convex-dev/better-auth": "0.8.6",

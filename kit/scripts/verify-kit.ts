@@ -31,6 +31,8 @@ import pngjs from "pngjs";
 import resvg from "@resvg/resvg-js";
 import { buildKit, type KitFile, type KitInput, type KitResult } from "../src/index.ts";
 import { contrast, ladder } from "../src/color.ts";
+import { loadFont, setText, type FetchLike } from "../src/font.ts";
+import { inkBox, LOCKUP_RATIOS, primaryLockup, stackedLockup } from "../src/layout.ts";
 import { bounds, parsePath, subpathCount } from "../src/path.ts";
 import { traceMark } from "../src/trace.ts";
 import { assert, assertClose, assertEqual, createHarness, NotRun } from "./harness.ts";
@@ -262,11 +264,11 @@ for (const lockup of LOCKUPS) {
 
 for (const [lockup, w, hgt] of [["square", 1024, 1024], ["social", 1200, 630]] as const) {
   const p = `${lockup}/${SLUG}-${lockup}.png`;
-  h.check(`${p}: ${w}x${hgt}, white ground, the mark in primary`, () => {
+  h.check(`${p}: ${w}x${hgt}, the neutral #F5F5F5 ground in the corner, the mark in primary`, () => {
     const f = byPath(p);
     assertEqual(pngSize(f.bytes), { width: w, height: hgt }, "size");
     const png = PNG.sync.read(Buffer.from(f.bytes));
-    assertEqual([...png.data.subarray(0, 4)], [255, 255, 255, 255], "corner is not opaque white");
+    assertEqual([...png.data.subarray(0, 4)], [0xf5, 0xf5, 0xf5, 255], "corner is not the opaque neutral ground");
     let primary = 0;
     for (let i = 0; i < png.data.length; i += 4) if (png.data[i] === 0xb8 && png.data[i + 1] === 0x3a && png.data[i + 2] === 0x1b) primary++;
     assert(primary > w * hgt * 0.01, `only ${primary} primary-colored pixels`);
@@ -291,7 +293,7 @@ h.check("spec: every contrast number recomputes to the same value", () => {
     assertEqual(c.contrast.onWhite, contrast(c.hex, "#FFFFFF"), `${c.role} on white`);
     assertEqual(c.contrast.onBlack, contrast(c.hex, "#000000"), `${c.role} on black`);
   }
-  assertEqual(kit.spec.pairs.map((p) => `${p.foreground}/${p.background}`), ["primary/white", "tertiary/white"], "pairs");
+  assertEqual(kit.spec.pairs.map((p) => `${p.foreground}/${p.background}`), ["primary/white", "tertiary/white", "primary/neutral", "tertiary/neutral"], "pairs");
   assertEqual(kit.spec.pairs[0]!.contrast.label, "5.7:1", "primary on white label");
 });
 
@@ -304,6 +306,41 @@ h.check("spec: clear space, minimum sizes and type as the Kit view shows them", 
 });
 
 // ---- other inputs -----------------------------------------------------------
+
+// ---- lock-up spacing --------------------------------------------------------
+//
+// The stacked lock-up places the name by its cap height. Some typefaces draw
+// letters taller than the cap height they state (Rye is one), and before the
+// guard in `stackedLockup` the name then ran into the mark. These checks
+// measure the outlined glyphs themselves, not the font's metrics.
+//
+// What they do not prove: other typefaces, or names with accents above the
+// capitals, beyond the two families here. The guard measures the real ink, so
+// it holds for any outline, but only these two are asserted.
+
+/** The clear distance between the mark's ink and the name's ink, as a share of the mark's box. */
+async function spacing(family: string, lockup: "stacked" | "primary"): Promise<number> {
+  const [mark, font] = await Promise.all([traceMark(fixtureBytes), loadFont(family, 400, fetch as unknown as FetchLike)]);
+  const art = (lockup === "stacked" ? stackedLockup : primaryLockup)(mark, (fontSize) => setText(font, INPUT.name, fontSize));
+  const markInk = inkBox(art, "mark");
+  const nameInk = inkBox(art, "wordmark");
+  const box = Math.max(markInk.width, markInk.height);
+  return lockup === "stacked" ? (nameInk.y - (markInk.y + markInk.height)) / box : (nameInk.x - (markInk.x + markInk.width)) / box;
+}
+
+for (const [family, why] of [
+  ["Rye", "its letters rise above its stated cap height"],
+  ["Young Serif", "an ordinary serif, as a control"],
+] as const) {
+  h.check(`stacked lock-up in ${family} (${why}): the name's ink is at least the stated gap below the mark's ink`, async () => {
+    const gap = await spacing(family, "stacked");
+    assert(gap >= LOCKUP_RATIOS.stacked.gap - 1e-6, `gap is ${gap.toFixed(4)} of the mark's box; the stated gap is ${LOCKUP_RATIOS.stacked.gap.toFixed(4)}`);
+  });
+}
+
+h.check("primary lock-up in Rye: the name's ink starts exactly the stated gap to the right of the mark's ink", async () => {
+  assertClose(await spacing("Rye", "primary"), LOCKUP_RATIOS.primary.gap, 1e-6, "gap, as a share of the mark's box");
+});
 
 h.check("an SVG mark is rasterized and traced to the same subpath count", async () => {
   const svg = byPath(`svg/${SLUG}-icon-black.svg`);

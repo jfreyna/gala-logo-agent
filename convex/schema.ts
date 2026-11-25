@@ -40,6 +40,14 @@ export default defineSchema({
     latestMarkFileId: v.optional(v.id("_storage")),
     /** Last time anything in the project changed (ms since epoch). */
     updatedAt: v.number(),
+    /**
+     * Set while Gala's server is working on this project. It is the lock
+     * that keeps turns one at a time, and `status` is the "working" line the
+     * studio shows. A turn that died leaves it behind; it expires by age.
+     */
+    turn: v.optional(v.object({ id: v.string(), startedAt: v.number(), status: v.string() })),
+    /** The person did something Gala has not answered yet. */
+    waitingOnGala: v.optional(v.boolean()),
   }).index("by_owner_and_updatedAt", ["ownerSubject", "updatedAt"]),
 
   /**
@@ -119,6 +127,21 @@ export default defineSchema({
         contentType: v.string(),
         fileId: v.id("_storage"),
       }),
+    ),
+    /**
+     * What each format chip and "Download kit" hands over: a zip per file
+     * format, the square, the social image, and one zip of everything.
+     */
+    downloads: v.optional(
+      v.array(
+        v.object({
+          /** "SVG", "EPS", "PNG", "Square", "Social" or "Kit". */
+          label: v.string(),
+          fileName: v.string(),
+          contentType: v.string(),
+          fileId: v.id("_storage"),
+        }),
+      ),
     ),
     /** Clear space, minimum sizes, type and color ladders. */
     spec: v.any(),

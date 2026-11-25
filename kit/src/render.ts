@@ -90,6 +90,11 @@ export function toEps(art: Artwork, fills: Fills, title: string): { text: string
   return { text, width, height };
 }
 
+/** Renders any SVG text to a PNG `width` px wide. For previews and check renders; kit files use `toPng`. */
+export function rasterize(svg: string, width: number): Uint8Array {
+  return new Uint8Array(new Resvg(svg, { fitTo: { mode: "width", value: width }, font: { loadSystemFonts: false } }).render().asPng());
+}
+
 /** Renders SVG text to PNG, `longEdge` px on the longer side (or the SVG's own size). */
 export function toPng(svg: string, art: Artwork, longEdge?: number): { bytes: Uint8Array; width: number; height: number } {
   const fitTo = longEdge === undefined ? ({ mode: "original" } as const) : art.width >= art.height ? ({ mode: "width", value: longEdge } as const) : ({ mode: "height", value: longEdge } as const);

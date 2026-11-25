@@ -20,6 +20,15 @@ export const forProject = query({
     return {
       _id: kit._id,
       spec: kit.spec,
+      /** What each format chip and "Download kit" hands over. */
+      downloads: await Promise.all(
+        (kit.downloads ?? []).map(async (file) => ({
+          label: file.label,
+          fileName: file.fileName,
+          contentType: file.contentType,
+          url: await ctx.storage.getUrl(file.fileId),
+        })),
+      ),
       files: await Promise.all(
         kit.files.map(async (file) => ({
           label: file.label,
