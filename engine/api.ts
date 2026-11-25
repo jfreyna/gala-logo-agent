@@ -21,10 +21,10 @@ import { classLabel, fontData } from "./fonts.ts";
 import { runTurn, type TurnResult } from "./loop.ts";
 import { headingFor } from "./memory.ts";
 import { assertComplete, loadPrompt, type Prompt } from "./prompt.ts";
-import { ConvexStore } from "./store-convex.ts";
+import { ConvexStore, fileMemoryLine, ownsProject, StorageError } from "./store-convex.ts";
 
 /** Turns in progress, by project. One per project; storage's lock says the same. */
-const running = new Map<string, { controller: AbortController; finished: Promise<TurnResult> }>();
+const running = new Map<string, { controller: AbortController; finished: Promise<TurnResult | "signin"> }>();
 
 /** More turns than this at once and new ones are asked to wait: each one draws and checks several images. */
 const MAX_TURNS_AT_ONCE = 12;
@@ -65,6 +65,21 @@ function tokenOf(request: IncomingMessage): string | null {
   return match === null ? null : match[1]!;
 }
 
+/**
+ * When a token was issued and when it runs out, for the log. Only these two
+ * times are read from it; the token itself is never logged. Storage is what
+ * verifies the token: this is for telling, afterwards, how old it was.
+ */
+function tokenTimes(token: string): string {
+  try {
+    const claims = JSON.parse(Buffer.from(token.split(".")[1]!, "base64url").toString("utf8")) as { iat?: number; exp?: number };
+    const time = (seconds: number | undefined) => (typeof seconds === "number" ? new Date(seconds * 1000).toISOString() : "unknown");
+    return `issued ${time(claims.iat)}, expires ${time(claims.exp)}`;
+  } catch {
+    return "times unreadable";
+  }
+}
+
 /** A storage id: letters and digits only, so it is safe to put in a URL or a map key. */
 function idOf(value: unknown): string | null {
   return typeof value === "string" && /^[a-z0-9]{8,64}$/i.test(value) ? value : null;
@@ -80,9 +95,15 @@ async function turn(request: IncomingMessage, response: ServerResponse): Promise
   if (entry === undefined) {
     if (running.size >= MAX_TURNS_AT_ONCE) return json(response, 429, { state: "busy" });
     const controller = new AbortController();
+    // The turn's id: random, and from here on the proof that this turn was opened by the project's owner.
     const store = new ConvexStore({ projectId, turnId: randomUUID(), token });
+    console.log(`Turn asked for; sign-in token ${tokenTimes(token)}.`);
     const finished = runTurn(store, prompt, controller.signal)
-      .catch((): TurnResult => "trouble")
+      .catch((error): TurnResult | "signin" => {
+        // Storage refused to open the turn. A refused sign-in is told apart, so the page can sign in afresh and ask again.
+        console.warn(`Turn not opened: ${error instanceof Error ? error.message : "unknown error"}`);
+        return error instanceof StorageError && error.status === 401 ? "signin" : "trouble";
+      })
       .finally(() => running.delete(projectId));
     entry = { controller, finished };
     running.set(projectId, entry);
@@ -105,11 +126,7 @@ async function stop(request: IncomingMessage, response: ServerResponse): Promise
   const entry = running.get(projectId);
   if (entry === undefined) return json(response, 200, { state: "idle" });
   // Storage decides whether this person owns the project; only then is the turn stopped.
-  try {
-    await new ConvexStore({ projectId, turnId: "stop", token }).end();
-  } catch {
-    return json(response, 403, { state: "refused" });
-  }
+  if (!(await ownsProject(projectId, token).catch(() => false))) return json(response, 403, { state: "refused" });
   entry.controller.abort();
   json(response, 200, { state: "stopped" });
 }
@@ -122,7 +139,7 @@ async function memory(request: IncomingMessage, response: ServerResponse): Promi
   if (token === null || memoryId === null || text === null) return json(response, 400, { state: "refused" });
   try {
     const group = await headingFor(text);
-    await new ConvexStore({ projectId: "", turnId: "", token }).fileMemory(memoryId, group);
+    await fileMemoryLine(memoryId, group, token);
     json(response, 200, { state: "done" });
   } catch {
     json(response, 502, { state: "trouble" });

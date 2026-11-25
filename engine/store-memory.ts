@@ -15,6 +15,8 @@ export class MemoryStore implements Store {
   files = new Map<string, { bytes: Uint8Array; contentType: string }>();
   kit: { files: StoredFile[]; downloads: StoredFile[]; spec: unknown } | null = null;
   status = "";
+  /** Every "working" line set so far, in order, for checks. */
+  statuses: string[] = [];
   private next = 1;
 
   private id(prefix: string): string {
@@ -49,6 +51,10 @@ export class MemoryStore implements Store {
     });
   }
 
+  async read(): Promise<Project> {
+    return this.begin();
+  }
+
   async write(operations: Operation[]): Promise<void> {
     const refs = new Map<string, string>();
     for (const item of operations) {
@@ -70,6 +76,7 @@ export class MemoryStore implements Store {
         }
         case "status":
           this.status = item.text;
+          this.statuses.push(item.text);
           break;
         case "project":
           if (item.brandName !== undefined) this.project.brandName = item.brandName;

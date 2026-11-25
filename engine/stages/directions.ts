@@ -79,7 +79,7 @@ async function drawRound(turn: Turn, round: Round): Promise<Outcome> {
         facts: { drawn: findings(drafts, round.letters), setAside: setAside.map((entry) => entry.reason) },
         shape: WORDS_SHAPE,
       }),
-    (value) => [value.say, ...value.rationales, ...drafts.map((draft) => draft.name)],
+    (value) => ({ line: value.say, card: [...value.rationales, ...drafts.map((draft) => draft.name)] }),
   );
   if (words === null) {
     await turn.decline();

@@ -29,6 +29,9 @@ const KIT_FORMATS = ["SVG", "EPS", "PNG", "Square", "Social"];
 /** The prompt bar's examples (from the studio's design). */
 const HINTS = ["Here’s what my business does and who it’s for", "Show me the logos my competitors use", "Keep it simple enough to work at 16px"];
 
+/** How many more times a turn that did not run is asked for. */
+const TURN_RETRIES = 3;
+
 /** How many families the type tray lists. All are ranked first; this is how much of the ranking shows. */
 const TRAY_LENGTH = 40;
 
@@ -143,15 +146,39 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
   const [focusRequest, setFocusRequest] = useState(0);
   const tray = useTrayData(panel?.view === "type");
 
-  // Gala is owed a turn whenever the person has done something unanswered
-  // and no turn is running. One request at a time; a reload asks again.
-  const asking = useRef(false);
-  const owed = project?.waitingOnGala === true && project.working === null;
+  // A turn's lock runs out after a while. The query's answer is not
+  // recomputed as time passes, so the page watches the clock itself: once
+  // the lock is older than its lifetime, Gala is no longer "working".
+  const [, setLockChecked] = useState(0);
+  const lockEndsAt = project?.turnStartedAt != null ? project.turnStartedAt + project.turnLifetimeMs : null;
   useEffect(() => {
-    if (!owed || asking.current) return;
+    if (lockEndsAt === null) return;
+    const timer = window.setTimeout(() => setLockChecked((count) => count + 1), Math.max(0, lockEndsAt - Date.now()) + 500);
+    return () => window.clearTimeout(timer);
+  }, [lockEndsAt]);
+  const working = project !== undefined && lockEndsAt !== null && Date.now() < lockEndsAt ? (project.working ?? "") : null;
+
+  // Gala is owed a turn whenever the person has done something unanswered
+  // and no turn is running. One request at a time. A turn that did not run
+  // (the sign-in had lapsed, the server was busy or out of reach) is asked
+  // for again, a few times, each with a new token.
+  const asking = useRef(false);
+  const [attempt, setAttempt] = useState(0);
+  const owed = project?.waitingOnGala === true && working === null;
+  useEffect(() => {
+    if (!owed) {
+      setAttempt(0);
+      return;
+    }
+    if (asking.current) return;
     asking.current = true;
-    void requestTurn(projectId).finally(() => (asking.current = false));
-  }, [owed, projectId]);
+    let retry: number | undefined;
+    void requestTurn(projectId).then((state) => {
+      asking.current = false;
+      if (state !== "done" && state !== "stopped" && attempt < TURN_RETRIES) retry = window.setTimeout(() => setAttempt(attempt + 1), 2000 * (attempt + 1));
+    });
+    return () => window.clearTimeout(retry);
+  }, [owed, projectId, attempt]);
 
   const cards = useMemo<Card[]>(
     () => (messages ?? []).flatMap((message) => (isArtifactKind(message.kind) && message.artifact !== null ? [{ id: message._id, kind: message.kind, data: message.artifact as Record<string, any> }] : [])),
@@ -171,9 +198,9 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
       return [{ id, kind: message.author === "gala" ? "gala" : "visitor", text: message.text ?? "" }];
     });
     // Gala's "working" line, while a turn runs.
-    if (project?.working != null) stream.push({ id: "working", kind: "working", text: project.working });
+    if (working !== null) stream.push({ id: "working", kind: "working", text: working });
     return stream;
-  }, [messages, project?.working]);
+  }, [messages, working]);
 
   async function sendMessage() {
     const words = text.trim();
@@ -350,8 +377,8 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
         placeholder,
         placeholderMobile,
         // The bar says what Gala is doing in the first person: "I’m drawing three directions…".
-        working: project.working === null || project.working === "" ? project.working : `I’m ${project.working.charAt(0).toLowerCase()}${project.working.slice(1)}…`,
-        workingMobile: project.working === null || project.working === "" ? project.working : `${project.working}…`,
+        working: working === null || working === "" ? working : `I’m ${working.charAt(0).toLowerCase()}${working.slice(1)}…`,
+        workingMobile: working === null || working === "" ? working : `${working}…`,
         onStop: () => void stopTurn(projectId),
         attachment: file !== null ? { fileName: file.file.name, previewUrl: file.previewUrl } : null,
         onAttach: (picked) => setFile({ file: picked, previewUrl: picked.type.startsWith("image/") ? URL.createObjectURL(picked) : null }),

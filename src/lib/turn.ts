@@ -13,31 +13,48 @@ async function token(): Promise<string | null> {
   return data?.token ?? null;
 }
 
-async function post(path: string, body: Record<string, unknown>): Promise<void> {
+/** The last state the server reported, or null when the call could not be made. */
+async function post(path: string, body: Record<string, unknown>): Promise<string | null> {
+  // A new token for every call: it is asked for here, never kept.
   const bearer = await token();
-  if (bearer === null) return;
+  if (bearer === null) return null;
   const response = await fetch(path, {
     method: "POST",
     headers: { Authorization: `Bearer ${bearer}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  // The turn's answer stays open until Gala is done; read it to the end.
-  await response.text();
+  // The turn's answer stays open until Gala is done, one state per line; the last line is how it ended.
+  const lines = (await response.text()).trim().split("\n");
+  try {
+    return (JSON.parse(lines[lines.length - 1] ?? "") as { state?: string }).state ?? null;
+  } catch {
+    return null;
+  }
 }
 
-/** Asks Gala to take a turn on a project. Resolves when the turn ends. */
-export function requestTurn(projectId: string): Promise<void> {
-  return post("/api/turn", { projectId }).catch(() => undefined);
+/**
+ * Asks Gala to take a turn on a project. Resolves when the turn ends, with
+ * how it ended: "done", "stopped", "busy", "signin" (the sign-in was
+ * refused when the turn opened), "trouble", or null when nothing answered.
+ */
+export function requestTurn(projectId: string): Promise<string | null> {
+  return post("/api/turn", { projectId }).catch(() => null);
 }
 
 /** Stops the turn in progress. */
 export function stopTurn(projectId: string): Promise<void> {
-  return post("/api/stop", { projectId }).catch(() => undefined);
+  return post("/api/stop", { projectId }).then(
+    () => undefined,
+    () => undefined,
+  );
 }
 
 /** Asks Gala to file a line the person added to memory under its heading. */
 export function fileMemoryLine(memoryId: string, text: string): Promise<void> {
-  return post("/api/memory", { memoryId, text }).catch(() => undefined);
+  return post("/api/memory", { memoryId, text }).then(
+    () => undefined,
+    () => undefined,
+  );
 }
 
 /** Saves a stored file under its own name. Storage addresses are on another origin, so a plain link can't name the download. */

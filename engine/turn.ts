@@ -8,7 +8,7 @@
  * other way for a stage to put words in front of a person.
  */
 import { fill, type Image, type Shape, type Spoken } from "./gemini.ts";
-import { checkReply } from "./guard.ts";
+import { checkReply, describeVerdict, type Shown } from "./guard.ts";
 import { ask, SURE } from "./jev.ts";
 import { DECLINE_LINE } from "./lines.ts";
 import { recall } from "./memory.ts";
@@ -30,10 +30,13 @@ export class Turn {
     this.signal = signal;
   }
 
+  private opened = false;
+
   /** Opens the turn, or refreshes what it knows after a write. False when another turn is running. */
   async read(): Promise<boolean> {
-    const state = await this.store.begin();
+    const state = this.opened ? await this.store.read() : await this.store.begin();
     if (state === "busy") return false;
+    this.opened = true;
     this.state = state;
     return true;
   }
@@ -143,21 +146,24 @@ export class Turn {
     await this.store.write([{ op: "status", text }]);
   }
 
-  /** True when these words may be shown. The words themselves are never logged. */
-  async mayShow(words: string[]): Promise<boolean> {
-    const verdict = await checkReply(this.prompt.guard, words.filter((word) => word !== "").join("\n"), this.signal);
-    if (verdict !== "ok") console.warn(`A reply was held back: it ${verdict}.`);
-    return verdict === "ok";
+  /**
+   * True when this may be shown. A held-back reply is logged by the name of
+   * the check and its score; the words themselves are never logged.
+   */
+  async mayShow(shown: Shown): Promise<boolean> {
+    const verdict = await checkReply(this.prompt.guard, shown, this.signal);
+    if (verdict.held) console.warn(describeVerdict(verdict));
+    return !verdict.held;
   }
 
   /**
    * Builds something to show, checks its words, and builds it once more if
    * the check fails. Null when both tries fail.
    */
-  async compose<T>(make: () => Promise<T>, wordsOf: (value: T) => string[], alsoRequire?: (value: T) => Promise<boolean> | boolean): Promise<T | null> {
+  async compose<T>(make: () => Promise<T>, shownIn: (value: T) => Shown, alsoRequire?: (value: T) => Promise<boolean> | boolean): Promise<T | null> {
     for (let attempt = 1; attempt <= 2; attempt++) {
       const value = await make();
-      if ((await this.mayShow(wordsOf(value))) && (alsoRequire === undefined || (await alsoRequire(value)))) return value;
+      if ((await this.mayShow(shownIn(value))) && (alsoRequire === undefined || (await alsoRequire(value)))) return value;
     }
     return null;
   }
@@ -170,7 +176,7 @@ export class Turn {
 
   /** Gala says a line. A line that fails the checks is replaced by the decline. */
   async say(text: string): Promise<void> {
-    await this.write([{ op: "say", text: (await this.mayShow([text])) ? text : DECLINE_LINE }]);
+    await this.write([{ op: "say", text: (await this.mayShow({ line: text })) ? text : DECLINE_LINE }]);
   }
 
   /** The decline, when nothing checked could be produced. */
@@ -188,7 +194,7 @@ export class Turn {
           facts: { step: this.stage, waitingFor },
           shape: { type: "OBJECT", properties: { say: { type: "STRING" } }, required: ["say"] },
         }),
-      (value) => [value.say],
+      (value) => ({ line: value.say }),
     );
     if (reply === null) await this.decline();
     else await this.write([{ op: "say", text: reply.say }]);

@@ -1,12 +1,11 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireOwnProject, requireSubject } from "./lib/owner";
+import { TURN_LIFETIME_MS } from "./lib/turn";
 
 /** Gala's first line in every project. */
 const OPENING_LINE = "Tell me who you’re building this for, and give me three words you never want associated with your brand. I’ll start there.";
 
-/** A turn older than this is taken for dead (see convex/engine.ts). */
-const TURN_LIFETIME_MS = 12 * 60 * 1000;
 
 /** The caller's projects, most recently touched first. */
 export const list = query({
@@ -44,6 +43,13 @@ export const get = query({
       updatedAt: project.updatedAt,
       /** Gala's "working" line while a turn runs, or null. */
       working: project.turn !== undefined && Date.now() - project.turn.startedAt < TURN_LIFETIME_MS ? project.turn.status : null,
+      /**
+       * When the running turn opened, and how long its lock lasts. This
+       * answer is not recomputed as time passes, so the studio uses these
+       * to stop showing "working" once the lock has run out.
+       */
+      turnStartedAt: project.turn?.startedAt ?? null,
+      turnLifetimeMs: TURN_LIFETIME_MS,
       /** True when the person is owed an answer and no turn is running. */
       waitingOnGala: project.waitingOnGala === true,
     };

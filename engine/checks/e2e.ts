@@ -55,6 +55,7 @@ h.check("brief: the first message produces a brief card with the brand's name", 
   const card = store.latest("brief").artifact!;
   assert(/ember/i.test(card.brand ?? ""), `brand is ${card.brand}`);
   assertEqual(card.never.length, 3, "never words");
+  assertEqual(store.statuses[0], "Reading your brief", "the working line while the brief step runs");
 });
 
 h.check("brief to research: once the brief is complete, research and a direction follow in the same turn", async () => {

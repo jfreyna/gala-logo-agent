@@ -1,34 +1,104 @@
 import { v } from "convex/values";
-import { internalMutation } from "./_generated/server";
-import type { MutationCtx } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
+import { TURN_LIFETIME_MS } from "./lib/turn";
 import { stage } from "./schema";
 
 /**
  * What Gala's server may do in storage. Every function here is internal: a
  * browser cannot call it. Each is reached through an HTTP route in
- * convex/http.ts, which has already checked two things: the Sprite's shared
- * secret (the caller is Gala's server) and the person's own sign-in token
- * (`subject`, whose project this is).
+ * convex/http.ts, which has already checked the Sprite's shared secret (the
+ * caller is Gala's server).
  *
- * A turn is one stretch of Gala's work on one project. `begin` takes the
- * project's lock, `write` records what Gala made, `end` releases the lock.
+ * A turn is one stretch of Gala's work on one project.
+ *   - `begin` opens it. The route also requires the person's own sign-in
+ *     token, and passes its `subject` here: only the project's owner can
+ *     open a turn. It takes the project's lock under a turn id that Gala's
+ *     server made at random.
+ *   - `read`, `write` and `end` run inside it. They take the turn id in
+ *     place of the token. The id works only on the project whose lock holds
+ *     it, and only until the lock is released or runs out, so a turn cannot
+ *     reach another project and cannot die halfway because a token expired.
  */
 
-/** A turn older than this is taken for dead, and its lock can be replaced. */
-const TURN_LIFETIME_MS = 12 * 60 * 1000;
+/**
+ * The project an id names, or null. The id arrives from outside as text; one
+ * that is not a project id at all is answered like one that names nothing.
+ */
+async function projectNamed(ctx: QueryCtx | MutationCtx, projectId: string): Promise<Doc<"projects"> | null> {
+  const id = ctx.db.normalizeId("projects", projectId);
+  return id === null ? null : ctx.db.get(id);
+}
 
-async function ownProject(ctx: MutationCtx, subject: string, projectId: Id<"projects">): Promise<Doc<"projects">> {
-  const project = await ctx.db.get(projectId);
+async function ownProject(ctx: QueryCtx | MutationCtx, subject: string, projectId: string): Promise<Doc<"projects">> {
+  const project = await projectNamed(ctx, projectId);
   if (project === null || project.ownerSubject !== subject) throw new Error("Project not found.");
   return project;
 }
 
-/** The project, only while `turnId` holds its lock. */
-async function ownTurn(ctx: MutationCtx, subject: string, projectId: Id<"projects">, turnId: string): Promise<Doc<"projects">> {
-  const project = await ownProject(ctx, subject, projectId);
-  if (project.turn === undefined || project.turn.id !== turnId) throw new Error("This turn is over.");
+/** True while `turnId` holds the project's lock and the lock has not run out. */
+function holdsLock(project: Doc<"projects"> | null, turnId: string): project is Doc<"projects"> {
+  return project !== null && project.turn !== undefined && project.turn.id === turnId && Date.now() - project.turn.startedAt < TURN_LIFETIME_MS;
+}
+
+/**
+ * The project a turn was opened on, only while that turn holds its lock. A
+ * project that does not exist, a wrong id and a lock that ran out all give
+ * the same answer.
+ */
+async function ownTurn(ctx: QueryCtx | MutationCtx, projectId: string, turnId: string): Promise<Doc<"projects">> {
+  const project = await projectNamed(ctx, projectId);
+  if (!holdsLock(project, turnId)) throw new Error("This turn is over.");
   return project;
+}
+
+/** Everything Gala needs to know about a project. */
+async function projectContext(ctx: QueryCtx | MutationCtx, project: Doc<"projects">) {
+  const projectId = project._id;
+  const messages = await ctx.db
+    .query("messages")
+    .withIndex("by_project", (q) => q.eq("projectId", projectId))
+    .order("asc")
+    .collect();
+  const uploads = await ctx.db
+    .query("uploads")
+    .withIndex("by_project", (q) => q.eq("projectId", projectId))
+    .collect();
+  const uploadsById = new Map(uploads.map((upload) => [upload._id, upload]));
+  const choices = await ctx.db
+    .query("phaseChoices")
+    .withIndex("by_project_and_step", (q) => q.eq("projectId", projectId))
+    .collect();
+  const memories = await ctx.db
+    .query("memories")
+    .withIndex("by_owner", (q) => q.eq("ownerSubject", project.ownerSubject))
+    .collect();
+  const submissions = await ctx.db
+    .query("hallSubmissions")
+    .withIndex("by_project", (q) => q.eq("projectId", projectId))
+    .collect();
+
+  return {
+    project: { id: project._id, brandName: project.brandName, stage: project.stage },
+    messages: messages.map((message) => {
+      const upload = message.uploadId ? uploadsById.get(message.uploadId) : undefined;
+      return {
+        id: message._id,
+        author: message.author,
+        kind: message.kind,
+        text: message.text ?? null,
+        artifact: message.artifact ?? null,
+        upload: upload ? { fileId: upload.fileId, fileName: upload.fileName, contentType: upload.contentType } : null,
+      };
+    }),
+    choices: choices.map((choice) => ({ step: choice.step, chosen: choice.chosen ?? null, discarded: choice.discarded })),
+    memory: memories.map((memory) => ({ id: memory._id, group: memory.group, text: memory.text, writtenBy: memory.writtenBy })),
+    // Quotes sent to the halls that have not been checked yet.
+    quotesToCheck: submissions
+      .filter((submission) => submission.quote !== undefined && submission.quoteCheck === "none")
+      .map((submission) => ({ id: submission._id, hall: submission.hall, quote: submission.quote as string })),
+  };
 }
 
 /**
@@ -36,59 +106,38 @@ async function ownTurn(ctx: MutationCtx, subject: string, projectId: Id<"project
  * `busy` means another turn holds the lock, and nothing was taken.
  */
 export const begin = internalMutation({
-  args: { subject: v.string(), projectId: v.id("projects"), turnId: v.string() },
+  args: { subject: v.string(), projectId: v.string(), turnId: v.string() },
   handler: async (ctx, { subject, projectId, turnId }) => {
     const project = await ownProject(ctx, subject, projectId);
     const now = Date.now();
     if (project.turn !== undefined && project.turn.id !== turnId && now - project.turn.startedAt < TURN_LIFETIME_MS) {
       return { busy: true as const };
     }
-    await ctx.db.patch(projectId, { turn: { id: turnId, startedAt: now, status: "" } });
+    await ctx.db.patch(project._id, { turn: { id: turnId, startedAt: now, status: "" } });
+    return { busy: false as const, ...(await projectContext(ctx, project)) };
+  },
+});
 
-    const messages = await ctx.db
-      .query("messages")
-      .withIndex("by_project", (q) => q.eq("projectId", projectId))
-      .order("asc")
-      .collect();
-    const uploads = await ctx.db
-      .query("uploads")
-      .withIndex("by_project", (q) => q.eq("projectId", projectId))
-      .collect();
-    const uploadsById = new Map(uploads.map((upload) => [upload._id, upload]));
-    const choices = await ctx.db
-      .query("phaseChoices")
-      .withIndex("by_project_and_step", (q) => q.eq("projectId", projectId))
-      .collect();
-    const memories = await ctx.db
-      .query("memories")
-      .withIndex("by_owner", (q) => q.eq("ownerSubject", subject))
-      .collect();
-    const submissions = await ctx.db
-      .query("hallSubmissions")
-      .withIndex("by_project", (q) => q.eq("projectId", projectId))
-      .collect();
+/** Reads the project again inside a turn, between Gala's steps. */
+export const read = internalQuery({
+  args: { projectId: v.string(), turnId: v.string() },
+  handler: async (ctx, { projectId, turnId }) => {
+    return { busy: false as const, ...(await projectContext(ctx, await ownTurn(ctx, projectId, turnId))) };
+  },
+});
 
-    return {
-      busy: false as const,
-      project: { id: project._id, brandName: project.brandName, stage: project.stage },
-      messages: messages.map((message) => {
-        const upload = message.uploadId ? uploadsById.get(message.uploadId) : undefined;
-        return {
-          id: message._id,
-          author: message.author,
-          kind: message.kind,
-          text: message.text ?? null,
-          artifact: message.artifact ?? null,
-          upload: upload ? { fileId: upload.fileId, fileName: upload.fileName, contentType: upload.contentType } : null,
-        };
-      }),
-      choices: choices.map((choice) => ({ step: choice.step, chosen: choice.chosen ?? null, discarded: choice.discarded })),
-      memory: memories.map((memory) => ({ id: memory._id, group: memory.group, text: memory.text, writtenBy: memory.writtenBy })),
-      // Quotes sent to the halls that have not been checked yet.
-      quotesToCheck: submissions
-        .filter((submission) => submission.quote !== undefined && submission.quoteCheck === "none")
-        .map((submission) => ({ id: submission._id, hall: submission.hall, quote: submission.quote as string })),
-    };
+/** Whether a turn holds a project's lock right now. The file routes ask before storing or reading a file. */
+export const holds = internalQuery({
+  args: { projectId: v.string(), turnId: v.string() },
+  handler: async (ctx, { projectId, turnId }) => holdsLock(await projectNamed(ctx, projectId), turnId),
+});
+
+/** Whether a person owns a project. Asked before a turn is stopped at their request. */
+export const owns = internalQuery({
+  args: { subject: v.string(), projectId: v.string() },
+  handler: async (ctx, { subject, projectId }) => {
+    const project = await projectNamed(ctx, projectId);
+    return project !== null && project.ownerSubject === subject;
   },
 });
 
@@ -125,11 +174,18 @@ const operation = v.union(
   v.object({ op: v.literal("quoteChecked"), submissionId: v.id("hallSubmissions"), passed: v.boolean() }),
 );
 
-/** Records what Gala made during a turn. Refused once the turn is over. */
+/**
+ * Records what Gala made during a turn. Refused once the turn is over.
+ * Everything is written to the turn's own project, for that project's
+ * owner: neither is taken from the caller.
+ */
 export const write = internalMutation({
-  args: { subject: v.string(), projectId: v.id("projects"), turnId: v.string(), operations: v.array(operation) },
-  handler: async (ctx, { subject, projectId, turnId, operations }) => {
-    const project = await ownTurn(ctx, subject, projectId, turnId);
+  args: { projectId: v.string(), turnId: v.string(), operations: v.array(operation) },
+  handler: async (ctx, args) => {
+    const { turnId, operations } = args;
+    const project = await ownTurn(ctx, args.projectId, turnId);
+    const projectId = project._id;
+    const subject = project.ownerSubject;
     const refs = new Map<string, Id<"messages">>();
     const written: Id<"messages">[] = [];
 
@@ -208,14 +264,18 @@ export const write = internalMutation({
   },
 });
 
-/** Closes a turn: the lock is released and the project no longer waits on Gala. */
+/**
+ * Closes a turn: the lock is released and the project no longer waits on
+ * Gala. A turn that no longer holds the lock has nothing to release, and
+ * that is not an error: closing always goes through.
+ */
 export const end = internalMutation({
-  args: { subject: v.string(), projectId: v.id("projects"), turnId: v.string() },
-  handler: async (ctx, { subject, projectId, turnId }) => {
-    const project = await ownProject(ctx, subject, projectId);
-    if (project.turn === undefined || project.turn.id !== turnId) return null;
-    await ctx.db.patch(projectId, { turn: undefined, waitingOnGala: false, updatedAt: Date.now() });
-    return null;
+  args: { projectId: v.string(), turnId: v.string() },
+  handler: async (ctx, { projectId, turnId }) => {
+    const project = await projectNamed(ctx, projectId);
+    if (project === null || project.turn === undefined || project.turn.id !== turnId) return { released: false };
+    await ctx.db.patch(project._id, { turn: undefined, waitingOnGala: false, updatedAt: Date.now() });
+    return { released: true };
   },
 });
 

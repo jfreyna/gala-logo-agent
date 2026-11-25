@@ -3,6 +3,7 @@
  * up to date. When the brief is complete, research starts in the same turn.
  */
 import type { Shape } from "../gemini.ts";
+import { WORKING } from "../lines.ts";
 import type { Outcome, Turn } from "../turn.ts";
 
 const FIELDS = ["brand", "tagline", "whatYouDo", "audience", "whereUsed"] as const;
@@ -39,6 +40,7 @@ const SHAPE: Shape = {
 
 export async function brief(turn: Turn): Promise<Outcome> {
   if (turn.unanswered().length === 0) return "wait";
+  await turn.status(WORKING.brief);
   const images = await turn.attachedImages();
   const move = await turn.compose(
     () =>
@@ -49,7 +51,8 @@ export async function brief(turn: Turn): Promise<Outcome> {
         shape: SHAPE,
         images,
       }),
-    (value) => [value.say, value.brand ?? "", value.tagline ?? "", value.whatYouDo ?? "", value.audience ?? "", ...value.whereUsed, ...value.never],
+    // The card's fields are the person's own words, so they are judged apart from Gala's line.
+    (value) => ({ line: value.say, card: [value.brand ?? "", value.tagline ?? "", value.whatYouDo ?? "", value.audience ?? "", ...value.whereUsed, ...value.never] }),
   );
   if (move === null) {
     await turn.decline();

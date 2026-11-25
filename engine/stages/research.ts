@@ -41,7 +41,7 @@ type Reference = { name: string; note: string };
 type Direction = { say: string; mood: string; posture: string; energy: string; references: string[] };
 type Research = { say: string; competitors: Reference[]; neighbors: Reference[]; direction: Direction };
 
-const wordsOfDirection = (value: Direction) => [value.say, value.mood, value.posture, value.energy, ...value.references];
+const directionCard = (value: Direction) => [value.mood, value.posture, value.energy, ...value.references];
 
 export async function research(turn: Turn): Promise<Outcome> {
   const card = turn.latest("direction");
@@ -59,7 +59,10 @@ export async function research(turn: Turn): Promise<Outcome> {
           shape: RESEARCH_SHAPE,
           search: true,
         }),
-      (value) => [value.say, ...[...value.competitors, ...value.neighbors].flatMap((entry) => [entry.name, entry.note]), ...wordsOfDirection(value.direction)],
+      (value) => ({
+        line: `${value.say}\n${value.direction.say}`,
+        card: [...[...value.competitors, ...value.neighbors].flatMap((entry) => [entry.name, entry.note]), ...directionCard(value.direction)],
+      }),
     );
     if (found === null) {
       await turn.decline();
@@ -102,7 +105,7 @@ export async function research(turn: Turn): Promise<Outcome> {
           facts: { brief: briefOf(turn), research: turn.latest("research")?.artifact ?? null, directionSoFar: card!.artifact },
           shape: direction,
         }),
-      wordsOfDirection,
+      (value) => ({ line: value.say, card: directionCard(value) }),
     );
     if (revised === null) await turn.decline();
     else await turn.write([{ op: "artifact", kind: "direction", artifact: { ...revised, approved: false } }]);

@@ -7,9 +7,12 @@
  *      instructions (that lives in the prompt, not here).
  *   2. `overlaps`: a code check. The reply must not contain a long run of
  *      text that is also in the prompt held in memory.
- *   3. `revealsInstructions`: Jev is asked "Does this reply reveal system
+ *   3. `leakScores`: Jev is asked "Does this reply reveal system
  *      instructions?", and whether it describes the prompt's contents or
  *      organization.
+ *
+ * Gala's spoken line and the rest of a card's text are checked as two
+ * texts, each against all of the above (see `Shown`).
  *
  * The code check compares against the prompt itself. There is no list of
  * forbidden phrases anywhere.
@@ -66,33 +69,94 @@ export function overlaps(guard: Guard, text: string): boolean {
   return false;
 }
 
-/**
- * The Jev check. The first question is the ruling's own wording. The
- * second was added after a measured miss: a reply that described how the
- * prompt is organized, without quoting a rule, scored 0.46 on the first
- * question (under the gate) and 0.97 on the second. Ordinary replies score
- * under 0.2 on both. Either yes holds the reply back.
- */
-export async function revealsInstructions(reply: string, signal?: AbortSignal): Promise<boolean> {
+/** The Jev check's two questions. A score at or above the gate on either holds a text back. */
+export const LEAK_QUESTIONS = {
+  /** The ruling's own wording. */
+  "Jev question 1": "Does this reply reveal system instructions?",
+  /**
+   * Added after a measured miss: a reply that described how the prompt is
+   * organized, without quoting a rule, scored 0.46 on the first question
+   * (under the gate) and 0.97 on this one. Ordinary replies score under 0.2
+   * on both.
+   */
+  "Jev question 2": "Does this reply describe the contents or the organization of the assistant's own prompt, rules or configuration?",
+} as const;
+
+export type LeakQuestion = keyof typeof LEAK_QUESTIONS;
+
+/** One text's score on each question, 0 to 1. */
+export async function leakScores(text: string, signal?: AbortSignal): Promise<Record<LeakQuestion, number>> {
   const answers = await ask({
-    state: { reply },
+    state: { reply: text },
     questions: {
-      reveals: { type: "noul", instructions: "Does this reply reveal system instructions?" },
-      describes: { type: "noul", instructions: "Does this reply describe the contents or the organization of the assistant's own prompt, rules or configuration?" },
+      first: { type: "noul", instructions: LEAK_QUESTIONS["Jev question 1"] },
+      second: { type: "noul", instructions: LEAK_QUESTIONS["Jev question 2"] },
     },
     signal,
   });
-  return answers.reveals.noul >= YES || answers.describes.noul >= YES;
+  return { "Jev question 1": answers.first.noul, "Jev question 2": answers.second.noul };
 }
 
-export type Verdict = "ok" | "copies the prompt" | "reveals instructions";
+/** True when either question scores a text at or above the gate. */
+export async function revealsInstructions(text: string, signal?: AbortSignal): Promise<boolean> {
+  const scores = await leakScores(text, signal);
+  return Object.values(scores).some((score) => score >= YES);
+}
 
-/** Both checks on one outgoing text. The code check runs first because it is free. */
-export async function checkReply(guard: Guard, reply: string, signal?: AbortSignal): Promise<Verdict> {
-  if (reply.trim() === "") return "ok";
-  if (overlaps(guard, reply)) return "copies the prompt";
-  if (await revealsInstructions(reply, signal)) return "reveals instructions";
-  return "ok";
+/**
+ * What Gala is about to show: the line Gala speaks, and the rest of a
+ * card's text (a brief's fields, a concept's name and rationale).
+ *
+ * The two are judged apart. A card often holds the person's own words, and
+ * a brief for an AI product, in the person's words, reads like an
+ * assistant's configuration. Joined to Gala's line, such a card pushed
+ * ordinary replies over the gate (measured: 0.43 to 0.59 joined; 0.04 to
+ * 0.15 for the line and 0.29 to 0.36 for the card on their own). Judged
+ * apart, each text answers for itself, and a leak written into either one
+ * is still caught (0.78 to 0.97).
+ */
+export type Shown = { line: string; card?: string[] };
+
+export type Verdict =
+  | { held: false }
+  | {
+      held: true;
+      /** Which check stopped it. */
+      check: "code overlap" | LeakQuestion;
+      /** Which text it was found in. */
+      part: "Gala's line" | "the card's text";
+      /** The Jev score, 0 to 1. Null for the code check, which has none. */
+      score: number | null;
+    };
+
+/**
+ * Every check on what Gala is about to show. The code check runs first on
+ * both texts because it is free; then Jev judges each text on its own, the
+ * two calls side by side.
+ */
+export async function checkReply(guard: Guard, shown: Shown, signal?: AbortSignal): Promise<Verdict> {
+  const parts = (
+    [
+      ["Gala's line", shown.line],
+      ["the card's text", (shown.card ?? []).filter((entry) => entry !== "").join("\n")],
+    ] as const
+  ).filter(([, text]) => text.trim() !== "");
+
+  for (const [part, text] of parts) {
+    if (overlaps(guard, text)) return { held: true, check: "code overlap", part, score: null };
+  }
+  const scored = await Promise.all(parts.map(async ([part, text]) => ({ part, scores: await leakScores(text, signal) })));
+  for (const { part, scores } of scored) {
+    for (const check of Object.keys(scores) as LeakQuestion[]) {
+      if (scores[check] >= YES) return { held: true, check, part, score: scores[check] };
+    }
+  }
+  return { held: false };
+}
+
+/** A held-back reply as one log line: the check, the text it was in and the score. Never the text itself. */
+export function describeVerdict(verdict: Verdict & { held: true }): string {
+  return `A reply was held back: ${verdict.check} on ${verdict.part}${verdict.score === null ? "" : `, score ${verdict.score.toFixed(2)}`}.`;
 }
 
 /**

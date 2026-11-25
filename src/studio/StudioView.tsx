@@ -63,15 +63,20 @@ export function StudioView({
       <Header state="signedIn" context={projectName} onOpenWork={onOpenWork} menuOpen={menuOpen} />
       <div className="relative flex min-h-px w-full flex-[1_0_0] items-start overflow-clip" data-name="main">
         <div
-          className="relative flex h-full min-w-px flex-[1_0_0] flex-col items-center overflow-clip px-[16px] pb-[16px] pt-[24px] desktop:px-[24px] desktop:pb-[32px] desktop:pt-[48px]"
+          className="relative flex h-full min-w-px flex-[1_0_0] flex-col items-center gap-[20px] overflow-clip px-[16px] pb-[16px] pt-[24px] desktop:gap-[28px] desktop:px-[24px] desktop:pb-[32px] desktop:pt-[48px]"
           data-name="body"
         >
-          <div ref={conversation} className="conversation relative flex min-h-px w-full max-w-[768px] flex-[1_0_0] flex-col items-start overflow-y-auto" data-name="conversation">
-            <div className={`relative flex w-full shrink-0 flex-col items-start gap-[20px] desktop:gap-[28px] ${restAtBottom ? "mt-auto" : ""}`}>
-              {items.map((item) => (
-                <StreamEntry key={item.id} item={item} onAction={(action) => onAction(action, item.id)} />
-              ))}
+          {/* The conversation scrolls under two fades, so an item never ends in a hard edge at the header or above the prompt bar. */}
+          <div className="relative flex min-h-px w-full max-w-[768px] flex-[1_0_0] flex-col items-start" data-name="conversation-area">
+            <div ref={conversation} className="conversation relative flex min-h-px w-full flex-[1_0_0] flex-col items-start overflow-y-auto" data-name="conversation">
+              <div className={`relative flex w-full shrink-0 flex-col items-start gap-[20px] desktop:gap-[28px] ${restAtBottom ? "mt-auto" : ""}`}>
+                {items.map((item) => (
+                  <StreamEntry key={item.id} item={item} onAction={(action) => onAction(action, item.id)} />
+                ))}
+              </div>
             </div>
+            <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[32px] bg-gradient-to-b from-background-2-light dark:from-background-1-dark" data-name="fade/top" />
+            <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-[32px] bg-gradient-to-t from-background-2-light dark:from-background-1-dark" data-name="fade/bottom" />
           </div>
           <div className="relative flex w-full max-w-[768px] shrink-0 flex-col items-start" data-name="composer">
             <PromptBar {...prompt} />

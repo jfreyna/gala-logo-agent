@@ -14,6 +14,7 @@ import type * as http from "../http.js";
 import type * as identity from "../identity.js";
 import type * as kits from "../kits.js";
 import type * as lib_owner from "../lib/owner.js";
+import type * as lib_turn from "../lib/turn.js";
 import type * as memories from "../memories.js";
 import type * as messages from "../messages.js";
 import type * as projects from "../projects.js";
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   identity: typeof identity;
   kits: typeof kits;
   "lib/owner": typeof lib_owner;
+  "lib/turn": typeof lib_turn;
   memories: typeof memories;
   messages: typeof messages;
   projects: typeof projects;

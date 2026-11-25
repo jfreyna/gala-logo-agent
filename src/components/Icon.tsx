@@ -96,14 +96,3 @@ export function Icon({ name, size, className = "" }: { name: IconName; size?: nu
     />
   );
 }
-
-/** The three fading dots beside "working" status text (gala-message, Working). */
-export function WorkingDots({ className = "" }: { className?: string }) {
-  return (
-    <svg aria-hidden="true" width="26" height="6" viewBox="0 0 26 6" fill="none" className={`shrink-0 ${className}`}>
-      <circle cx="3" cy="3" r="3" fill="currentColor" />
-      <circle opacity="0.6" cx="13" cy="3" r="3" fill="currentColor" />
-      <circle opacity="0.3" cx="23" cy="3" r="3" fill="currentColor" />
-    </svg>
-  );
-}

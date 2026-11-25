@@ -55,7 +55,7 @@ async function memoryOperations(turn: Turn, outcome: { mark: string; family: str
   const operations: Operation[] = [{ op: "remember", group: "From past projects", text: `${turn.brand}: picked the ${outcome.mark} mark, set in ${outcome.family}.` }];
   const { lines } = await turn.think<{ lines: string[] }>({ section: "memory", task: "List what is worth remembering about this person, apart from the project's outcome, which is already recorded.", facts, shape: LINES });
   const kept = lines.filter((line) => line.trim() !== "").slice(0, 4);
-  if (kept.length > 0 && (await turn.mayShow(kept))) {
+  if (kept.length > 0 && (await turn.mayShow({ line: "", card: kept }))) {
     operations.push(...(await Promise.all(kept.map(async (line): Promise<Operation> => ({ op: "remember", group: await headingFor(line, turn.signal), text: line })))));
   }
   return operations;
@@ -118,7 +118,7 @@ export async function kit(turn: Turn): Promise<Outcome> {
         },
         shape: SAY,
       }),
-    (value) => [value.say],
+    (value) => ({ line: value.say }),
     (value) => !mentionsHex(value.say),
   );
 
@@ -176,7 +176,7 @@ export async function picks(turn: Turn): Promise<Outcome> {
   );
   const words = await turn.compose(
     () => turn.think<{ say: string }>({ section: "picks", task: "Close the project.", facts: { brand: turn.brand, picks: card.artifact!.answered }, shape: SAY }),
-    (value) => [value.say],
+    (value) => ({ line: value.say }),
   );
   await turn.write([...checked, { op: "project", stage: "done" }, ...(words !== null ? [{ op: "say" as const, text: words.say }] : [])]);
   return "wait";

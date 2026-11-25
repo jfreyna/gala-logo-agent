@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { WorkingDots } from "../components/Icon";
+import { Thinking } from "../components/Thinking";
 
 /**
  * gala-message (Figma 5527:2752): Gala's lines sit flush left under the
@@ -33,7 +33,7 @@ export function WorkingMessage({ children }: { children: ReactNode }) {
   return (
     <div className="relative flex w-full shrink-0 flex-col items-start gap-[6px]" data-name="gala-message" role="status">
       <div className="relative flex shrink-0 items-center gap-[8px] overflow-clip" data-name="status">
-        <WorkingDots className="text-text-neutral-2-light dark:text-text-neutral-2-dark" />
+        <Thinking className="text-text-neutral-2-light dark:text-text-neutral-2-dark" />
         <p className="type-caption-medium shrink-0 text-text-neutral-2-light dark:text-text-neutral-2-dark">{children}</p>
       </div>
     </div>

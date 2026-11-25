@@ -46,8 +46,14 @@ export type Operation =
   | { op: "quoteChecked"; submissionId: string; passed: boolean };
 
 export interface Store {
-  /** Opens (or refreshes) the turn and reads the project. "busy" means another turn is running. */
+  /**
+   * Opens the turn and reads the project. "busy" means another turn is
+   * running. This is the one step that needs the person's sign-in; every
+   * step after it runs on the turn itself.
+   */
   begin(): Promise<Project | "busy">;
+  /** Reads the project again inside the open turn, between Gala's steps. */
+  read(): Promise<Project>;
   write(operations: Operation[]): Promise<void>;
   end(): Promise<void>;
   saveFile(bytes: Uint8Array, contentType: string): Promise<string>;

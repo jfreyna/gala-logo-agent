@@ -27,6 +27,16 @@ Each image here shows the Figma frame on the left and the built screen on the ri
 | `signin-*`, `signingin-*`, `signinerror-*` | The join card's sign-in states are component variants in the design file, so they are compared as the card alone, 340 wide for desktop and 348 for a phone. |
 | `kit-*`, `color-*`, `type-*` | The sample lock-ups and wordmarks are drawn with the frames' placeholder marks; sizes inside the paper differ slightly. |
 
+## The working line on a phone
+
+The prompt bar's Working variants draw the working line on one line, cut with an ellipsis when it does not fit. These three are the built bar alone, 348 wide on a 380 phone, at 2x. They are made by opening `/preview/studio?status=<line>`, which shows any working line in the bar.
+
+| Image | What it shows |
+|---|---|
+| `working-line-mobile-light.png` | "Reading your brief…", light. It fits on one line. |
+| `working-line-mobile-dark.png` | The same, dark. |
+| `working-line-mobile-long.png` | "Looking at competitors and neighbors…", which does not fit, cut with an ellipsis. The bar stays 62 tall. |
+
 ## Results
 
 ```
@@ -42,9 +52,9 @@ hallmodal-desktop-light        frame 1440x900   built 1440x900   differing 16.99
 hallmodal-desktop-dark         frame 1440x900   built 1440x900   differing 22.41%
 hallmodal-mobile-light         frame 380x812    built 380x812    differing 5.27%
 accountmenu-desktop-light      frame 1440x900   built 1440x900   differing 0.77%
-accountmenu-mobile-light       frame 380x812    built 380x812    differing 2.40%
+accountmenu-mobile-light       frame 380x812    built 380x812    differing 2.39%
 hints-desktop-light            frame 1440x900   built 1440x900   differing 1.04%
-hints-mobile-light             frame 380x812    built 380x812    differing 3.54%
+hints-mobile-light             frame 380x812    built 380x812    differing 3.53%
 projects-desktop-light         frame 1440x858   built 1440x858   differing 0.55%
 projects-desktop-dark          frame 1440x858   built 1440x858   differing 0.58%
 projects-mobile-light          frame 380x1702   built 380x1702   differing 0.90%
@@ -60,46 +70,46 @@ signinerror-desktop-light      frame 340x479    built 340x479    differing 3.12%
 signinerror-desktop-dark       frame 340x479    built 340x479    differing 3.20%
 signinerror-mobile-light       frame 348x479    built 348x479    differing 3.06%
 signinerror-mobile-dark        frame 348x479    built 348x479    differing 3.11%
-studio-desktop-light           frame 1440x900   built 1440x900   differing 0.50%
+studio-desktop-light           frame 1440x900   built 1440x900   differing 0.49%
 studio-desktop-dark            frame 1440x900   built 1440x900   differing 0.52%
-studio-mobile-light            frame 380x812    built 380x812    differing 2.39%
+studio-mobile-light            frame 380x812    built 380x812    differing 1.64%
 brief-desktop-light            frame 1440x900   built 1440x900   differing 0.61%
-brief-desktop-dark             frame 1440x900   built 1440x900   differing 0.65%
-brief-mobile-light             frame 380x812    built 380x812    differing 1.49%
-research-desktop-light         frame 1440x900   built 1440x900   differing 1.33%
-research-desktop-dark          frame 1440x900   built 1440x900   differing 1.45%
-research-mobile-light          frame 380x812    built 380x812    differing 5.34%
-upload-desktop-light           frame 1440x900   built 1440x900   differing 1.30%
-upload-desktop-dark            frame 1440x900   built 1440x900   differing 1.38%
-upload-mobile-light            frame 380x812    built 380x812    differing 3.72%
-type-desktop-light             frame 1440x900   built 1440x900   differing 2.90%
-type-desktop-dark              frame 1440x900   built 1440x900   differing 1.75%
-type-mobile-light              frame 380x812    built 380x812    differing 3.28%
-directions-desktop-light       frame 1440x1000  built 1440x1000  differing 1.11%
-directions-desktop-dark        frame 1440x1000  built 1440x1000  differing 1.18%
-directions-mobile-light        frame 380x812    built 380x812    differing 2.47%
-variations-desktop-light       frame 1440x900   built 1440x900   differing 1.05%
-variations-desktop-dark        frame 1440x900   built 1440x900   differing 1.12%
-variations-mobile-light        frame 380x812    built 380x812    differing 2.03%
-stresstest-desktop-light       frame 1440x900   built 1440x900   differing 0.71%
+brief-desktop-dark             frame 1440x900   built 1440x900   differing 0.64%
+brief-mobile-light             frame 380x812    built 380x812    differing 1.43%
+research-desktop-light         frame 1440x900   built 1440x900   differing 1.16%
+research-desktop-dark          frame 1440x900   built 1440x900   differing 1.32%
+research-mobile-light          frame 380x812    built 380x812    differing 5.27%
+upload-desktop-light           frame 1440x900   built 1440x900   differing 1.29%
+upload-desktop-dark            frame 1440x900   built 1440x900   differing 1.37%
+upload-mobile-light            frame 380x812    built 380x812    differing 3.69%
+type-desktop-light             frame 1440x900   built 1440x900   differing 2.89%
+type-desktop-dark              frame 1440x900   built 1440x900   differing 1.74%
+type-mobile-light              frame 380x812    built 380x812    differing 3.25%
+directions-desktop-light       frame 1440x1000  built 1440x1000  differing 1.09%
+directions-desktop-dark        frame 1440x1000  built 1440x1000  differing 1.17%
+directions-mobile-light        frame 380x812    built 380x812    differing 2.36%
+variations-desktop-light       frame 1440x900   built 1440x900   differing 1.04%
+variations-desktop-dark        frame 1440x900   built 1440x900   differing 1.11%
+variations-mobile-light        frame 380x812    built 380x812    differing 2.01%
+stresstest-desktop-light       frame 1440x900   built 1440x900   differing 0.70%
 stresstest-desktop-dark        frame 1440x900   built 1440x900   differing 0.75%
-stresstest-mobile-light        frame 380x812    built 380x812    differing 1.70%
+stresstest-mobile-light        frame 380x812    built 380x812    differing 1.68%
 pickcolors-desktop-light       frame 1440x900   built 1440x900   differing 0.98%
 pickcolors-desktop-dark        frame 1440x900   built 1440x900   differing 1.00%
-pickcolors-mobile-light        frame 380x812    built 380x812    differing 13.47%
-color-desktop-light            frame 1440x900   built 1440x900   differing 1.73%
-color-desktop-dark             frame 1440x900   built 1440x900   differing 1.53%
-color-mobile-light             frame 380x812    built 380x812    differing 3.29%
-kit-desktop-light              frame 1440x900   built 1440x900   differing 3.03%
-kit-desktop-dark               frame 1440x900   built 1440x900   differing 2.46%
-kit-mobile-light               frame 380x812    built 380x812    differing 3.65%
-picks-desktop-light            frame 1440x900   built 1440x900   differing 1.89%
-picks-desktop-dark             frame 1440x900   built 1440x900   differing 2.09%
-picks-mobile-light             frame 380x812    built 380x812    differing 5.35%
-panel-desktop-light            frame 1440x900   built 1440x900   differing 1.91%
-panel-desktop-dark             frame 1440x900   built 1440x900   differing 1.95%
+pickcolors-mobile-light        frame 380x812    built 380x812    differing 12.28%
+color-desktop-light            frame 1440x900   built 1440x900   differing 1.72%
+color-desktop-dark             frame 1440x900   built 1440x900   differing 1.52%
+color-mobile-light             frame 380x812    built 380x812    differing 2.76%
+kit-desktop-light              frame 1440x900   built 1440x900   differing 3.02%
+kit-desktop-dark               frame 1440x900   built 1440x900   differing 2.45%
+kit-mobile-light               frame 380x812    built 380x812    differing 3.52%
+picks-desktop-light            frame 1440x900   built 1440x900   differing 1.80%
+picks-desktop-dark             frame 1440x900   built 1440x900   differing 1.98%
+picks-mobile-light             frame 380x812    built 380x812    differing 5.06%
+panel-desktop-light            frame 1440x900   built 1440x900   differing 1.86%
+panel-desktop-dark             frame 1440x900   built 1440x900   differing 1.90%
 panel-mobile-light             frame 380x812    built 380x812    differing 2.90%
-memory-desktop-light           frame 1440x900   built 1440x900   differing 1.69%
-memory-desktop-dark            frame 1440x900   built 1440x900   differing 1.82%
+memory-desktop-light           frame 1440x900   built 1440x900   differing 1.64%
+memory-desktop-dark            frame 1440x900   built 1440x900   differing 1.76%
 memory-mobile-light            frame 380x812    built 380x812    differing 2.25%
 ```

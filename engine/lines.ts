@@ -11,6 +11,7 @@ export const TROUBLE_LINE = "Something went wrong on my side. Send that again an
 
 /** The "working" lines the studio shows while a step runs. */
 export const WORKING = {
+  brief: "Reading your brief",
   research: "Looking at competitors and neighbors",
   type: "Setting your name in three typefaces",
   directions: "Drawing three directions",

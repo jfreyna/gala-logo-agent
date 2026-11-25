@@ -28,7 +28,7 @@ export async function stressTest(turn: Turn): Promise<Outcome> {
           facts: { mark: chosen.name, passed: checks },
           shape: SAY,
         }),
-      (value) => [value.say],
+      (value) => ({ line: value.say }),
     );
     if (words === null) {
       await turn.decline();

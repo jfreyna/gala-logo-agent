@@ -162,7 +162,8 @@ export function PromptBar({
           </div>
         )}
         {isWorking ? (
-          <p className="type-body-regular min-w-px flex-[1_0_0] text-text-neutral-2-light dark:text-text-neutral-2-dark" role="status">
+          // One line, cut with an ellipsis when it doesn't fit, as the Working variants draw it.
+          <p className="type-body-regular min-w-px flex-[1_0_0] truncate text-text-neutral-2-light dark:text-text-neutral-2-dark" role="status">
             <span className="hidden desktop:inline">{working}</span>
             <span className="desktop:hidden">{workingMobile}</span>
           </p>

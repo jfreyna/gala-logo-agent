@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useReducedMotion } from "../lib/motion";
 import { useTheme } from "../lib/theme";
 
 export type BackdropName = "hero-silk" | "halls-horizon" | "about-ribbons";
@@ -9,17 +9,6 @@ export type BackdropName = "hero-silk" | "halls-horizon" | "about-ribbons";
  * as the static file, so adding a name here changes nothing else.
  */
 const ANIMATED: ReadonlySet<BackdropName> = new Set<BackdropName>([]);
-
-function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReduced(query.matches);
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, []);
-  return reduced;
-}
 
 /**
  * One backdrop: a decorative layer behind the content, loaded from one file

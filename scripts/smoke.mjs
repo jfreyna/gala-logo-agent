@@ -236,6 +236,69 @@ check("studio: the Work button opens the panel, and Memory asks before clearing"
   return history && asked && (await text(page)).includes("Clear all memory");
 });
 
+check("studio: the working mark is a file: the animated one normally, the static one under reduced motion", async () => {
+  const fileOf = (page) => page.$eval('[data-name="thinking"]', (mark) => [mark.dataset.file, getComputedStyle(mark).maskImage || getComputedStyle(mark).webkitMaskImage, mark.offsetWidth, mark.offsetHeight]);
+  const moving = await fileOf(await open("/preview/studio?working=1"));
+  const still = await fileOf(await open("/preview/studio?working=1", { reducedMotion: true }));
+  // The animated file carries its own animation and the still does not.
+  const text = (path) => fetch(BASE + path).then((response) => response.text());
+  const served = (await text("/thinking/gala-thinking.svg")).includes("@keyframes") && !(await text("/thinking/gala-thinking-static.svg")).includes("@keyframes");
+  return (
+    moving[0] === "/thinking/gala-thinking.svg" && moving[1].includes("/thinking/gala-thinking.svg") && moving[2] === 32 && moving[3] === 16 &&
+    still[0] === "/thinking/gala-thinking-static.svg" && still[1].includes("/thinking/gala-thinking-static.svg") && served
+  );
+});
+
+check("studio: on a phone the prompt bar's working line stays on one line, and is cut with an ellipsis when it does not fit", async () => {
+  // The bar is 348 wide on a 380 phone, and 62 tall with one line of text in it.
+  const measure = async (status) => {
+    const page = await open(`/preview/studio?status=${encodeURIComponent(status)}`, { width: 380, height: 812 });
+    return page.evaluate(() => {
+      const line = document.querySelector('[data-name="composer"] [role="status"]');
+      const bar = document.querySelector('[data-name="composer"]').getBoundingClientRect();
+      const shown = [...line.querySelectorAll("span")].find((span) => span.offsetParent !== null);
+      return { shown: shown.innerText.trim(), lineHeight: Math.round(line.getBoundingClientRect().height), bar: [Math.round(bar.width), Math.round(bar.height)], cut: line.scrollWidth > line.clientWidth, ellipsis: getComputedStyle(line).textOverflow };
+    });
+  };
+  const short = await measure("Reading your brief");
+  const long = await measure("Looking at competitors and neighbors");
+  const oneLine = (bar) => bar.lineHeight === 25 && bar.bar[0] === 348 && bar.bar[1] === 62 && bar.ellipsis === "ellipsis";
+  return short.shown === "Reading your brief…" && oneLine(short) && !short.cut && oneLine(long) && long.cut;
+});
+
+check("studio: a gap of 28px (20px on a phone) sits between the conversation and the prompt bar, under a 32px fade at each end", async () => {
+  const measure = (page) =>
+    page.evaluate(() => {
+      const box = (name) => document.querySelector(`[data-name="${name}"]`).getBoundingClientRect();
+      const style = (name) => getComputedStyle(document.querySelector(`[data-name="${name}"]`));
+      const area = box("conversation-area");
+      const top = box("fade/top");
+      const bottom = box("fade/bottom");
+      return {
+        gap: Math.round(box("composer").top - area.bottom),
+        fades: [Math.round(top.height), Math.round(bottom.height)],
+        // Each fade lies on its end of the conversation, as wide as it, and never over the prompt bar or the header.
+        placed: Math.round(top.top) === Math.round(area.top) && Math.round(bottom.bottom) === Math.round(area.bottom) && Math.round(top.width) === Math.round(area.width) && Math.round(bottom.width) === Math.round(area.width),
+        clickThrough: style("fade/top").pointerEvents === "none" && style("fade/bottom").pointerEvents === "none",
+        gradients: style("fade/top").backgroundImage.includes("linear-gradient") && style("fade/bottom").backgroundImage.includes("linear-gradient"),
+      };
+    });
+  const desktop = await measure(await open("/preview/directions"));
+  const phone = await measure(await open("/preview/directions", { width: 380, height: 812 }));
+  const good = (screen, gap) => screen.gap === gap && screen.fades[0] === 32 && screen.fades[1] === 32 && screen.placed && screen.clickThrough && screen.gradients;
+  return good(desktop, 28) && good(phone, 20);
+});
+
+check("studio: a card's button under the bottom fade still takes the click", async () => {
+  const page = await open("/preview/directions");
+  // The element at a point inside the bottom fade is the conversation's content, not the fade.
+  return page.evaluate(() => {
+    const fade = document.querySelector('[data-name="fade/bottom"]').getBoundingClientRect();
+    const hit = document.elementFromPoint(fade.left + fade.width / 2, fade.top + fade.height / 2);
+    return hit !== null && hit.getAttribute("data-name") !== "fade/bottom" && document.querySelector('[data-name="conversation-area"]').contains(hit);
+  });
+});
+
 check("studio: the send button is dimmed until something is typed", async () => {
   const page = await open("/preview/brief");
   const dimmed = await page.$eval('[aria-label="Send"]', (element) => element.getAttribute("aria-disabled"));

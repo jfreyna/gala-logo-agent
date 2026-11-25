@@ -58,7 +58,7 @@ export async function pickColors(turn: Turn): Promise<Outcome> {
         facts: { brief: briefOf(turn), direction: directionOf(turn) },
         shape: DESCRIBED_SHAPE,
       }),
-    (value) => [value.say],
+    (value) => ({ line: value.say }),
     (value) => !mentionsHex(value.say) && HEX.test(value.primary) && HEX.test(value.secondary) && (value.tertiary === null || HEX.test(value.tertiary)),
   );
   if (described === null) {
@@ -170,7 +170,8 @@ export async function colorways(turn: Turn): Promise<Outcome> {
 
   await turn.status(WORKING.colorways);
   const options = colorwayOptions(colors);
-  const describe = (value: Picked) => [value.say, ...value.colorways.flatMap((entry) => [entry.name, entry.rationale])];
+  const cardOf = (value: Picked) => value.colorways.flatMap((entry) => [entry.name, entry.rationale]);
+  const describe = (value: Picked) => [value.say, ...cardOf(value)];
   const picked = await turn.compose(
     () =>
       turn.think<Picked>({
@@ -179,7 +180,7 @@ export async function colorways(turn: Turn): Promise<Outcome> {
         facts: { brief: briefOf(turn), direction: directionOf(turn), options },
         shape: pickedShape(options),
       }),
-    describe,
+    (value) => ({ line: value.say, card: cardOf(value) }),
     async (value) => !describe(value).some(mentionsHex) && (await agreesWithNumbers(describe(value), threeOptions(value, options).map((entry) => entry.option), turn.signal)),
   );
   // No checked wording after two tries: show the colorways with the fixed line and no claims.

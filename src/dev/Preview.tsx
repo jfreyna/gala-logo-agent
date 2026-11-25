@@ -14,7 +14,7 @@ import { halls, panels, projects, screens } from "./fixtures";
  *   /preview/joincard?state=signIn   (the join card's sign-in states)
  *   /preview/<screen>            (studio, brief, research, type, directions, ...)
  *   /preview/<screen>?panel=<view>   (history, artifact, color, type, kit, memory)
- *   add &working=1 or &attached=1 for those prompt bar states,
+ *   add &working=1 or &attached=1 for those prompt bar states, &status=<line> for a working line of your own,
  *   &skip=N to leave out the first N items, &top=1 to show the start of a long conversation
  */
 export function Preview({ pathname, search }: { pathname: string; search: string }) {
@@ -53,7 +53,14 @@ export function Preview({ pathname, search }: { pathname: string; search: string
   if (!screen) return <p style={{ padding: 24 }}>No preview named “{name}”. Try: {Object.keys(screens).join(", ")}.</p>;
   const named = panelName !== null ? panels[panelName.replace("-confirm", "")] : undefined;
   const view = named && named.view === "memory" && panelName === "memory-confirm" ? { ...named, confirming: true } : named;
-  const working = params.get("working") === "1" ? (screen.working ?? ["I’m drawing three directions…", "Drawing three directions…"]) : null;
+  // &status=<a working line> shows that line the way the live studio phrases it for the bar.
+  const status = params.get("status");
+  const working: [string, string] | null =
+    status !== null
+      ? [`I’m ${status.charAt(0).toLowerCase()}${status.slice(1)}…`, `${status}…`]
+      : params.get("working") === "1"
+        ? (screen.working ?? ["I’m drawing three directions…", "Drawing three directions…"])
+        : null;
   const noop = () => undefined;
 
   return (

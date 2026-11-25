@@ -37,7 +37,7 @@ How a turn runs:
 
 1. The person does something: sends a message, or presses a button on a card. That writes straight to storage (`convex/messages.ts`, `convex/studio.ts`), as the person, and never as Gala.
 2. The page asks Gala's server for a turn (`POST /api/turn`), carrying the person's own sign-in token.
-3. The server opens the turn in storage, which takes a lock so a project has one turn at a time, and reads the project.
+3. The server opens the turn in storage, which checks the person's token, takes a lock so a project has one turn at a time, and reads the project. The token is used for this one step and then dropped.
 4. It runs the current stage, and keeps going through stages until one needs the person.
 5. Everything Gala is about to say passes the prompt-protection checks, then is written to storage. The page sees it through its live queries. The browser receives Gala's replies and nothing else.
 
@@ -51,7 +51,11 @@ How a turn runs:
 | Color | The person picks their colors. Code lists every way to apply them, with contrast computed; the model picks three and says why, and what it says is checked against the numbers (`engine/colorways.ts`). |
 | Kit, picks | The kit pipeline builds the files; quotes sent to the halls are checked before they can show. |
 
-**Who may write what.** The engine reaches storage through a handful of HTTP routes (`convex/http.ts`) that require two proofs together: the person's sign-in token, which says whose project it is, and a secret shared between the server and storage, which says the caller is Gala's server. Without the secret, a signed-in person could write as Gala and put an unchecked image or quote in the public halls. Without the token, the secret alone can't touch a project.
+**Who may write what.** The engine reaches storage through a handful of HTTP routes (`convex/http.ts`). Every one needs a secret shared between the server and storage, which says the caller is Gala's server. Opening a turn also needs the person's own sign-in token, which says whose project it is: only the owner can open a turn. Inside the turn, the turn's id stands for the person. It is random, storage holds it as the project's lock, and it works only on that project and only while the lock lasts.
+
+- Without the secret, a signed-in person could write as Gala and put an unchecked image or quote in the public halls.
+- Without a turn an owner opened, the secret alone can't touch a project.
+- A turn, once open, can't die halfway because a token ran out, and closing it always goes through, so a project is never left locked.
 
 **The seam.** The engine talks to storage through one interface (`engine/store.ts`). On the server it is backed by Convex; in checks it is backed by memory, which is how a whole brief runs against the real models with no sign-in.
 
@@ -61,7 +65,7 @@ The persona prompt, the instructions for each step and the hall rules are not in
 
 - **Where the real prompt lives:** in the environment of Gala's Convex project, split across numbered values (one value holds 8 KiB). One internal function joins them (`convex/prompt.ts`), and one route returns it to a caller holding the shared secret.
 - **On the Sprite:** the server fetches it once at boot and keeps it in memory (`engine/prompt.ts`). It is never written to disk.
-- **Before anything Gala says is stored or shown** (`engine/guard.ts`): the persona is told never to reveal its instructions; a code check refuses any reply that repeats a 48-character run of the prompt, ignoring case, spacing and punctuation; and Jev is asked whether the reply reveals or describes its instructions. A reply that fails is replaced by a short decline. There is no list of forbidden phrases.
+- **Before anything Gala says is stored or shown** (`engine/guard.ts`): the persona is told never to reveal its instructions; a code check refuses any reply that repeats a 48-character run of the prompt, ignoring case, spacing and punctuation; and Jev is asked whether the reply reveals or describes its instructions. Gala's spoken line and the rest of a card's text are judged as two texts, because a card often holds the person's own words. A reply that fails is replaced by a short decline, and the log names the check and its score, never the text. There is no list of forbidden phrases.
 - **What this does not prove:** a paraphrase that Jev scores low, or a leak spread thinly across many replies, would get through.
 
 ## Where things are
@@ -102,8 +106,11 @@ Each prints `N/N passed`, or `N/M, run incomplete` when a check could not run. E
 |---|---|---|
 | `npm run check:guard` | The code half of prompt protection: copies of the prompt are caught, reformatted or not; ordinary replies are not | anywhere |
 | `npm run check:jev` | The Jev reply check and the halls' quote check, on leaking, harmless, offensive and personal cases | on the Sprite |
+| `npm run check:walk` | The founder's first walk replayed: a brief for Gala's own logo gets its card, not the decline | on the Sprite |
 | `npm run check:e2e` | One full brief, first message to kit and picks, against the real models with a scripted person | on the Sprite |
-| `npm run check:storage` | The storage functions as a signed-in person and as Gala's server: the turn lock, Gala's writes, ownership, choices, and quotes waiting for their check | anywhere with the Convex CLI signed in to a dev deployment |
+| `npm run check:storage` | The storage functions as a signed-in person and as Gala's server: the turn lock, a turn's id reading and writing its own project and no other, ownership, choices, and quotes waiting for their check. `-- --aged-lock` also waits out a lock (12 minutes) | anywhere with the Convex CLI signed in to a dev deployment |
+| `npm run check:routes` | The storage routes' refusals: no secret, no open turn, a forged token | on the Sprite |
+| `npm run check:turn` | A whole real turn that runs with no sign-in token once it is open: the case of a turn that outlives the person's token | from a machine with the Convex CLI and the Sprite CLI |
 | `npm run check:history -- <local prompt draft>` | No line of the real prompt is in any commit, as written or re-wrapped | anywhere, by whoever holds the draft |
 | `node scripts/check-sprite-disk.mjs <local prompt draft>` | No line of the real prompt is in any file on the Sprite | from a machine with the Sprite CLI |
 | `node scripts/smoke.mjs` | What the screens do: the join card's states, the halls, the studio's controls | with the dev server running |

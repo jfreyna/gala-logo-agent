@@ -73,7 +73,7 @@ async function propose(turn: Turn): Promise<Outcome> {
         },
         shape: WORDS_SHAPE,
       }),
-    (value) => [value.say, ...value.reasons],
+    (value) => ({ line: value.say, card: value.reasons }),
   );
   if (words === null) {
     await turn.decline();
