@@ -3,6 +3,8 @@ import { useGoogleFont } from "../../lib/googleFont";
 import type { LockupArtifact, LockupLayout, LockupSpaceBetween } from "./types";
 import { ArtifactCard, Turn } from "./Turn";
 import { Actions, Field, Heading, Settings, Tile } from "./Settings";
+import { CardFooter } from "../Feedback";
+import type { Past } from "../history";
 
 const LAYOUTS: [LockupLayout, string][] = [
   ["sideBySide", "Side by side"],
@@ -50,11 +52,15 @@ export function Lockup({
   onSet,
   onChangeSymbol,
   onApprove,
+  past,
+  onBack,
 }: {
   data: LockupArtifact;
   onSet: (setting: { layout?: LockupLayout; spaceBetween?: LockupSpaceBetween }) => void;
   onChangeSymbol: () => void;
   onApprove: () => void;
+  past?: Past;
+  onBack: () => void;
 }) {
   useGoogleFont(data.family, data.brandName);
 
@@ -101,11 +107,17 @@ export function Lockup({
             {draw(INVERTED)}
           </Tile>
         </div>
-        <Settings>
-          <Field name="Layout" options={LAYOUTS} value={data.layout} disabled={data.approved} onPick={(value) => onSet({ layout: value })} />
-          <Field name="Space between" options={SPACES} value={data.spaceBetween} disabled={data.approved} onPick={(value) => onSet({ spaceBetween: value })} />
-        </Settings>
-        <Actions change="Change symbol" approve="Use this lockup" disabled={data.approved} onChange={onChangeSymbol} onApprove={onApprove} />
+        {past !== undefined ? (
+          <CardFooter past={past} onBack={onBack} />
+        ) : (
+          <>
+            <Settings>
+              <Field name="Layout" options={LAYOUTS} value={data.layout} disabled={data.approved} onPick={(value) => onSet({ layout: value })} />
+              <Field name="Space between" options={SPACES} value={data.spaceBetween} disabled={data.approved} onPick={(value) => onSet({ spaceBetween: value })} />
+            </Settings>
+            <Actions change="Change symbol" approve="Use this lockup" disabled={data.approved} onChange={onChangeSymbol} onApprove={onApprove} />
+          </>
+        )}
       </ArtifactCard>
     </div>
   );

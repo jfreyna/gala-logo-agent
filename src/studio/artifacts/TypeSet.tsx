@@ -2,6 +2,8 @@ import { Icon } from "../../components/Icon";
 import { useGoogleFont } from "../../lib/googleFont";
 import type { TypeDirection, TypeSetArtifact } from "./types";
 import { Turn } from "./Turn";
+import { CardFooter } from "../Feedback";
+import type { Past } from "../history";
 
 const ALPHABET = "Aa Bb Cc 0123";
 
@@ -15,12 +17,15 @@ function TypeSpecimen({
   direction,
   brandName,
   chosen,
+  readOnly,
   onChange,
   onChoose,
 }: {
   direction: TypeDirection;
   brandName: string;
   chosen: boolean;
+  /** A past card: its buttons give way to the set's footer. */
+  readOnly: boolean;
   onChange: () => void;
   onChoose: () => void;
 }) {
@@ -58,6 +63,7 @@ function TypeSpecimen({
         <p className="type-mini-medium shrink-0 text-text-neutral-2-light dark:text-text-neutral-2-dark">{direction.moods}</p>
       </div>
       <p className="type-caption-medium relative w-full flex-[1_0_auto] text-text-neutral-1-light dark:text-text-neutral-1-dark">{direction.rationale}</p>
+      {!readOnly && (
       <div className="relative flex w-full shrink-0 items-start gap-[8px]" data-name="actions">
         <button
           type="button"
@@ -82,16 +88,19 @@ function TypeSpecimen({
           <span className="type-caption-semibold shrink-0">{chosen ? "Chosen" : "Choose"}</span>
         </button>
       </div>
+      )}
     </div>
   );
 }
 
-/** The saved choice: the brand name in the chosen family, with Edit. */
-function SavedType({ direction, brandName, onEdit }: { direction: TypeDirection; brandName: string; onEdit: () => void }) {
+/** The saved choice: the brand name in the chosen family, with Edit; once past, with the footer under it instead. */
+function SavedType({ direction, brandName, onEdit, past, onBack }: { direction: TypeDirection; brandName: string; onEdit: () => void; past?: Past; onBack: () => void }) {
   useGoogleFont(direction.family, brandName);
   return (
     <div
-      className="relative flex w-full shrink-0 items-center justify-between gap-[16px] rounded-[16px] bg-background-1-light p-[16px] dark:bg-background-2-dark"
+      className={`relative flex w-full shrink-0 rounded-[16px] bg-background-1-light p-[16px] dark:bg-background-2-dark ${
+        past !== undefined ? "flex-col items-start" : "items-center justify-between gap-[16px]"
+      }`}
       data-name="saved"
     >
       <div className="relative flex min-w-px flex-wrap items-center gap-[16px]" data-name="chosen">
@@ -105,9 +114,13 @@ function SavedType({ direction, brandName, onEdit }: { direction: TypeDirection;
           <p className="type-mini-semibold shrink-0 text-headline-1-light dark:text-headline-1-dark">{direction.category}</p>
         </div>
       </div>
-      <button type="button" onClick={onEdit} className="type-caption-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">
-        Edit
-      </button>
+      {past !== undefined ? (
+        <CardFooter past={past} onBack={onBack} />
+      ) : (
+        <button type="button" onClick={onEdit} className="type-caption-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">
+          Edit
+        </button>
+      )}
     </div>
   );
 }
@@ -121,19 +134,24 @@ export function TypeSet({
   onChange,
   onChoose,
   onEdit,
+  past,
+  onBack,
 }: {
   data: TypeSetArtifact;
   onChange: (id: string) => void;
   onChoose: (id: string) => void;
   onEdit: () => void;
+  past?: Past;
+  onBack: () => void;
 }) {
   const saved = data.saved ? data.directions.find((direction) => direction.id === data.chosenId) : undefined;
   return (
     <div className="relative flex w-full shrink-0 flex-col items-start gap-[12px]" data-name="gala-type-set">
       <Turn>{data.say}</Turn>
       {saved ? (
-        <SavedType direction={saved} brandName={data.brandName} onEdit={onEdit} />
+        <SavedType direction={saved} brandName={data.brandName} onEdit={onEdit} past={past} onBack={onBack} />
       ) : (
+        <>
         <div className="swipe-row relative flex w-full shrink-0 items-stretch gap-[12px] overflow-x-auto desktop:overflow-visible" data-name="directions">
           {data.directions.map((direction) => (
             <TypeSpecimen
@@ -141,11 +159,14 @@ export function TypeSet({
               direction={direction}
               brandName={data.brandName}
               chosen={direction.id === data.chosenId}
+              readOnly={past !== undefined}
               onChange={() => onChange(direction.id)}
               onChoose={() => onChoose(direction.id)}
             />
           ))}
         </div>
+        {past !== undefined && <CardFooter past={past} onBack={onBack} />}
+        </>
       )}
     </div>
   );

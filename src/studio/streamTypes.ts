@@ -18,13 +18,14 @@ import type {
   WordmarkCase,
   WordmarkSpacing,
 } from "./artifacts/types";
+import type { Past } from "./history";
 
 /**
  * One thing in the conversation: a line from Gala, a line from the visitor
- * (with or without a reference file), Gala's "working" status, or an
- * artifact Gala placed in the stream.
+ * (with or without a reference file), the line a card action leaves, Gala's
+ * "working" status, or an artifact Gala placed in the stream.
  */
-export type StreamItem =
+export type StreamItem = (
   | { id: string; kind: "gala"; text: string }
   | { id: string; kind: "visitor"; text: string }
   | { id: string; kind: "working"; text: string }
@@ -42,7 +43,13 @@ export type StreamItem =
   | { id: string; kind: "colorPicker"; data: ColorPickerArtifact }
   | { id: string; kind: "colorwaySet"; data: ColorwaySetArtifact }
   | { id: string; kind: "kit"; data: KitArtifact }
-  | { id: string; kind: "picks"; data: PicksArtifact };
+  | { id: string; kind: "picks"; data: PicksArtifact }
+  /** A card action's line on the person's side (gala-action-echo). */
+  | { id: string; kind: "action"; label: string; state: "Sending" | "Sent" }
+) & {
+  /** Set on a card whose step is behind the project: its footer replaces its buttons and chips (history.ts). */
+  past?: Past;
+};
 
 /** The artifact kinds, as stored in a message's `kind`. */
 export const ARTIFACT_KINDS = [
@@ -90,4 +97,6 @@ export type ArtifactAction =
   | { type: "downloadKit" }
   | { type: "openSpec" }
   | { type: "submitPicks"; hated: { draftId: string; quote: string } | null; loved: { quote: string } | null }
-  | { type: "declinePicks" };
+  | { type: "declinePicks" }
+  /** "Back to this step" on a read-only card's footer. */
+  | { type: "backToStep" };

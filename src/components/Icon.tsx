@@ -49,6 +49,11 @@ const ICONS = {
     size: 16,
     body: '<path d="M7.99967 2.66699V10.0003M11.333 6.66699L7.99967 10.0003L4.66634 6.66699M3.33301 13.3337H12.6663" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round" stroke="currentColor"/>',
   },
+  /** icon/check (Figma, gala-card-footer and gala-action-echo): a check in a circle, 16px. */
+  checkCircle: {
+    size: 16,
+    body: '<path d="M14.8 8C14.8 11.7555 11.7555 14.8 8 14.8C4.24446 14.8 1.2 11.7555 1.2 8C1.2 4.24446 4.24446 1.2 8 1.2C11.7555 1.2 14.8 4.24446 14.8 8Z" stroke-width="1.5" stroke="currentColor"/><path d="M4.8 8.24L6.88 10.32L11.2 6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" stroke="currentColor"/>',
+  },
   checkSmall: {
     size: 12,
     body: '<path d="M2.5 6.25L4.75 8.5L9.5 3.75" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" stroke="currentColor"/>',

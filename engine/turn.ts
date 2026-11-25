@@ -185,14 +185,19 @@ export class Turn {
     return images;
   }
 
-  /** The conversation as the model reads it. A card is its spoken line plus a note of what it was. */
+  /**
+   * The conversation as the model reads it. A card is its spoken line plus a
+   * note of what it was. A button the person pressed on a card (its line in
+   * the chat, convex/lib/echo.ts) is a note of what they pressed.
+   */
   private conversation(): Spoken[] {
     const spoken: Spoken[] = [];
     for (const message of this.state.messages) {
       const role = message.author === "visitor" ? "user" : "model";
       let text = message.text ?? "";
       if (message.upload !== null) text = `${text}\n[attached a reference: ${message.upload.fileName}]`.trim();
-      if (message.artifact !== null) text = `${message.artifact.say ?? ""}\n[showed the ${message.kind} card]`.trim();
+      if (message.kind === "action" && message.author === "visitor") text = typeof message.artifact?.sent === "string" ? `[pressed a button on the card: ${message.artifact.sent}]` : "";
+      else if (message.artifact !== null) text = `${message.artifact.say ?? ""}\n[showed the ${message.kind} card]`.trim();
       if (text === "") continue;
       const previous = spoken[spoken.length - 1];
       if (previous !== undefined && previous.role === role) previous.text += `\n${text}`;

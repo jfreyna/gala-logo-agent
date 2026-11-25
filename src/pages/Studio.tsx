@@ -11,6 +11,8 @@ import { projectName, type Stage } from "../lib/stages";
 import { useRouter } from "../lib/router";
 import { download, fileMemoryLine, requestTurn, stopTurn } from "../lib/turn";
 import { groupsOf, mainClass, rankFamilies, topMoods, useTrayData } from "../lib/typeTray";
+import { pastCards } from "../studio/history";
+import { ECHO_KIND, echoFor, type EchoAction } from "../../convex/lib/echo";
 
 /** The steps the History view lists, in order, with the stages each covers. */
 const PHASES: { key: string; name: string; stages: Stage[] }[] = [
@@ -161,6 +163,9 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
   const [file, setFile] = useState<{ file: File; previewUrl: string | null } | null>(null);
   const [panel, setPanel] = useState<Open>(null);
   const [focusRequest, setFocusRequest] = useState(0);
+  // The line a card action leaves, shown the instant the click lands, until `act` has stored it (gala-action-echo, Sending).
+  const [pending, setPending] = useState<{ key: number; label: string }[]>([]);
+  const nextEcho = useRef(0);
   const tray = useTrayData(panel?.view === "type");
 
   // A turn's lock runs out after a while. The query's answer is not
@@ -202,22 +207,34 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
     [messages],
   );
 
+  const stage = project?.stage;
   const items = useMemo<StreamItem[]>(() => {
-    const stream = (messages ?? []).flatMap((message): StreamItem[] => {
+    const all = messages ?? [];
+    // Cards whose step is past show their footer in place of their buttons and chips.
+    const past = stage === undefined ? {} : pastCards(all.map((message) => ({ id: message._id, author: message.author, kind: message.kind, artifact: message.artifact as Record<string, any> | null })), stage);
+    const stream = all.flatMap((message, at): StreamItem[] => {
       const id = message._id;
+      if (message.kind === ECHO_KIND && message.artifact !== null) {
+        // Sending until Gala's working line appears or Gala answers; Sent after. An action that wakes no one is done at once.
+        const echo = message.artifact as { sending: string; sent: string; wakes: boolean };
+        const answered = working !== null || all.slice(at + 1).some((later) => later.author === "gala");
+        const state = echo.wakes && !answered ? "Sending" : "Sent";
+        return [{ id, kind: "action", label: state === "Sending" ? echo.sending : echo.sent, state }];
+      }
       if (message.kind === "upload" && message.upload) {
         return [{ id, kind: "upload", text: message.text ?? "", fileName: message.upload.fileName, sizeLabel: sizeLabel(message.upload.sizeBytes), imageUrl: message.upload.url }];
       }
       if (isArtifactKind(message.kind) && message.artifact !== null) {
         // The engine writes each artifact in the shape its kind names.
-        return [{ id, kind: message.kind, data: message.artifact } as unknown as StreamItem];
+        return [{ id, kind: message.kind, data: message.artifact, past: past[id] } as unknown as StreamItem];
       }
       return [{ id, kind: message.author === "gala" ? "gala" : "visitor", text: message.text ?? "" }];
     });
+    for (const echo of pending) stream.push({ id: `echo-${echo.key}`, kind: "action", label: echo.label, state: "Sending" });
     // Gala's "working" line, while a turn runs.
     if (working !== null) stream.push({ id: "working", kind: "working", text: working });
     return stream;
-  }, [messages, working]);
+  }, [messages, working, pending, stage]);
 
   async function sendMessage() {
     const words = text.trim();
@@ -250,10 +267,29 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
     });
   }
 
+  /**
+   * Stores a card action. Its line in the chat shows at once (Sending), and
+   * gives way to the one `act` stores with the action.
+   */
+  function record(messageId: Id<"messages">, recorded: Parameters<typeof act>[0]["action"]) {
+    const card = cards.find((entry) => entry.id === messageId)?.data ?? null;
+    const echo = echoFor(recorded as EchoAction, card);
+    const key = nextEcho.current++;
+    if (echo !== null) setPending((list) => [...list, { key, label: echo.sending }]);
+    void act({ projectId, messageId, action: recorded })
+      .catch(() => undefined)
+      .finally(() => setPending((list) => list.filter((entry) => entry.key !== key)));
+  }
+
   function onAction(action: ArtifactAction, itemId: string) {
     const messageId = itemId as Id<"messages">;
-    const record = (recorded: Parameters<typeof act>[0]["action"]) => void act({ projectId, messageId, action: recorded });
     switch (action.type) {
+      // "Back to this step" on a past card's footer: the same path as the Work panel's link.
+      case "backToStep": {
+        const step = items.find((item) => item.id === itemId)?.past?.backTo;
+        if (step != null) goBack(step);
+        return;
+      }
       // Editing the brief, or the direction, happens in the chat: the prompt is readied for the person.
       case "editBrief":
         setText("Change the brief: ");
@@ -270,7 +306,7 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
       case "changeSymbol":
         return goBack("directions");
       case "saveColors":
-        return record({ type: "saveColors", primary: action.colors.primary, secondary: action.colors.secondary, tertiary: action.colors.tertiary });
+        return record(messageId, { type: "saveColors", primary: action.colors.primary, secondary: action.colors.secondary, tertiary: action.colors.tertiary });
       case "downloadFormat":
         return saveFile(action.format);
       case "downloadKit":
@@ -278,7 +314,7 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
       case "openSpec":
         return setPanel({ view: "kit" });
       default:
-        return record(action);
+        return record(messageId, action);
     }
   }
 
@@ -392,7 +428,7 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
               if (panel?.view !== "type" || tray === null) return;
               const family = tray.families.find((entry) => entry.family === name);
               if (family === undefined) return;
-              void act({ projectId, messageId: panel.messageId as Id<"messages">, action: { type: "useFamily", id: panel.cardId, family: family.family, category: mainClass(family), moods: topMoods(family) } });
+              record(panel.messageId as Id<"messages">, { type: "useFamily", id: panel.cardId, family: family.family, category: mainClass(family), moods: topMoods(family) });
               setPanel(null);
             }}
             onDownloadFormat={saveFile}

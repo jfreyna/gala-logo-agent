@@ -95,7 +95,9 @@ async function show(turn: Turn, previous: StoredMessage | null): Promise<Outcome
     return "wait";
   }
 
-  await turn.write([{ op: "artifact", kind: "wordmark", artifact: { say: words.say, brandName: name, family, case: current.case, spacing: current.spacing, letterSpacingEm: letterSpacing, readsAt16: reads, approved: false } }]);
+  // The weight the name is drawn in: a family with no Regular is set in the weight a browser picks for it (Buda is Light), and the card says so.
+  const weight = (await fontFor(family)).info.weight;
+  await turn.write([{ op: "artifact", kind: "wordmark", artifact: { say: words.say, brandName: name, family, weight, case: current.case, spacing: current.spacing, letterSpacingEm: letterSpacing, readsAt16: reads, approved: false } }]);
   return "wait";
 }
 

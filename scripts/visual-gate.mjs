@@ -77,6 +77,10 @@ const screens = [
   // Drawn in desktop light only: a request held for a later step, and Gala opening the symbol step.
   { name: "held-desktop-light", path: "/preview/held?top=1", w: 1440, h: 1240, scheme: "light" },
   { name: "opener-desktop-light", path: "/preview/opener?top=1", ...DESKTOP, scheme: "light" },
+  // Feedback loops (FRI-1712), drawn in desktop light: a card action heard at once, then done; past cards read-only.
+  { name: "fb-heard-desktop-light", path: "/preview/heard?top=1", w: 1440, h: 948, scheme: "light" },
+  { name: "fb-heardworking-desktop-light", path: "/preview/heardWorking?top=1", w: 1440, h: 995, scheme: "light" },
+  { name: "fb-history-desktop-light", path: "/preview/history", w: 1440, h: 1040, scheme: "light" },
   // The join card's three sign-in states, drawn in Figma as component variants: the card alone, 340 wide on desktop and 348 on a phone.
   ...[
     ["signin", "signIn", 450],

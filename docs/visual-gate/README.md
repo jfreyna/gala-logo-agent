@@ -159,3 +159,16 @@ In `fri1709/`, from the dev previews at 2x, light and dark. They use the preview
 | `fri1711/wordmark-pacifico-desktop-light.png` | The same card in Pacifico, a connected script. |
 | `fri1711/wordmark-buda-desktop-light.png` | The same card in Buda, which has no Regular: the browser draws its Light, as the kit does. The heading still says Regular. |
 | `fri1711/kit-alata-primary-and-stacked.png` | The primary and stacked lock-ups from a kit built in Alata by `buildKit`, with the fixture mark. The "ffi" in Office is the font's ligature. |
+
+## Cards and history (FRI-1713)
+
+Run on 2026-11-25, port 3004, on `feature/FRI-1713-cards-history`. The three Feedback loops frames this issue builds were exported that day from the band "Feedback loops (FRI-1712)": `fb-heard-*` (Heard 5663:17342), `fb-heardworking-*` (Heard, then working 5663:17510) and `fb-history-*` (History cards 5663:17685). They are drawn in desktop light only.
+
+| Image | Note |
+|---|---|
+| `fb-heard-desktop-light` | The frame's prompt bar shows Stop while the action is on its way; the build shows Send, because no turn has started yet. The bar's states are FRI-1715's. |
+| `fb-history-desktop-light` | Every card measures the frame's size (direction 269, signed-off type card 118, echo 33, wordmark 585); the conversation rests a few pixels lower, from the scroll-to-bottom timing the other studio screens share. |
+
+The other 80 screens were not compared with their frames this run (the exports are not on this machine). Instead each was compared with the same screen built from `main` at `1399a18`: all 80 are unchanged (no screen over 0.05% of pixels).
+
+`fri1713/` holds the built screens with no frame: the same three in desktop dark and on a phone, light and dark, drawn from the components' Dark and Mobile modes.

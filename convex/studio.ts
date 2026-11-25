@@ -3,14 +3,16 @@ import { mutation } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireOwnProject } from "./lib/owner";
+import { ECHO_KIND, echoFor } from "./lib/echo";
 
 /**
  * What a person does on one of Gala's cards: approve the direction, pick a
  * typeface, sign off the wordmark, pick a mark, sign off the lockup, save
  * colors, send picks to the halls.
  *
- * This is the person's side only. It marks the card and notes that Gala has
- * something to answer; it never writes anything as Gala. A choice is
+ * This is the person's side only. It marks the card, leaves the action's
+ * line in the chat on the person's side (lib/echo.ts), and notes that Gala
+ * has something to answer; it never writes anything as Gala. A choice is
  * accepted only if it names an option that card really offers, so a crafted
  * call cannot choose a mark Gala did not draw.
  */
@@ -124,18 +126,22 @@ export const act = mutation({
         break;
       }
       case "chooseType": {
+        // Once the project is past the type step, the type card is history: a change goes back to the step first (FRI-1713, gap C).
+        if (project.stage !== "type") throw new Error("That step is done.");
         const { artifact } = await card(ctx, projectId, messageId, "typeSet");
         if (!hasOption(artifact.directions, action.id)) throw new Error("That typeface is not on the card.");
         await ctx.db.patch(messageId, { artifact: { ...artifact, chosenId: action.id, saved: true } });
-        waitingOnGala = project.stage === "type";
+        waitingOnGala = true;
         break;
       }
       case "editType": {
+        if (project.stage !== "type") throw new Error("That step is done.");
         const { artifact } = await card(ctx, projectId, messageId, "typeSet");
         await ctx.db.patch(messageId, { artifact: { ...artifact, saved: false } });
         break;
       }
       case "useFamily": {
+        if (project.stage !== "type") throw new Error("That step is done.");
         const { artifact } = await card(ctx, projectId, messageId, "typeSet");
         if (!hasOption(artifact.directions, action.id)) throw new Error("That card is not in the set.");
         const directions = (artifact.directions as Artifact[]).map((direction) =>
@@ -254,6 +260,12 @@ export const act = mutation({
         waitingOnGala = true;
         break;
       }
+    }
+
+    // The action's line in the chat, on the person's side. It has no text, so steering never reads it as something the person said.
+    const echo = echoFor(action, ((await ctx.db.get(messageId))?.artifact ?? null) as Record<string, unknown> | null);
+    if (echo !== null) {
+      await ctx.db.insert("messages", { projectId, ownerSubject: subject, author: "visitor", kind: ECHO_KIND, artifact: { ...echo, wakes: waitingOnGala } });
     }
 
     await ctx.db.patch(projectId, waitingOnGala ? { waitingOnGala: true, updatedAt: Date.now() } : { updatedAt: Date.now() });

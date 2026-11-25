@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { CardFooter } from "../Feedback";
+import type { Past } from "../history";
 import type { DirectionArtifact } from "./types";
 import { ArtifactCard, Chip, FieldLabel, Turn } from "./Turn";
 
@@ -18,7 +20,19 @@ function Row({ label, center = false, children }: { label: string; center?: bool
  * gala-direction (Figma 5565:12433): the creative direction, stated before
  * anything is drawn, with the two answers: change something, or looks right.
  */
-export function Direction({ data, onChange, onApprove }: { data: DirectionArtifact; onChange: () => void; onApprove: () => void }) {
+export function Direction({
+  data,
+  onChange,
+  onApprove,
+  past,
+  onBack,
+}: {
+  data: DirectionArtifact;
+  onChange: () => void;
+  onApprove: () => void;
+  past?: Past;
+  onBack: () => void;
+}) {
   const value = "type-body-regular w-full shrink-0 text-text-neutral-1-light desktop:min-w-px desktop:flex-[1_0_0] dark:text-text-neutral-1-dark";
   return (
     <div className="relative flex w-full shrink-0 flex-col items-start gap-[12px]" data-name="gala-direction">
@@ -41,6 +55,9 @@ export function Direction({ data, onChange, onApprove }: { data: DirectionArtifa
             ))}
           </div>
         </Row>
+        {past !== undefined ? (
+          <CardFooter past={past} onBack={onBack} />
+        ) : (
         <div className="relative flex w-full shrink-0 flex-col items-start gap-[8px] desktop:flex-row desktop:justify-end desktop:gap-[12px]" data-name="actions">
           <button
             type="button"
@@ -59,6 +76,7 @@ export function Direction({ data, onChange, onApprove }: { data: DirectionArtifa
             <span className="type-caption-semibold shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">Change something</span>
           </button>
         </div>
+        )}
       </ArtifactCard>
     </div>
   );

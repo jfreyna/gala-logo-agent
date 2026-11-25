@@ -2,9 +2,11 @@ import { ConceptCard } from "../../components/ConceptCard";
 import { CheckBadge } from "../../components/CheckBadge";
 import type { Concept, ConceptSetArtifact, VariationSetArtifact } from "./types";
 import { Turn } from "./Turn";
+import { CardFooter } from "../Feedback";
+import type { Past } from "../history";
 
 /** Three cards across the column, each as tall as the tallest; a row that swipes sideways on a phone. */
-function ConceptRow({ concepts, chosenId, onChoose, name }: { concepts: Concept[]; chosenId: string | null; onChoose: (id: string) => void; name: string }) {
+function ConceptRow({ concepts, chosenId, onChoose, name }: { concepts: Concept[]; chosenId: string | null; onChoose: ((id: string) => void) | null; name: string }) {
   return (
     <div className="swipe-row relative flex w-full shrink-0 items-stretch gap-[12px] overflow-x-auto desktop:overflow-visible" data-name={name}>
       {concepts.map((concept) => (
@@ -16,7 +18,8 @@ function ConceptRow({ concepts, chosenId, onChoose, name }: { concepts: Concept[
           markUrl={concept.markUrl}
           checks={concept.checks}
           chosen={concept.id === chosenId}
-          onChoose={() => onChoose(concept.id)}
+          onChoose={onChoose === null ? undefined : () => onChoose(concept.id)}
+          readOnly={onChoose === null}
           className="desktop:w-auto desktop:min-w-px desktop:flex-[1_0_0]"
         />
       ))}
@@ -49,22 +52,24 @@ function DiscardedStrip({ drafts }: { drafts: ConceptSetArtifact["discarded"] })
 }
 
 /** gala-concept-set (Figma 5533:3286): three directions in black and white, and the drafts set aside. */
-export function ConceptSet({ data, onChoose }: { data: ConceptSetArtifact; onChoose: (id: string) => void }) {
+export function ConceptSet({ data, onChoose, past, onBack }: { data: ConceptSetArtifact; onChoose: (id: string) => void; past?: Past; onBack: () => void }) {
   return (
     <div className="relative flex w-full shrink-0 flex-col items-start gap-[12px]" data-name="gala-concept-set">
       <Turn>{data.say}</Turn>
-      <ConceptRow concepts={data.concepts} chosenId={data.chosenId} onChoose={onChoose} name="directions" />
+      <ConceptRow concepts={data.concepts} chosenId={data.chosenId} onChoose={past === undefined ? onChoose : null} name="directions" />
       {data.discarded.length > 0 && <DiscardedStrip drafts={data.discarded} />}
+      {past !== undefined && <CardFooter past={past} onBack={onBack} />}
     </div>
   );
 }
 
 /** gala-variation-set (Figma 5550:7950): three refinements of the chosen direction. */
-export function VariationSet({ data, onChoose }: { data: VariationSetArtifact; onChoose: (id: string) => void }) {
+export function VariationSet({ data, onChoose, past, onBack }: { data: VariationSetArtifact; onChoose: (id: string) => void; past?: Past; onBack: () => void }) {
   return (
     <div className="relative flex w-full shrink-0 flex-col items-start gap-[12px]" data-name="gala-variation-set">
       <Turn>{data.say}</Turn>
-      <ConceptRow concepts={data.concepts} chosenId={data.chosenId} onChoose={onChoose} name="variations" />
+      <ConceptRow concepts={data.concepts} chosenId={data.chosenId} onChoose={past === undefined ? onChoose : null} name="variations" />
+      {past !== undefined && <CardFooter past={past} onBack={onBack} />}
     </div>
   );
 }

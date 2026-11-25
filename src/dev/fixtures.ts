@@ -145,6 +145,38 @@ const lockupCard = (layout: "sideBySide" | "stacked"): StreamItem => ({
 });
 
 /** Each studio screen in the frames: its conversation and its prompt placeholders. */
+/** The direction and type cards as the Feedback loops frames draw them signed off (FRI-1712, History cards 5663:17685). */
+const directionSignedOff: StreamItem = {
+  id: "direction-signed-off",
+  kind: "direction",
+  data: {
+    say: "Here’s the direction I’d take. Tell me if it’s off before I draw anything.",
+    mood: "Warm, plain-spoken, a little worn",
+    posture: "Steady and grounded, never trendy",
+    energy: "Slow heat: calm, with one bright accent",
+    references: ["Hand-painted signs", "Oven arches", "Flour sacks", "Market stalls"],
+    approved: true,
+  },
+  past: { signedOff: true, backTo: "research" },
+};
+
+const typeSignedOff: StreamItem = {
+  id: "type-signed-off",
+  kind: "typeSet",
+  data: {
+    say: "Three type directions, chosen from Google’s own categories. A has the warmth your brief asks for; C is the calmest, but it leans corporate.",
+    brandName: BRAND,
+    saved: true,
+    chosenId: "a",
+    directions: [
+      { id: "a", letter: "A", family: "Young Serif", category: "Serif · Old Style Garalde", moods: "Vintage, sincere, rugged", rationale: "Warm and a little worn, like a hand-painted sign. Never fussy.", pick: "gala" },
+      { id: "b", letter: "B", family: "Alegreya Sans", category: "Sans · Humanist", moods: "Competent, sincere, rugged", rationale: "Friendly and steady. Reads well small, on menus and bags.", pick: null },
+      { id: "c", letter: "C", family: "Outfit", category: "Sans · Geometric", moods: "Calm, competent, business", rationale: "The calmest of the three, but it leans corporate, which your brief rules out.", pick: null },
+    ],
+  },
+  past: { signedOff: true, backTo: "type" },
+};
+
 export const screens: Record<string, { items: StreamItem[]; placeholder: string; placeholderMobile: string; working?: [string, string] }> = {
   studio: {
     items: [opening, visitorBrief, { id: "working", kind: "working", text: "Looking at competitors and neighbors" }],
@@ -261,6 +293,32 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholderMobile: "Pick A, B or C.",
   },
   wordmark: { items: [{ id: "pick", kind: "visitor", text: "A, Young Serif." }, wordmark], placeholder: "Approve the wordmark, or ask for a change.", placeholderMobile: "Approve, or ask for a change." },
+  // Feedback loops (FRI-1712): a card action heard at once, then done; past cards read-only.
+  heard: {
+    items: [wordmark, { id: "echo", kind: "action", label: "Using this wordmark", state: "Sending" }],
+    placeholder: "Approve the wordmark, or ask for a change.",
+    placeholderMobile: "Approve, or ask for a change.",
+  },
+  heardWorking: {
+    items: [
+      { ...wordmark, data: { ...(wordmark as { data: object }).data, approved: true }, past: { signedOff: true, backTo: "wordmark" } } as StreamItem,
+      { id: "echo", kind: "action", label: "Used this wordmark", state: "Sent" },
+      { id: "working", kind: "working", text: "Opening the symbol step" },
+    ],
+    placeholder: "Approve the wordmark, or ask for a change.",
+    placeholderMobile: "Approve, or ask for a change.",
+  },
+  history: {
+    items: [
+      directionSignedOff,
+      { id: "echo-direction", kind: "action", label: "Direction looks right", state: "Sent" },
+      typeSignedOff,
+      { id: "echo-type", kind: "action", label: "Picked Young Serif", state: "Sent" },
+      wordmark,
+    ],
+    placeholder: "Approve the wordmark, or ask for a change.",
+    placeholderMobile: "Approve, or ask for a change.",
+  },
   held: {
     items: [
       wordmark,

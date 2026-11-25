@@ -35,6 +35,8 @@ export type DirectionArtifact = {
   posture: string;
   energy: string;
   references: string[];
+  /** True once the person says it looks right. */
+  approved?: boolean;
 };
 
 export type Concept = {
@@ -99,6 +101,8 @@ export type WordmarkArtifact = {
   letterSpacingEm: number;
   /** True once the person signs it off; the symbol opens then. */
   approved: boolean;
+  /** The weight the name is drawn in (FRI-1711 `info.weight`). Absent on cards from before it was stored: Regular. */
+  weight?: number;
 };
 
 /** Gala's line that opens the symbol step. It is drawn as a plain message. */

@@ -17,6 +17,7 @@ export function ConceptCard({
   checks,
   chosen = false,
   onChoose,
+  readOnly = false,
   className = "",
 }: {
   letter: string;
@@ -27,6 +28,8 @@ export function ConceptCard({
   chosen?: boolean;
   /** Absent where the card is a picture of the work, not a choice. */
   onChoose?: () => void;
+  /** A card in a set whose step is past: no Choose button, the set's footer stands in for it. */
+  readOnly?: boolean;
   className?: string;
 }) {
   return (
@@ -54,6 +57,7 @@ export function ConceptCard({
           <CheckBadge key={check.label} label={check.label} pass={check.pass} />
         ))}
       </div>
+      {!readOnly && (
       <button
         type="button"
         onClick={onChoose}
@@ -69,6 +73,7 @@ export function ConceptCard({
         {chosen && <Icon name="check" size={16} />}
         <span className="type-caption-semibold shrink-0 whitespace-nowrap">{chosen ? "Chosen" : "Choose"}</span>
       </button>
+      )}
     </div>
   );
 }

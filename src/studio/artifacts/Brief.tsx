@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { CardFooter } from "../Feedback";
+import type { Past } from "../history";
 import type { BriefArtifact } from "./types";
 import { ArtifactCard, Chip, FieldLabel, Turn } from "./Turn";
 
@@ -25,7 +27,7 @@ function Value({ children }: { children: string | null }) {
  * gala-brief (Figma 5564:12227): the brief as it fills in. A field Gala has
  * not asked about yet is dimmed and says "I’ll ask".
  */
-export function Brief({ data, onEdit }: { data: BriefArtifact; onEdit: () => void }) {
+export function Brief({ data, onEdit, past, onBack }: { data: BriefArtifact; onEdit: () => void; past?: Past; onBack: () => void }) {
   const pending = (field: BriefArtifact["pending"][number]) => data.pending.includes(field);
   return (
     <div className="relative flex w-full shrink-0 flex-col items-start gap-[12px]" data-name="gala-brief">
@@ -33,9 +35,11 @@ export function Brief({ data, onEdit }: { data: BriefArtifact; onEdit: () => voi
       <ArtifactCard name="brief">
         <div className="relative flex w-full shrink-0 items-center justify-between" data-name="heading">
           <p className="type-body-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">Brief</p>
-          <button type="button" onClick={onEdit} className="type-caption-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">
-            Edit
-          </button>
+          {past === undefined && (
+            <button type="button" onClick={onEdit} className="type-caption-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">
+              Edit
+            </button>
+          )}
         </div>
         <div className="relative flex w-full shrink-0 flex-wrap items-start gap-x-[24px] gap-y-[16px]" data-name="fields">
           <Field label="Brand" pending={pending("brand")}>
@@ -71,6 +75,7 @@ export function Brief({ data, onEdit }: { data: BriefArtifact; onEdit: () => voi
             </div>
           </Field>
         </div>
+        {past !== undefined && <CardFooter past={past} onBack={onBack} />}
       </ArtifactCard>
     </div>
   );

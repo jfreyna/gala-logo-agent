@@ -3,6 +3,8 @@ import { Icon } from "../../components/Icon";
 import { useGoogleFont } from "../../lib/googleFont";
 import type { BrandColors, Colorway, ColorwaySetArtifact, Role } from "./types";
 import { Turn } from "./Turn";
+import { CardFooter } from "../Feedback";
+import type { Past } from "../history";
 
 function roleColor(role: Role, colors: BrandColors): string {
   if (role === "Primary") return colors.primary;
@@ -23,8 +25,10 @@ function ColorwayCard({
   letterSpacingEm,
   colors,
   chosen,
+  readOnly,
   onChoose,
 }: {
+  readOnly: boolean;
   colorway: Colorway;
   brandName: string;
   family: string;
@@ -66,6 +70,7 @@ function ColorwayCard({
           <ColorChip key={role} color={roleColor(role, colors)} label={role} />
         ))}
       </div>
+      {!readOnly && (
       <button
         type="button"
         onClick={onChoose}
@@ -80,12 +85,13 @@ function ColorwayCard({
         {chosen && <Icon name="check" size={16} />}
         <span className="type-caption-semibold shrink-0">{chosen ? "Chosen" : "Choose"}</span>
       </button>
+      )}
     </div>
   );
 }
 
 /** gala-colorway-set (Figma 5541:5713): the person's colors applied three ways. */
-export function ColorwaySet({ data, onChoose }: { data: ColorwaySetArtifact; onChoose: (id: string) => void }) {
+export function ColorwaySet({ data, onChoose, past, onBack }: { data: ColorwaySetArtifact; onChoose: (id: string) => void; past?: Past; onBack: () => void }) {
   useGoogleFont(data.family, data.brandName);
   return (
     <div className="relative flex w-full shrink-0 flex-col items-start gap-[12px]" data-name="gala-colorway-set">
@@ -100,10 +106,12 @@ export function ColorwaySet({ data, onChoose }: { data: ColorwaySetArtifact; onC
             letterSpacingEm={data.letterSpacingEm ?? 0}
             colors={data.colors}
             chosen={colorway.id === data.chosenId}
+            readOnly={past !== undefined}
             onChoose={() => onChoose(colorway.id)}
           />
         ))}
       </div>
+      {past !== undefined && <CardFooter past={past} onBack={onBack} />}
     </div>
   );
 }

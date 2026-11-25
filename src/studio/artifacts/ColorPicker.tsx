@@ -4,6 +4,8 @@ import { Icon } from "../../components/Icon";
 import { parseHex, toHex } from "../../lib/color";
 import type { BrandColors, ColorPickerArtifact } from "./types";
 import { ArtifactCard, Turn } from "./Turn";
+import { CardFooter } from "../Feedback";
+import type { Past } from "../history";
 
 type EyeDropperWindow = Window & { EyeDropper?: new () => { open: () => Promise<{ sRGBHex: string }> } };
 
@@ -84,7 +86,19 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
  * optional Tertiary, then Save colors. Saved: one swatch per role, named by
  * role and never by hex, with Edit.
  */
-export function ColorPicker({ data, onSave, onEdit }: { data: ColorPickerArtifact; onSave: (colors: BrandColors) => void; onEdit: () => void }) {
+export function ColorPicker({
+  data,
+  onSave,
+  onEdit,
+  past,
+  onBack,
+}: {
+  data: ColorPickerArtifact;
+  onSave: (colors: BrandColors) => void;
+  onEdit: () => void;
+  past?: Past;
+  onBack: () => void;
+}) {
   const [primary, setPrimary] = useState(data.colors?.primary ?? "");
   const [secondary, setSecondary] = useState(data.colors?.secondary ?? "");
   const [tertiary, setTertiary] = useState(data.colors?.tertiary ?? "");
@@ -108,11 +122,13 @@ export function ColorPicker({ data, onSave, onEdit }: { data: ColorPickerArtifac
               <ColorChip color={data.colors.secondary} label="Secondary" />
               {data.colors.tertiary !== null && <ColorChip color={data.colors.tertiary} label="Tertiary" />}
             </div>
-            <button type="button" onClick={onEdit} className="type-caption-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">
-              Edit
-            </button>
+            {past === undefined && (
+              <button type="button" onClick={onEdit} className="type-caption-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">
+                Edit
+              </button>
+            )}
           </div>
-        ) : (
+        ) : past !== undefined ? null : (
           <>
             <div className="relative flex w-full shrink-0 flex-col items-start gap-[16px] desktop:flex-row" data-name="fields">
               <ColorField label="PRIMARY" value={primary} onChange={setPrimary} />
@@ -131,6 +147,7 @@ export function ColorPicker({ data, onSave, onEdit }: { data: ColorPickerArtifac
             </div>
           </>
         )}
+        {past !== undefined && <CardFooter past={past} onBack={onBack} />}
       </ArtifactCard>
     </div>
   );
