@@ -3,10 +3,8 @@ import { Link, useRouter } from "../lib/router";
 import { authClient } from "../lib/auth";
 import { Icon } from "./Icon";
 import { useTheme } from "../lib/theme";
-import frillyIconBlack from "../assets/icons/frilly-icon-black.svg";
-import frillyIconBlackMobile from "../assets/icons/frilly-icon-black-mobile.svg";
-import frillyIconWhite from "../assets/icons/frilly-icon-white.svg";
-import frillyIconWhiteMobile from "../assets/icons/frilly-icon-white-mobile.svg";
+import galaLogoLight from "../assets/brand/gala-logo-light.svg";
+import galaLogoDark from "../assets/brand/gala-logo-dark.svg";
 import panelLight from "../assets/icons/panel-light.svg";
 import panelDark from "../assets/icons/panel-dark.svg";
 import sun from "../assets/icons/sun.svg";
@@ -144,13 +142,9 @@ export function Header(props: HeaderProps) {
         data-name="identity"
       >
         <Link to="/" className="flex shrink-0 items-center gap-[12px]">
-          <img alt="" src={frillyIconBlack} width={40} height={39} className="hidden h-[39px] w-[40px] shrink-0 desktop:block dark:desktop:hidden" />
-          <img alt="" src={frillyIconBlackMobile} width={32} height={31.038} className="block h-[31.038px] w-[32px] shrink-0 desktop:hidden dark:hidden" />
-          <img alt="" src={frillyIconWhite} width={40} height={39} className="hidden h-[39px] w-[40px] shrink-0 dark:desktop:block" />
-          <img alt="" src={frillyIconWhiteMobile} width={32} height={31.038} className="hidden h-[31.038px] w-[32px] shrink-0 dark:block dark:desktop:hidden" />
-          <span className="shrink-0 whitespace-nowrap font-headings text-[22px] font-bold leading-[normal] text-headline-2-light desktop:text-[24px] dark:text-headline-2-dark">
-            Gala
-          </span>
+          {/* gala-logo-light and gala-logo-dark (Figma 5671:22126, 5671:22239), 100 by 39 at every size. */}
+          <img alt="Gala" src={galaLogoLight} width={100} height={39} className="block h-[39px] w-[100px] shrink-0 dark:hidden" />
+          <img alt="Gala" src={galaLogoDark} width={100} height={39} className="hidden h-[39px] w-[100px] shrink-0 dark:block" />
         </Link>
         {signedIn && (
           <>
