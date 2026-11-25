@@ -7,7 +7,7 @@
  * are drawn from the same geometry.
  *
  * Reach (gate 3b): handles M L H V C Q Z in absolute and relative forms,
- * which is all Potrace and opentype.js emit. Arcs (A) and the smooth forms
+ * which is all Potrace and HarfBuzz emit. Arcs (A) and the smooth forms
  * (S, T) throw rather than guess; marks arriving as SVG are rasterized and
  * traced, so they never reach this parser.
  */

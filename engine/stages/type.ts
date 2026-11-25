@@ -9,9 +9,11 @@
 import { classLabel, fontData, rank, topMoods } from "../fonts.ts";
 import type { Shape } from "../gemini.ts";
 import { ask, SURE, type Choice, type Score } from "../jev.ts";
-import { WORKING } from "../lines.ts";
+import { cannotDrawLine, NO_TYPEFACE_LINE, WORKING } from "../lines.ts";
 import { googleFamily } from "../steer.ts";
 import { optionId, requestsOf, type Outcome, type Request, type Turn } from "../turn.ts";
+import { CannotSet } from "../../kit/src/font.ts";
+import { namesToSet, settablePicks, whyNot } from "../typeset.ts";
 import { briefOf } from "./brief.ts";
 import { directionOf } from "./research.ts";
 
@@ -52,32 +54,33 @@ async function propose(turn: Turn, request: Request | null): Promise<Outcome> {
   ]);
 
   const moodWeights = Object.fromEntries(Object.entries(moods).map(([mood, answer]) => [mood, answer.score]));
-  // The three likeliest classes, and in each the family that fits the moods best.
-  const topClasses = Object.entries(classes.typeClass.probabilities)
+  // Every class, likeliest first. The first three give the three typefaces, unless one has no family that can draw the name.
+  const byLikelihood = Object.entries(classes.typeClass.probabilities)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
     .map(([name]) => name);
-  const used = new Set<string>();
   // A family the person named now, or one they asked for before this step opened.
   const kept = turn.heldFor("type");
   const wanted = request?.typeface ?? (await Promise.all(kept.map((text) => googleFamily(text)))).find((family) => family !== null) ?? null;
-  const named = wanted !== null ? data.families.find((family) => family.family === wanted) : undefined;
-  const picks: { typeClass: string; family: (typeof data.families)[number]; person: boolean }[] = [];
-  if (named !== undefined) {
-    const typeClass = Object.entries(named.classes).sort((a, b) => b[1] - a[1])[0]?.[0] ?? topClasses[0]!;
-    picks.push({ typeClass, family: named, person: true });
-    used.add(named.family);
-  }
-  for (const typeClass of topClasses) {
-    if (picks.length >= 3) break;
-    const family = rank(data, typeClass, moodWeights).find((candidate) => !used.has(candidate.family))!;
-    used.add(family.family);
-    picks.push({ typeClass, family, person: false });
-  }
-  // "My pick" only when Jev is sure of its first class and the person named none; otherwise the cards themselves are the question.
-  const galaIsSure = named === undefined && classes.typeClass.confidence >= SURE;
+  const namedFamily = wanted !== null ? data.families.find((family) => family.family === wanted) : undefined;
   // How the name is set: as the person asked now, or as they asked before.
   const nameAs = request?.nameAs ?? turn.nameAsTyped;
+  // Each typeface is checked by setting the name in it before it is offered (typeset.ts): a family that
+  // can't draw the name is passed over for the next-ranked one in its class.
+  const { picks, refused, skipped } = await settablePicks({
+    classes: byLikelihood,
+    ranked: (typeClass) => rank(data, typeClass, moodWeights),
+    named: namedFamily === undefined ? undefined : { typeClass: Object.entries(namedFamily.classes).sort((a, b) => b[1] - a[1])[0]?.[0] ?? byLikelihood[0]!, family: namedFamily },
+    names: namesToSet(nameAs),
+    count: LETTERS.length,
+  });
+  if (skipped.length > 0 || refused !== null) console.log(`Type: passed over ${skipped.length + (refused !== null ? 1 : 0)} typeface(s) that can't draw the name`);
+  if (picks.length === 0) {
+    await turn.write([{ op: "say", text: refused !== null ? cannotDrawLine(nameAs, refused, true) : NO_TYPEFACE_LINE }]);
+    return "wait";
+  }
+  const named = picks[0]!.person ? picks[0]!.family : undefined;
+  // "My pick" only when Jev is sure of its first class and the person named none; otherwise the cards themselves are the question.
+  const galaIsSure = named === undefined && classes.typeClass.confidence >= SURE;
 
   const words = await turn.compose(
     () =>
@@ -91,6 +94,7 @@ async function propose(turn: Turn, request: Request | null): Promise<Outcome> {
           thePersonsOwnPick: named !== undefined ? "A" : null,
           nameIsWritten: nameAs,
           whatThePersonAskedForEarlier: kept.length > 0 ? kept : null,
+          typefaceThePersonAskedForThatCannotDrawTheName: refused === null ? null : { family: refused.family, lettersItLacks: refused.letters.length > 0 ? refused.letters : null },
         },
         shape: WORDS_SHAPE,
       }),
@@ -139,6 +143,18 @@ export async function type(turn: Turn): Promise<Outcome> {
 
   // The typeface is chosen: the next step shows the name set in it, and waits for its own sign-off.
   if (set.saved === true && set.chosenId !== null) {
+    // The pick is checked by setting the name in it, whichever way it was made: a specimen, or a family
+    // from the type tray, which Gala never offered. One that can't draw the name is un-picked, and Gala says why.
+    const family = familyOf(turn);
+    const verdict = await whyNot(family, namesToSet(turn.nameAsTyped));
+    if (verdict instanceof CannotSet) {
+      console.log(`Type: the chosen typeface can't draw the name (${verdict.why})`);
+      await turn.write([
+        { op: "patchArtifact", messageId: card.id, artifact: { ...set, chosenId: null, saved: false } },
+        { op: "say", text: cannotDrawLine(turn.nameAsTyped, verdict, true) },
+      ]);
+      return "wait";
+    }
     await turn.write([
       { op: "choice", step: "type", chosen: set.chosenId, discarded: set.directions.filter((entry: { id: string }) => entry.id !== set.chosenId).map((entry: { id: string }) => entry.id) },
       { op: "project", stage: "wordmark" },

@@ -5,8 +5,12 @@
   "type": "module",
   "description": "Gala's kit pipeline: a mark, a Google font and brand colors in; lock-ups (SVG, EPS, PNG), the square, the social image and the spec sheet out.",
   "main": "./src/index.ts",
-  "exports": { ".": "./src/index.ts" },
-  "engines": { "node": ">=22.6" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "engines": {
+    "node": ">=22.6"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "verify:color": "node --experimental-strip-types --no-warnings scripts/verify-color.ts",
@@ -16,8 +20,8 @@
   },
   "dependencies": {
     "@resvg/resvg-js": "2.6.2",
+    "harfbuzzjs": "1.6.4",
     "jpeg-js": "0.4.4",
-    "opentype.js": "2.0.0",
     "pngjs": "7.0.0",
     "potrace": "2.1.8"
   },

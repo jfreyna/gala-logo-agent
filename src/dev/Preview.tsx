@@ -27,6 +27,7 @@ const BACKDROPS = {
  *   /preview/<screen>            (studio, brief, research, type, directions, ...)
  *   /preview/<screen>?panel=<view>   (history, artifact, color, type, kit, memory)
  *   add &working=1 or &attached=1 for those prompt bar states, &status=<line> for a working line of your own,
+ *   &family=<Google family> sets the wordmark card in that typeface, and &name=<text> changes the name on it,
  *   &skip=N to leave out the first N items, &top=1 to show the start of a long conversation
  */
 export function Preview({ pathname, search }: { pathname: string; search: string }) {
@@ -91,7 +92,10 @@ export function Preview({ pathname, search }: { pathname: string; search: string
   return (
     <StudioView
       projectName="Ember & Rye"
-      items={screen.items.slice(Number(params.get("skip") ?? 0))}
+      items={screen.items.slice(Number(params.get("skip") ?? 0)).map((item) =>
+        // &family and &name show the wordmark card in another typeface or with another name.
+        item.kind === "wordmark" ? { ...item, data: { ...item.data, family: params.get("family") ?? item.data.family, brandName: params.get("name") ?? item.data.brandName } } : item,
+      )}
       onAction={noop}
       startAtTop={params.get("top") === "1"}
       restAtBottom={params.get("bottom") === "1"}

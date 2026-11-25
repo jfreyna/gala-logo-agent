@@ -9,6 +9,29 @@ export const DECLINE_LINE = "I keep my working notes to myself. Your logo, thoug
 /** Said when a model or a check could not be reached after retries. */
 export const TROUBLE_LINE = "Something went wrong on my side. Send that again and I’ll pick it up.";
 
+/**
+ * Said when the chosen typeface cannot draw the name: what is wrong, in
+ * plain words, and what to do next. `atType` is true on the type step,
+ * where the person can pick again right there.
+ */
+export function cannotDrawLine(name: string, problem: { family: string; why: string; letters: string[] }, atType: boolean): string {
+  const drawn = [...new Set([...name].filter((letter) => letter.trim() !== ""))];
+  const lacksAll = problem.letters.length > 0 && drawn.every((letter) => problem.letters.some((missing) => missing.includes(letter)));
+  const reason =
+    problem.why === "notOnGoogle"
+      ? "it isn’t on Google Fonts"
+      : problem.why === "missingLetters" && lacksAll
+        ? "that typeface has none of the letters in the name"
+        : problem.why === "missingLetters"
+          ? `that typeface has no ${new Intl.ListFormat("en", { type: "disjunction" }).format(problem.letters)}`
+          : "that typeface has no outlines I can draw";
+  const next = atType ? "Pick another typeface and I’ll set the name in it." : "Want to go back to type and pick another?";
+  return `I can’t draw “${name}” in ${problem.family}: ${reason}. ${next}`;
+}
+
+/** Said when no typeface that was tried can draw the name. */
+export const NO_TYPEFACE_LINE = "I couldn’t find a typeface that has every letter in your name. Name one you know has them and I’ll set it.";
+
 /** The "working" lines the studio shows while a step runs. */
 export const WORKING = {
   brief: "Reading your brief",

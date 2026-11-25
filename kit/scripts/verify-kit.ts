@@ -370,6 +370,108 @@ h.check("letter spacing widens or narrows the name, and 0 leaves it as the typef
   assertClose(drawn - width(-0.02), 0.02 * 1000 * 10, 1, "removed width at -0.02em");
 });
 
+// ---- shaping: any Google font ----------------------------------------------
+//
+// The name is shaped by HarfBuzz. These check that the font's own rules are
+// applied, on the families that showed each case, fetched live as the kit
+// fetches them.
+//
+// What they do not prove: that every family sets (the font sweep measures
+// that, `npm run sweep:fonts` at the root), or how any of it looks. They
+// read glyph ids and outlines. A font Google re-releases with different
+// rules would change what these see.
+
+const live = (family: string) => loadFont(family, 400, fetch as unknown as FetchLike);
+const SHAPED_NAME = "Gala Office";
+const letterCount = (text: string) => [...text].length;
+
+h.check("Alata sets: the typeface whose rules stopped the wordmark step now draws the name", async () => {
+  const set = setText(await live("Alata"), SHAPED_NAME, 1000);
+  const box = bounds(set.segments);
+  assert(box.width > 0 && box.height > 0, "no ink");
+  // The baseline is y = 0 and y runs down: the capitals sit above it, by about the cap height.
+  assert(box.y < 0 && box.y + box.height < set.capHeight * 0.1, `the name is not sitting on the baseline (ink from ${box.y.toFixed(0)} to ${(box.y + box.height).toFixed(0)})`);
+  assertClose(-box.y, set.capHeight, set.capHeight * 0.15, "height of the capitals above the baseline");
+});
+
+h.check("a ligature applies: Alata sets the name in fewer glyphs than letters, and with letter spacing the letters stay apart", async () => {
+  const font = await live("Alata");
+  const drawn = setText(font, SHAPED_NAME, 1000);
+  assert(drawn.glyphs.length < letterCount(SHAPED_NAME), `${drawn.glyphs.length} glyphs for ${letterCount(SHAPED_NAME)} letters: no ligature was applied`);
+  assertEqual(setText(font, SHAPED_NAME, 1000, 0.08).glyphs.length, letterCount(SHAPED_NAME), "glyphs with letter spacing");
+});
+
+h.check("a connected script sets with its joins: Pacifico joins letters into fewer glyphs, and each letter's ink reaches the next", async () => {
+  const font = await live("Pacifico");
+  const word = "office";
+  const set = setText(font, word, 1000);
+  assert(set.glyphs.length < letterCount(word), `${set.glyphs.length} glyphs for ${letterCount(word)} letters: the script's ligatures were not applied`);
+  // Connected: no gap in the ink along the word. Each contour's x range must overlap the ink before it.
+  const contours: { from: number; to: number }[] = [];
+  let at = -1;
+  for (const segment of set.segments) {
+    if (segment.op === "M") contours[++at] = { from: Infinity, to: -Infinity };
+    for (const point of segment.op === "Z" ? [] : segment.op === "C" ? [segment.c1, segment.c2, segment.p] : [segment.p]) {
+      contours[at]!.from = Math.min(contours[at]!.from, point.x);
+      contours[at]!.to = Math.max(contours[at]!.to, point.x);
+    }
+  }
+  contours.sort((a, b) => a.from - b.from);
+  let reach = contours[0]!.to;
+  for (const contour of contours.slice(1)) {
+    assert(contour.from <= reach, `a gap in the ink at x = ${reach.toFixed(0)}: the letters are not joined`);
+    reach = Math.max(reach, contour.to);
+  }
+});
+
+h.check("contextual forms apply: one Arabic letter three times in a row draws as three different glyphs, right to left", async () => {
+  const font = await live("Amiri");
+  const letter = "\u0628";
+  const alone = setText(font, letter, 1000).glyphs;
+  const joined = setText(font, letter.repeat(3), 1000).glyphs;
+  assertEqual(joined.length, 3, "glyphs");
+  assertEqual(new Set(joined).size, 3, "different glyphs among the three (start, middle and end forms)");
+  assert(!joined.includes(alone[0]!), "the letter kept its stand-alone form inside a word");
+});
+
+h.check("a kit builds in Alata and in Pacifico: every file, with ink", async () => {
+  for (const fontFamily of ["Alata", "Pacifico"]) {
+    const built = await buildKit({ ...INPUT, fontFamily });
+    assertEqual(built.files.map((file) => file.path).sort(), [...EXPECTED_PATHS].sort(), `${fontFamily} files`);
+    for (const file of built.files) assert(file.bytes.length > 0, `${fontFamily}: ${file.path} is empty`);
+    assertEqual(built.spec.type.family, fontFamily, "family on the spec sheet");
+  }
+});
+
+h.check("a family with no Regular sets in the weight a browser would pick: Buda 300, Sunflower 500, Molle's italic 400", async () => {
+  for (const [family, weight] of [["Buda", 300], ["Sunflower", 500], ["Molle", 400]] as const) {
+    const font = await live(family);
+    assertEqual(font.info.weight, weight, `${family} weight`);
+    assert(bounds(setText(font, SHAPED_NAME, 1000).segments).width > 0, `${family} drew nothing`);
+  }
+});
+
+h.check("a font whose own ligature points at a missing glyph still sets, letter by letter (Doppio One's ffi)", async () => {
+  assertEqual(setText(await live("Doppio One"), SHAPED_NAME, 1000).glyphs.length, letterCount(SHAPED_NAME), "glyphs");
+});
+
+h.check("what cannot be drawn fails loudly: a letter the font lacks, and a font with no letters of the name's script", async () => {
+  const cases: [string, string, RegExp][] = [
+    ["Sunflower", "Caf\u00e9", /Sunflower has no glyph for "\u00e9"/],
+    ["Noto Emoji", SHAPED_NAME, /Noto Emoji has no glyph for/],
+  ];
+  for (const [family, text, expected] of cases) {
+    const font = await live(family);
+    let message = "";
+    try {
+      setText(font, text, 1000);
+    } catch (err) {
+      message = err instanceof Error ? err.message : String(err);
+    }
+    assert(expected.test(message), `${family} setting ${JSON.stringify(text)}: ${message === "" ? "it was set" : `failed for the wrong reason: ${message}`}`);
+  }
+});
+
 h.check("the settings reach the files: a wide name, a wide gap and the stacked layout change the wordmark, the primary lock-up and the social image", async () => {
   if (!kit) throw new Error("buildKit did not finish");
   const plain = kit;

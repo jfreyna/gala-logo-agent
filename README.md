@@ -127,6 +127,9 @@ Each prints `N/N passed`, or `N/M, run incomplete` when a check could not run. E
 | `npm run check:gate` | No step advances without an approval: nothing new, or praise, leaves the stage where it is; a sign-off moves it by exactly one step | on the Sprite |
 | `npm run check:settings` | Case, Spacing, Layout and Space between land on the right values from varied wording, and other messages change nothing | on the Sprite |
 | `npm run check:nosymbol` | A logo of the name alone happens only on an explicit ask, and then runs through color to a wordmark-only kit | on the Sprite |
+| `npm run check:typeset` | No typeface is offered, and no pick moves on, unless the name sets in it: a failing candidate gives way to the next-ranked family in its class, and a pick that can't be drawn gets a plain line | anywhere |
+| `npm run check:wordmark-fonts` | The wordmark step opens in typefaces that used to stop it (Alata, Roboto) and in a connected script | on the Sprite |
+| `npm run sweep:fonts -- --cache <folder>` | Sets two names in every family in Google's tag file through the real setter and groups what fails by cause; a report, not a pass or fail | anywhere |
 | `npm run check:steps-walk` | One made-up brief from brief to kit on the dev deployment, one sign-off at a time: the wordmark, a held request coming back at the symbol opener, going back from the lockup to the symbol, the lockup | from a machine with the Convex CLI and the Sprite CLI |
 | `npm run check:storage` | The storage functions as a signed-in person and as Gala's server: the turn lock, a turn's id reading and writing its own project and no other, ownership, choices, and quotes waiting for their check. `-- --aged-lock` also waits out a lock (12 minutes) | anywhere with the Convex CLI signed in to a dev deployment |
 | `npm run check:routes` | The storage routes' refusals: no secret, no open turn, a forged token | on the Sprite |

@@ -148,3 +148,14 @@ In `fri1709/`, from the dev previews at 2x, light and dark. They use the preview
 | `f3-cards-*` | Finding 3. The directions named as on the founder's walk (Tilted Brush, Ink Pivot, Press Chase) with five or six lines of rationale each: the cards grow, the rationale never meets the checks, and the checks and Choose line up across the row. |
 | `f8-history-*` | Finding 8. The History view, with "Back to this step" under each Done row. |
 | `f9-tray-*` | Finding 9. The type tray scrolled partway: each specimen above its name, with a line under each row. |
+
+## Any Google font (FRI-1711)
+
+`fri1711/` holds what the HarfBuzz setter and the browser draw in typefaces that could not be set before. Nothing here is compared with a frame.
+
+| Image | What it shows |
+|---|---|
+| `fri1711/wordmark-alata-desktop-light.png` | The wordmark card in Alata, from the preview (`/preview/wordmark?family=Alata&name=Gala Office`). The browser draws this card; Gala's line above it is the preview's sample line. |
+| `fri1711/wordmark-pacifico-desktop-light.png` | The same card in Pacifico, a connected script. |
+| `fri1711/wordmark-buda-desktop-light.png` | The same card in Buda, which has no Regular: the browser draws its Light, as the kit does. The heading still says Regular. |
+| `fri1711/kit-alata-primary-and-stacked.png` | The primary and stacked lock-ups from a kit built in Alata by `buildKit`, with the fixture mark. The "ffi" in Office is the font's ligature. |

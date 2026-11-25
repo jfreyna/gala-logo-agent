@@ -7,7 +7,7 @@
  * (settings.ts), and checks that the name still reads at 16px. The model
  * writes only Gala's line. Nothing moves on until the wordmark is approved.
  */
-import { loadFont, setText } from "../../kit/src/font.ts";
+import { setText } from "../../kit/src/font.ts";
 import { bounds, toSvgPathData } from "../../kit/src/path.ts";
 import { rasterize } from "../../kit/src/render.ts";
 import type { Image, Shape } from "../gemini.ts";
@@ -16,6 +16,7 @@ import { WORKING } from "../lines.ts";
 import { CASE, describeSettings, inCase, isValue, LETTER_SPACING_EM, readSettings, SPACING, type Case, type Spacing } from "../settings.ts";
 import type { StoredMessage } from "../store.ts";
 import { type Outcome, type Turn } from "../turn.ts";
+import { fontFor } from "../typeset.ts";
 import { familyOf } from "./type.ts";
 
 const SAY: Shape = { type: "OBJECT", properties: { say: { type: "STRING" } }, required: ["say"] };
@@ -26,7 +27,7 @@ const SAY: Shape = { type: "OBJECT", properties: { say: { type: "STRING" } }, re
  * under 280px a side.
  */
 export async function nameAt16(family: string, name: string, letterSpacing: number): Promise<Image> {
-  const font = await loadFont(family, 400, globalThis.fetch as never);
+  const font = await fontFor(family);
   const text = setText(font, name, 16, letterSpacing);
   const box = bounds(text.segments);
   const side = Math.ceil(Math.max(box.width, 16)) + 8;

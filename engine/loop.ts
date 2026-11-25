@@ -11,7 +11,8 @@
  * of them needs the person. Every step needs the person before the next
  * one opens: a stage returns "continue" only after its own sign-off.
  */
-import { TROUBLE_LINE } from "./lines.ts";
+import { CannotSet } from "../kit/src/font.ts";
+import { cannotDrawLine, TROUBLE_LINE } from "./lines.ts";
 import type { Prompt } from "./prompt.ts";
 import { brief } from "./stages/brief.ts";
 import { colorways, pickColors } from "./stages/color.ts";
@@ -67,8 +68,10 @@ export async function runTurn(store: Store, prompt: Prompt, signal: AbortSignal,
     if (signal.aborted) return "stopped";
     // The cause goes to the server log; the person gets a plain line.
     console.error(`Turn failed at stage ${turn.stage}: ${error instanceof Error ? error.message : "unknown error"}`);
-    await store.write([{ op: "say", text: TROUBLE_LINE }]).catch(() => undefined);
-    return "trouble";
+    // A typeface that cannot draw the name is not trouble that passes: sending the message again would fail the same way, so Gala says what is wrong.
+    const line = error instanceof CannotSet ? cannotDrawLine(turn.nameAsSet, error, false) : TROUBLE_LINE;
+    await store.write([{ op: "say", text: line }]).catch(() => undefined);
+    return error instanceof CannotSet ? "done" : "trouble";
   } finally {
     await store.end().catch(() => undefined);
   }
