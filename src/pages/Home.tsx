@@ -3,7 +3,8 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
-import { Backdrop } from "../components/Backdrop";
+import { HeroGlows } from "../backdrops/HeroGlows";
+import { HallsHorizon } from "../backdrops/HallsHorizon";
 import { JoinCard } from "../components/JoinCard";
 import { ConceptCard, type Check } from "../components/ConceptCard";
 import { HallCarousel } from "../components/HallCarousel";
@@ -62,10 +63,7 @@ export function Home({ sample, sampleOpen }: { sample?: { fame: HallEntry[]; sha
   return (
     <div className="relative flex min-h-full w-full flex-col items-start overflow-clip bg-background-2-light dark:bg-background-1-dark" data-name="Intro">
       <HallTintFilters />
-      <Backdrop
-        name="hero-silk"
-        className="left-[-386px] top-0 h-[680px] w-[1152px] desktop:left-1/2 desktop:h-[850px] desktop:w-full desktop:min-w-[1440px] desktop:-translate-x-1/2 desktop:object-cover"
-      />
+      <HeroGlows className="left-[-386px] top-0 h-[680px] w-[1152px] desktop:left-1/2 desktop:h-[850px] desktop:w-full desktop:min-w-[1440px] desktop:-translate-x-1/2" />
       <Header state="signedOut" />
 
       <section className="hero relative flex w-full shrink-0 flex-col items-center justify-start gap-[24px] overflow-clip border-b-2 border-solid border-brand-tertiary-200 px-[16px] pb-[40px] pt-[32px] desktop:h-[786px] desktop:justify-center desktop:gap-[8px] desktop:px-[190px] desktop:py-[40px] dark:border-brand-tertiary-700">
@@ -105,10 +103,7 @@ export function Home({ sample, sampleOpen }: { sample?: { fame: HallEntry[]; sha
         data-name="halls"
       >
         <div className="relative h-[200px] w-full shrink-0 overflow-clip desktop:absolute desktop:left-0 desktop:top-0 desktop:h-[523px] desktop:overflow-visible">
-          <Backdrop
-            name="halls-horizon"
-            className="left-1/2 top-[20.92px] w-[max(518.4px,136.42%)] -translate-x-1/2 desktop:top-0 desktop:h-[523px] desktop:w-full desktop:min-w-[1440px] desktop:object-cover"
-          />
+          <HallsHorizon className="left-1/2 top-[20.92px] aspect-[1440/523] w-[max(518.4px,136.42%)] -translate-x-1/2 desktop:top-0 desktop:aspect-auto desktop:h-[523px] desktop:w-full desktop:min-w-[1440px]" />
         </div>
         <div className="relative flex w-full flex-col items-start gap-[32px] desktop:absolute desktop:left-0 desktop:top-[430px] desktop:gap-[48px]">
           {fame.length > 0 && <HallCarousel kind="fame" entries={fame} onOpen={(entry) => setOpen({ entry, kind: "fame" })} />}

@@ -4,13 +4,25 @@ import { JoinCard } from "../components/JoinCard";
 import { ProjectsView } from "../pages/Projects";
 import { StudioView } from "../studio/StudioView";
 import { WorkPanel } from "../studio/panel/WorkPanel";
+import { HeroGlows } from "../backdrops/HeroGlows";
+import { HallsHorizon } from "../backdrops/HallsHorizon";
+import { AboutRibbons } from "../backdrops/AboutRibbons";
 import { halls, panels, projects, screens } from "./fixtures";
+
+/** Each backdrop and the height of its stage, in frame pixels (the stage is 1440 wide). */
+const BACKDROPS = {
+  "hero-silk": { Scene: HeroGlows, height: 850 },
+  "halls-horizon": { Scene: HallsHorizon, height: 523 },
+  "about-ribbons": { Scene: AboutRibbons, height: 1346 },
+} as const;
 
 /**
  * Development only: each designed screen with the frames' sample content,
  * for the side-by-side check against Figma. The address picks the screen:
  *   /preview/home
  *   /preview/projects
+ *   /preview/backdrop?scene=hero-silk   (one backdrop alone at its frame's size: hero-silk, halls-horizon, about-ribbons;
+ *                                        &width=N draws it N wide, &below=N puts it N pixels down the page)
  *   /preview/joincard?state=signIn   (the join card's sign-in states)
  *   /preview/<screen>            (studio, brief, research, type, directions, ...)
  *   /preview/<screen>?panel=<view>   (history, artifact, color, type, kit, memory)
@@ -29,6 +41,19 @@ export function Preview({ pathname, search }: { pathname: string; search: string
     const open = (entries: typeof halls.fame, id: string) => entries.map((entry) => ({ ...entry, pinnedOpen: pin && entry.id === id }));
     const modal = params.get("modal");
     return <Home sample={{ fame: open(halls.fame, "f3"), shame: open(halls.shame, "s5") }} sampleOpen={modal === "fame" || modal === "shame" ? modal : undefined} />;
+  }
+  if (name === "backdrop") {
+    const backdrop = BACKDROPS[(params.get("scene") ?? "") as keyof typeof BACKDROPS];
+    if (backdrop === undefined) return <p style={{ padding: 24 }}>No backdrop named “{params.get("scene")}”. Try: {Object.keys(BACKDROPS).join(", ")}.</p>;
+    const width = Number(params.get("width") ?? 1440);
+    const below = Number(params.get("below") ?? 0);
+    return (
+      <div style={{ paddingTop: below, paddingBottom: below }}>
+        <div style={{ position: "relative", width, height: (width * backdrop.height) / 1440 }}>
+          <backdrop.Scene className="left-0 top-0 h-full w-full" />
+        </div>
+      </div>
+    );
   }
   if (name === "joincard") {
     // The join card alone, in one of its sign-in states: ?state=signIn|signingIn|signInError, &set=1 for the Password set line.

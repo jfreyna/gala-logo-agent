@@ -12,7 +12,7 @@ Each image here shows the Figma frame on the left and the built screen on the ri
 
 ## What the gate does not prove
 
-- Behavior: hover, focus, typing, sending, scrolling, the rolling halls.
+- Behavior: hover, focus, typing, sending, scrolling, the rolling halls, the backdrops' motion. The gate asks for reduced motion, so the backdrops are compared at rest; `scripts/check-backdrops.mjs` compares them with Figma's rendering more closely, and checks what moves.
 - Any width other than the two drawn (380 and 1440).
 - Mobile dark for the studio screens, which the design file does not draw.
 - Real content. The built side uses the frames' own sample content (`src/dev/fixtures.ts`), so it says nothing about how real brands, long names or other fonts fit.
@@ -25,6 +25,7 @@ Each image here shows the Figma frame on the left and the built screen on the ri
 | `brief-*`, `pickcolors-*` | The frames rest a short conversation against the prompt bar; most other frames rest it at the top. The build rests it at the top, and the preview for these two is set to the bottom to compare the rest. |
 | `picks-mobile-light` | The frame clips the card's title at the right edge. The build wraps it to a second line so it can be read. |
 | `signin-*`, `signingin-*`, `signinerror-*` | The join card's sign-in states are component variants in the design file, so they are compared as the card alone, 340 wide for desktop and 348 for a phone. |
+| `intro-mobile-*` | The halls' backdrop is drawn from separate layers, and each layer is placed on whole device pixels. At the phone frame's size and one device pixel to one, the edges of the ribbon and the spheres land up to half a pixel from the frame. A phone screen has two or three device pixels to one, so the same rounding is finer there. The desktop frames place every layer on a whole pixel. |
 | `kit-*`, `color-*`, `type-*` | The sample lock-ups and wordmarks are drawn with the frames' placeholder marks; sizes inside the paper differ slightly. |
 
 ## The working line on a phone
@@ -40,16 +41,16 @@ The prompt bar's Working variants draw the working line on one line, cut with an
 ## Results
 
 ```
-intro-desktop-light            frame 1440x2165  built 1440x2165  differing 1.39%
-intro-desktop-dark             frame 1440x2165  built 1440x2165  differing 2.24%
-intro-mobile-light             frame 380x1621   built 380x1621   differing 1.65%
-intro-mobile-dark              frame 380x1621   built 380x1621   differing 2.03%
+intro-desktop-light            frame 1440x2165  built 1440x2165  differing 1.38%
+intro-desktop-dark             frame 1440x2165  built 1440x2165  differing 1.58%
+intro-mobile-light             frame 380x1621   built 380x1621   differing 1.72%
+intro-mobile-dark              frame 380x1621   built 380x1621   differing 1.80%
 about-desktop-light            frame 1440x1537  built 1440x1537  differing 1.67%
 about-desktop-dark             frame 1440x1537  built 1440x1537  differing 1.73%
 about-mobile-light             frame 380x1785   built 380x1785   differing 4.75%
-about-mobile-dark              frame 380x1785   built 380x1785   differing 4.86%
-hallmodal-desktop-light        frame 1440x900   built 1440x900   differing 16.99%
-hallmodal-desktop-dark         frame 1440x900   built 1440x900   differing 22.41%
+about-mobile-dark              frame 380x1785   built 380x1785   differing 4.87%
+hallmodal-desktop-light        frame 1440x900   built 1440x900   differing 17.05%
+hallmodal-desktop-dark         frame 1440x900   built 1440x900   differing 21.66%
 hallmodal-mobile-light         frame 380x812    built 380x812    differing 5.27%
 accountmenu-desktop-light      frame 1440x900   built 1440x900   differing 0.77%
 accountmenu-mobile-light       frame 380x812    built 380x812    differing 2.39%

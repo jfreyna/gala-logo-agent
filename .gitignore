@@ -11,3 +11,6 @@ private/
 
 # Build output
 dist
+
+# Screen recordings of the backdrops (scripts/record-backdrops.mjs). Posted with a pull request, not kept here.
+recordings/

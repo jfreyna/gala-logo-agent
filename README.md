@@ -75,14 +75,15 @@ The persona prompt, the instructions for each step and the hall rules are not in
 | `src/pages/` | The front page, About, Your logos, and the studio |
 | `src/components/` | Shared pieces: header, footer, join card, halls, buttons, icons |
 | `src/studio/` | The conversation, the prompt bar, each artifact Gala places in the chat, and the work panel |
+| `src/backdrops/` | The animated backdrops: the hero's glows, the halls' horizon scene, the About ribbons |
 | `src/lib/` | Sign-in, joining, color maths, theme, the small router |
 | `src/dev/` | Development only: sample content and preview routes. Compiled out of production builds |
 | `convex/` | Schema and functions for Gala's Convex project, and the routes the engine calls |
 | `engine/` | The agent loop, its stages, the model and Jev clients, prompt protection, and the checks |
 | `kit/` | The kit pipeline: a mark, a typeface and colors in; the lock-up files and spec sheet out |
 | `server/` | The server that runs on the Sprite |
-| `scripts/` | Deploy to the Sprite; the visual gate; the behavior checks; the prompt loader and the history check |
-| `public/backdrops/` | The page backdrops, one file per backdrop and mode |
+| `scripts/` | Deploy to the Sprite; the visual gate; the behavior checks; the backdrops' checks, measurement and recordings; the prompt loader and the history check |
+| `public/backdrops/` | The hero's dot pattern |
 | `docs/visual-gate/` | Each built screen beside its design frame |
 
 ## Running it
@@ -97,6 +98,18 @@ npm run dev                 # http://localhost:3000
 `npm run typecheck` checks the app, the Convex functions and the engine. `npm run build` makes the production build in `dist/`; `npm start` serves it.
 
 The engine needs the two connectors, so it runs only on a Sprite. `./scripts/deploy-sprite.sh` builds and deploys; the server reads its settings from `/home/sprite/gala.env` (see `env.example`), a file the deploy never touches. With `sprite proxy 8080` running, the dev server passes `/api` through to the Sprite.
+
+## The backdrops
+
+The front page and About sit on three small scenes, built in `src/backdrops/` from the design frames: three glows behind the hero, a horizon with a ribbon and three spheres above the halls, and three ribbons on About.
+
+- **Each piece is its own layer**, placed on a stage the size of its frame. The stage scales as one piece, so a phone shows the same composition smaller.
+- **Only transform and opacity ever animate**, so the browser moves finished layers and repaints nothing. A ribbon never changes shape: a band of light slides along it, cut to its outline.
+- **A glow is one CSS gradient with its blur already in the falloff.** `scripts/fit-falloffs.mjs` works that out from the frame's numbers and prints how close it is.
+- **Loops pause while a scene is off the screen**, the halls play an entrance once, and the pointer moves things only on a device that has a fine one.
+- **When the system asks for reduced motion, nothing moves:** the scene is the frame's own composition.
+
+`node scripts/record-backdrops.mjs` writes a short recording of each scene.
 
 ## Checks
 
@@ -115,4 +128,6 @@ Each prints `N/N passed`, or `N/M, run incomplete` when a check could not run. E
 | `node scripts/check-sprite-disk.mjs <local prompt draft>` | No line of the real prompt is in any file on the Sprite | from a machine with the Sprite CLI |
 | `node scripts/smoke.mjs` | What the screens do: the join card's states, the halls, the studio's controls | with the dev server running |
 | `node scripts/visual-gate.mjs <frames> docs/visual-gate` | Every screen beside its design frame | with the dev server running |
+| `npm run check:backdrops -- <frames>` | The backdrops at rest against Figma's rendering, and what moves: only transform and opacity, loops paused off screen, the halls' entrance, the pointer only where there is one, nothing under reduced motion | with the dev server running |
+| `npm run measure:backdrops` | Main-thread time per frame for each backdrop on a throttled phone profile, against a 2 ms budget | with the dev server running |
 | `cd kit && npm run verify` | The kit's color maths and every file it writes | anywhere; the EPS checks need Ghostscript |

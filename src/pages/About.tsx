@@ -1,6 +1,6 @@
 import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
-import { Backdrop } from "../components/Backdrop";
+import { AboutRibbons } from "../backdrops/AboutRibbons";
 import { PrimaryButton } from "../components/Buttons";
 import { useRouter } from "../lib/router";
 
@@ -39,10 +39,7 @@ export function About() {
   const { navigate } = useRouter();
   return (
     <div className="relative flex min-h-full w-full flex-col items-start overflow-clip bg-background-2-light dark:bg-background-1-dark" data-name="About">
-      <Backdrop
-        name="about-ribbons"
-        className="left-[-674px] top-[-20.8px] h-[1615.2px] w-[1728px] desktop:left-1/2 desktop:top-0 desktop:h-[1346px] desktop:w-full desktop:min-w-[1440px] desktop:-translate-x-1/2 desktop:object-cover"
-      />
+      <AboutRibbons className="left-[-674px] top-[-20.8px] h-[1615.2px] w-[1728px] desktop:left-1/2 desktop:top-0 desktop:h-[1346px] desktop:w-full desktop:min-w-[1440px] desktop:-translate-x-1/2" />
       <Header state="signedOut" />
       <main className="relative flex w-full shrink-0 flex-col items-center px-[16px] pb-[48px] pt-[32px] desktop:px-[24px] desktop:pb-[96px] desktop:pt-[72px]" data-name="body">
         <div

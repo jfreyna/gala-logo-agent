@@ -1,0 +1,187 @@
+/*
+ * The backdrops' motion. The scene is a quiet one: every motion is slow,
+ * small and physical. Nothing here animates anything but transform and
+ * opacity, so the browser moves finished layers and repaints none of them.
+ *
+ * A scene's box carries three facts:
+ *   data-motion   "on", or "off" when the visitor's system asks for reduced motion
+ *   data-inview   whether any of it is on screen (loops pause when it is not)
+ *   data-phase    "waiting" for its entrance, "entering", or "idle" (only the
+ *                 halls have an entrance; the others are idle from the start)
+ *
+ * A piece has one animation at a time: its entrance while the scene is
+ * entering, its loop once the scene is idle. Two animations listed on one
+ * property would keep both off the compositor, even after the first ends.
+ *
+ * With data-motion="off" no rule below applies, and the stage is the frame's
+ * own composition.
+ */
+
+/*
+ * The box shows the middle of the stage. It centers with flex, not with a
+ * transform: a transform would set an odd-height stage half a pixel off and
+ * soften every edge in it.
+ */
+.bd {
+  display: flex;
+  align-items: center;
+}
+
+.bd-stage {
+  position: relative;
+  flex: none;
+  width: 100%;
+  /* Pieces that blend, blend with what is on this stage and nothing behind it. */
+  isolation: isolate;
+  /* One frame pixel, at the size the stage is drawn: 1/1440 of its width. */
+  container-type: size;
+  --u: calc(100cqw / 1440);
+}
+
+.bd-piece {
+  position: absolute;
+  display: block;
+  overflow: visible;
+}
+/* A piece that follows the pointer and the scroll sits in a wrapper (Scene sets the wrapper's translate) and fills it. */
+.bd-fill {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Layers are promoted only while they can be seen moving. */
+.bd[data-motion="on"][data-inview="true"] :is(.bd-glow, .bd-follows, .bd-sphere, .bd-shadow, .bd-ribbon, .bd-sweep > i) {
+  will-change: transform, opacity;
+}
+.bd[data-inview="false"] :is(.bd-piece, .bd-fill, .bd-sweep > i) {
+  animation-play-state: paused !important;
+}
+
+/* Glows breathe: between 90% and 70% of the opacity the frame gives them, growing a touch as they dim. */
+.bd[data-motion="on"] .bd-glow {
+  animation: bd-breathe 10s ease-in-out infinite;
+}
+@keyframes bd-breathe {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.04); }
+}
+
+/*
+ * Spheres float, and their shadows answer. Before the entrance they wait
+ * 20 frame pixels up; then they settle over 1.2 seconds and start to bob:
+ * --bd-rise, every --bd-period, each starting after its own --bd-wait so no
+ * two move together. The frame's position is the bottom of the bob, where
+ * the shadow is full width and full strength.
+ *
+ * The distances in these keyframes (--bd-above, --bd-rise, --bd-drift) are
+ * percentages of the piece's own height, worked out from frame pixels where
+ * the piece is drawn. A percentage keeps the animation on the compositor; a
+ * length measured from the stage would have the browser work out the style
+ * again on every frame.
+ */
+.bd[data-motion="on"][data-phase="waiting"] .bd-sphere {
+  transform: translateY(calc(var(--bd-above) * -1));
+}
+.bd[data-motion="on"][data-phase="waiting"] .bd-shadow {
+  transform: scaleX(0.75);
+  opacity: 0.55;
+}
+.bd[data-motion="on"][data-phase="entering"] .bd-sphere {
+  animation: bd-settle 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.bd[data-motion="on"][data-phase="entering"] .bd-shadow {
+  animation: bd-shadow-in 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.bd[data-motion="on"][data-phase="idle"] .bd-sphere {
+  animation: bd-float var(--bd-period) ease-in-out var(--bd-wait) infinite;
+}
+.bd[data-motion="on"][data-phase="idle"] .bd-shadow {
+  animation: bd-shadow var(--bd-period) ease-in-out var(--bd-wait) infinite;
+}
+@keyframes bd-settle {
+  from { transform: translateY(calc(var(--bd-above) * -1)); }
+  to { transform: translateY(0); }
+}
+@keyframes bd-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(calc(var(--bd-rise) * -1)); }
+}
+@keyframes bd-shadow-in {
+  from { transform: scaleX(0.75); opacity: 0.55; }
+  to { transform: scaleX(1); opacity: 1; }
+}
+@keyframes bd-shadow {
+  0%, 100% { transform: scaleX(1); opacity: 1; }
+  50% { transform: scaleX(0.85); opacity: 0.75; }
+}
+
+/* The halls' ribbon drifts 6 frame pixels as one piece, out of step with the spheres. Its shape never changes. */
+.bd[data-motion="on"][data-phase="idle"] .bd-ribbon {
+  animation: bd-drift 12s ease-in-out 2s infinite;
+}
+@keyframes bd-drift {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(calc(var(--bd-drift) * -1)); }
+}
+
+/*
+ * The traveling highlight. The outer box is cut to the ribbon's outline; the
+ * band of light inside it only slides. At rest it sits off the ribbon's
+ * start, so the still composition has no highlight, as the frames draw it.
+ */
+.bd-sweep {
+  overflow: hidden;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+.bd-sweep > i {
+  position: absolute;
+  inset: 0;
+  display: block;
+  /* A quarter of the band's length wide, 15% white at its middle. */
+  background-image: linear-gradient(
+    var(--bd-angle),
+    rgb(255 255 255 / 0) calc(50% - var(--u) * var(--bd-half)),
+    rgb(255 255 255 / 0.06) calc(50% - var(--u) * var(--bd-half) * 0.5),
+    rgb(255 255 255 / 0.15) 50%,
+    rgb(255 255 255 / 0.06) calc(50% + var(--u) * var(--bd-half) * 0.5),
+    rgb(255 255 255 / 0) calc(50% + var(--u) * var(--bd-half))
+  );
+  transform: translateX(calc(var(--bd-travel) * -1));
+}
+@keyframes bd-sweep {
+  from { transform: translateX(calc(var(--bd-travel) * -1)); }
+  to { transform: translateX(var(--bd-travel)); }
+}
+/*
+ * One ribbon by itself: one quick sweep at the entrance, then a slow pass
+ * every 24 seconds. The entrance lasts as long as this sweep, 3.5 seconds
+ * (Scene is told the same number), and then the idle loops take over.
+ */
+.bd[data-motion="on"][data-phase="entering"] .bd-sweep-loop > i {
+  animation: bd-sweep 3.2s ease-in-out 0.3s;
+}
+.bd[data-motion="on"][data-phase="idle"] .bd-sweep-loop > i {
+  animation: bd-sweep 24s linear infinite;
+}
+/* Several ribbons: each sweeps for 8 seconds of a 25-second turn, one after another, so one is lit at a time. */
+.bd[data-motion="on"] .bd-sweep-turns > i {
+  animation: bd-sweep-turn 25s ease-in-out var(--bd-wait) infinite backwards;
+}
+@keyframes bd-sweep-turn {
+  0% { transform: translateX(calc(var(--bd-travel) * -1)); }
+  32%, 100% { transform: translateX(var(--bd-travel)); }
+}
+
+/* A second guard, should the page's script and the system setting ever disagree. */
+@media (prefers-reduced-motion: reduce) {
+  .bd :is(.bd-piece, .bd-fill, .bd-sweep > i) {
+    animation: none !important;
+  }
+}
