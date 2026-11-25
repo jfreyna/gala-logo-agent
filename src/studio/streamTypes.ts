@@ -54,6 +54,8 @@ export type StreamItem = (
   past?: Past;
   /** The server's message for an action on this card that failed (gala-inline-error), until the next action on it. */
   error?: string;
+  /** On the kit card: where each download stands (gala-download-chip). */
+  downloads?: Record<string, "idle" | "saving" | "saved" | "couldnt">;
 };
 
 /** The artifact kinds, as stored in a message's `kind`. */

@@ -22,7 +22,7 @@ import type { Stage, StoredMessage } from "./store.ts";
 export const NOTICE_KIND = "notice";
 
 /** What failed, as far as the code knows. */
-export type Cause = "font" | "color" | "model" | "storage" | "unknown";
+export type Cause = "font" | "color" | "model" | "storage" | "unknown" | "stopped";
 
 /**
  * What a notice's button does in the studio: go back to a step, show the
@@ -32,7 +32,7 @@ export type Cause = "font" | "color" | "model" | "storage" | "unknown";
 export type NoticeAction = { label: string; do: "back"; step: Stage } | { label: string; do: "showType" } | { label: string; do: "retry" } | { label: string; do: "prompt" };
 
 export type Notice = {
-  kind: "couldnt" | "repeated";
+  kind: "couldnt" | "repeated" | "stopped";
   /** The stage the failure happened at. */
   step: Stage;
   cause: Cause;
@@ -57,6 +57,22 @@ const STEP_NAMES: Partial<Record<Stage, string>> = {
   colorways: "Color",
   kit: "Kit",
 };
+
+/**
+ * Gala's line after Stop (gala-notice Kind=Stopped, FRI-1715): the words
+ * alone, no button. `kept` is true when the turn had already written
+ * something before it was stopped, so the line doesn't claim nothing was.
+ */
+export function stoppedNotice(stage: Stage, kept: boolean): Notice {
+  return {
+    kind: "stopped",
+    step: stage,
+    cause: "stopped",
+    title: "Stopped",
+    say: kept ? "Stopped. Tell me what to do next." : "Stopped. Nothing from that turn was kept. Tell me what to do next.",
+    actions: [],
+  };
+}
 
 /** The cause of an error, in the terms the notice speaks. */
 export function causeOf(error: unknown): Cause {

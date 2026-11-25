@@ -1,10 +1,11 @@
 import { useState, type ReactNode } from "react";
-import { InlineError } from "../Feedback";
+import { DownloadChip, InlineError } from "../Feedback";
 import { CheckBadge } from "../../components/CheckBadge";
 import { Icon } from "../../components/Icon";
 import { useGoogleFont } from "../../lib/googleFont";
 import { ColorSummary, Palette } from "./Colors";
 import type { ArtifactView, ColorView, HistoryView, KitView, MemoryLine, MemoryView, PanelView, Phase, TypeFamily, TypeView } from "./types";
+import { chipClass, chipLabelClass, LINK, PLAIN, SECONDARY, SECONDARY_LABEL } from "../../components/states";
 
 /**
  * gala-work-panel (Figma 5535:4481): the panel beside the conversation.
@@ -19,7 +20,7 @@ function IconButton({ icon, label, onClick }: { icon: "back" | "close"; label: s
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="relative flex size-[36px] shrink-0 items-center justify-center overflow-clip rounded-[8px] text-text-neutral-2-light dark:text-text-neutral-2-dark"
+      className={`relative flex size-[36px] shrink-0 items-center justify-center overflow-clip rounded-[8px] text-text-neutral-2-light dark:text-text-neutral-2-dark ${PLAIN}`}
     >
       <Icon name={icon} />
     </button>
@@ -68,7 +69,7 @@ const STATUS_COLOR = {
  * (layer `go-back`, 5534:3605 and 5534:3670). The row opens the phase; the
  * link is its own button above it, so the two never nest.
  */
-function PhaseRow({ phase, onOpen, onGoBack }: { phase: Phase; onOpen: () => void; onGoBack: () => void }) {
+function PhaseRow({ phase, working, onOpen, onGoBack }: { phase: Phase; working: boolean; onOpen: () => void; onGoBack: () => void }) {
   return (
     <div
       className={`relative flex w-full shrink-0 items-start gap-[12px] rounded-[12px] p-[12px] text-left ${
@@ -76,7 +77,7 @@ function PhaseRow({ phase, onOpen, onGoBack }: { phase: Phase; onOpen: () => voi
       }`}
       data-name="gala-phase-row"
     >
-      <button type="button" onClick={onOpen} aria-label={phase.name} className="absolute inset-0 rounded-[12px]" />
+      <button type="button" onClick={onOpen} aria-label={phase.name} className={`absolute inset-0 rounded-[12px] ${PLAIN}`} />
       <Icon name={STATUS_ICON[phase.status]} className={STATUS_COLOR[phase.status]} />
       <span className="relative flex min-w-px flex-[1_0_0] flex-col items-start gap-[4px]" data-name="texts">
         <span className="type-body-semibold w-full text-text-blue-1-light dark:text-text-blue-1-dark">{phase.name}
@@ -91,11 +92,17 @@ function PhaseRow({ phase, onOpen, onGoBack }: { phase: Phase; onOpen: () => voi
             ))}
           </span>
         )}
-        {phase.status === "done" && (
+        {/* Status=Done while working (FRI-1712): going back waits for Gala, and the row says so instead of ignoring the press. */}
+        {phase.status === "done" && working && (
+          <span className="type-caption-semibold relative shrink-0 whitespace-nowrap text-text-neutral-2-light dark:text-text-neutral-2-dark" data-name="go-back-waiting">
+            Back to this step when I finish
+          </span>
+        )}
+        {phase.status === "done" && !working && (
           <button
             type="button"
             onClick={onGoBack}
-            className="type-caption-semibold relative z-10 shrink-0 whitespace-nowrap text-left text-text-blue-1-light dark:text-text-blue-1-dark"
+            className={`type-caption-semibold relative z-10 shrink-0 whitespace-nowrap text-left ${LINK}`}
             data-name="go-back"
           >
             Back to this step
@@ -120,7 +127,7 @@ function History({ data, onOpenPhase, onGoBack, onOpenMemory, onClose, onDownloa
             <button
               type="button"
               onClick={onOpenMemory}
-              className="type-caption-semibold relative flex shrink-0 items-start overflow-clip rounded-[8px] px-[8px] py-[6px] text-text-blue-1-light dark:text-text-blue-1-dark"
+              className={`type-caption-semibold relative flex shrink-0 items-start overflow-clip rounded-[8px] px-[8px] py-[6px] ${LINK}`}
               data-name="memory-link"
             >
               Memory
@@ -132,23 +139,14 @@ function History({ data, onOpenPhase, onGoBack, onOpenMemory, onClose, onDownloa
     >
       <div className="relative flex min-h-px w-full flex-[1_0_0] flex-col items-start gap-[4px] overflow-y-auto px-[16px] py-[12px]" data-name="history">
         {data.phases.map((phase) => (
-          <PhaseRow key={phase.key} phase={phase} onOpen={() => onOpenPhase(phase.key)} onGoBack={() => onGoBack(phase.key)} />
+          <PhaseRow key={phase.key} phase={phase} working={data.working === true} onOpen={() => onOpenPhase(phase.key)} onGoBack={() => onGoBack(phase.key)} />
         ))}
       </div>
       <div className="relative flex w-full shrink-0 flex-col items-start gap-[8px] overflow-clip border-t border-solid border-stroke-1-light p-[16px] dark:border-stroke-1-dark" data-name="kit">
         <p className="type-caption-semibold shrink-0 text-text-neutral-2-light dark:text-text-neutral-2-dark">Kit</p>
         <div className={`relative flex shrink-0 items-start gap-[8px] ${data.kitReady ? "" : "opacity-50"}`} data-name="formats">
           {data.formats.map((format) => (
-            <button
-              key={format}
-              type="button"
-              disabled={!data.kitReady}
-              onClick={() => onDownloadFormat(format)}
-              className="relative flex shrink-0 items-center justify-center rounded-[8px] border border-solid border-stroke-2-light px-[12px] py-[8px] dark:border-stroke-2-dark"
-              data-name="format"
-            >
-              <span className="type-caption-semibold shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">{format}</span>
-            </button>
+            <DownloadChip key={format} label={format} state={data.downloads?.[format] ?? "idle"} disabled={!data.kitReady} onPress={() => onDownloadFormat(format)} />
           ))}
         </div>
         {!data.kitReady && <p className="type-mini-medium shrink-0 text-text-neutral-2-light dark:text-text-neutral-2-dark">Ready after the stress test.</p>}
@@ -177,10 +175,10 @@ function Artifact({ data, onBack, onClose, onChoose }: { data: ArtifactView; onB
         <button
           type="button"
           onClick={onChoose}
-          className="relative flex h-[44px] w-full shrink-0 items-center justify-center rounded-[12px] border border-solid border-stroke-2-light dark:border-stroke-2-dark"
+          className={`relative flex h-[44px] w-full shrink-0 items-center justify-center rounded-[12px] ${SECONDARY}`}
           data-name="choose"
         >
-          <span className="type-caption-semibold shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">Choose {data.letter}</span>
+          <span className={`type-caption-semibold shrink-0 ${SECONDARY_LABEL}`}>Choose {data.letter}</span>
         </button>
       </div>
     </Shell>
@@ -200,22 +198,8 @@ function Color({ data, onBack, onClose }: { data: ColorView; onBack: () => void;
 
 function FilterChip({ label, selected, onClick }: { label: string; selected: boolean; onClick: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={selected}
-      className={`relative flex shrink-0 items-start rounded-[999px] px-[10px] py-[4px] ${
-        selected ? "bg-background-3-light dark:bg-background-3-dark" : "border border-solid border-stroke-2-light dark:border-stroke-2-dark"
-      }`}
-      data-name="gala-filter-chip"
-    >
-      <span
-        className={`type-mini-semibold shrink-0 whitespace-nowrap ${
-          selected ? "text-text-neutral-1-light dark:text-text-neutral-1-dark" : "text-text-neutral-2-light dark:text-text-neutral-2-dark"
-        }`}
-      >
-        {label}
-      </span>
+    <button type="button" onClick={onClick} aria-pressed={selected} className={chipClass(selected)} data-name="gala-filter-chip">
+      <span className={chipLabelClass(selected)}>{label}</span>
     </button>
   );
 }
@@ -243,7 +227,7 @@ function TypeRow({ family, brandName, letter, onUse }: { family: TypeFamily; bra
         {family.current ? (
           <p className="type-caption-semibold shrink-0 text-text-neutral-2-light dark:text-text-neutral-2-dark">Current</p>
         ) : (
-          <button type="button" onClick={onUse} className="type-caption-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">
+          <button type="button" onClick={onUse} className={`type-caption-semibold shrink-0 ${LINK}`}>
             Use for {letter}
           </button>
         )}
@@ -368,10 +352,10 @@ function MemoryRow({ line, error, onEdit, onRemove }: { line: MemoryLine; error?
         <p className="type-body-regular min-w-px flex-[1_0_0] text-text-neutral-1-light dark:text-text-neutral-1-dark">{line.text}</p>
       )}
       <div className="relative flex shrink-0 items-start gap-[4px] overflow-clip text-text-neutral-2-light dark:text-text-neutral-2-dark" data-name="actions">
-        <button type="button" onClick={() => setDraft(line.text)} aria-label="Edit" className="flex size-[28px] shrink-0 items-center justify-center rounded-[8px]">
+        <button type="button" onClick={() => setDraft(line.text)} aria-label="Edit" className={`flex size-[28px] shrink-0 items-center justify-center rounded-[8px] ${PLAIN}`}>
           <Icon name="edit" />
         </button>
-        <button type="button" onClick={onRemove} aria-label="Remove" className="flex size-[28px] shrink-0 items-center justify-center rounded-[8px]">
+        <button type="button" onClick={onRemove} aria-label="Remove" className={`flex size-[28px] shrink-0 items-center justify-center rounded-[8px] ${PLAIN}`}>
           <Icon name="remove" />
         </button>
       </div>
@@ -422,7 +406,7 @@ function Memory({ data, onBack, onClose, onAddMemory, onEditMemory, onRemoveMemo
             aria-label="Add something to remember"
             className="type-body-regular min-w-px flex-[1_0_0] bg-transparent text-text-neutral-1-light outline-none placeholder:text-text-neutral-2-light dark:text-text-neutral-1-dark dark:placeholder:text-text-neutral-2-dark"
           />
-          <button type="submit" aria-label="Add" className="flex size-[28px] shrink-0 items-center justify-center text-text-neutral-2-light dark:text-text-neutral-2-dark" data-name="add-button">
+          <button type="submit" aria-label="Add" className={`flex size-[28px] shrink-0 items-center justify-center rounded-[8px] text-text-neutral-2-light dark:text-text-neutral-2-dark ${PLAIN}`} data-name="add-button">
             <Icon name="plus" />
           </button>
         </form>
@@ -433,7 +417,7 @@ function Memory({ data, onBack, onClose, onAddMemory, onEditMemory, onRemoveMemo
           <div className="relative flex w-full shrink-0 flex-col items-start gap-[8px] rounded-[8px] border border-solid border-stroke-1-light p-[12px] dark:border-stroke-1-dark" data-name="clear-confirm">
             <p className="type-caption-medium w-full shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">Clear everything Gala remembers? This can’t be undone.</p>
             <div className="relative flex shrink-0 items-start gap-[16px]" data-name="actions">
-              <button type="button" onClick={() => setConfirming(false)} className="type-caption-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">
+              <button type="button" onClick={() => setConfirming(false)} className={`type-caption-semibold shrink-0 ${LINK}`}>
                 Cancel
               </button>
               <button
@@ -442,14 +426,14 @@ function Memory({ data, onBack, onClose, onAddMemory, onEditMemory, onRemoveMemo
                   setConfirming(false);
                   onClearMemory();
                 }}
-                className="type-caption-semibold shrink-0 text-error-text-light dark:text-error-text-dark"
+                className={`type-caption-semibold shrink-0 rounded-[4px] text-error-text-light focus-visible:outline-offset-2 dark:text-error-text-dark ${PLAIN}`}
               >
                 Clear all
               </button>
             </div>
           </div>
         ) : (
-          <button type="button" onClick={() => setConfirming(true)} className="type-caption-medium shrink-0 text-text-neutral-2-light dark:text-text-neutral-2-dark" data-name="clear">
+          <button type="button" onClick={() => setConfirming(true)} className={`type-caption-medium shrink-0 rounded-[4px] text-text-neutral-2-light focus-visible:outline-offset-2 dark:text-text-neutral-2-dark ${PLAIN}`} data-name="clear">
             Clear all memory
           </button>
         )}

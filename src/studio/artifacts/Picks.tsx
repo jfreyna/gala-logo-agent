@@ -3,6 +3,7 @@ import { CountedLineField } from "../../components/LineField";
 import { Icon } from "../../components/Icon";
 import type { PicksArtifact, PicksSubmission } from "./types";
 import { Turn } from "./Turn";
+import { PRIMARY, PRIMARY_LABEL, SECONDARY, SECONDARY_LABEL } from "../../components/states";
 
 /** The longest one-line reason a person can write. */
 const QUOTE_LIMIT = 280;
@@ -87,18 +88,18 @@ export function Picks({ data, onSubmit, onDecline }: { data: PicksArtifact; onSu
           <button
             type="button"
             onClick={submit}
-            className="relative flex h-[40px] w-full shrink-0 items-center justify-center rounded-[12px] bg-button-1-default-light px-[20px] desktop:order-2 desktop:w-auto dark:bg-button-1-default-dark"
+            className={`relative flex h-[40px] w-full shrink-0 items-center justify-center rounded-[12px] px-[20px] desktop:order-2 desktop:w-auto ${PRIMARY}`}
             data-name="submit"
           >
-            <span className="type-caption-semibold shrink-0 text-button-light-text">Submit my picks</span>
+            <span className={`type-caption-semibold shrink-0 ${PRIMARY_LABEL}`}>Submit my picks</span>
           </button>
           <button
             type="button"
             onClick={onDecline}
-            className="relative flex h-[40px] w-full shrink-0 items-center justify-center rounded-[12px] border border-solid border-stroke-2-light px-[16px] desktop:order-1 desktop:w-auto dark:border-stroke-2-dark"
+            className={`relative flex h-[40px] w-full shrink-0 items-center justify-center rounded-[12px] px-[16px] desktop:order-1 desktop:w-auto ${SECONDARY}`}
             data-name="dont-submit"
           >
-            <span className="type-caption-semibold shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">Don’t submit</span>
+            <span className={`type-caption-semibold shrink-0 ${SECONDARY_LABEL}`}>Don’t submit</span>
           </button>
         </div>
       </div>

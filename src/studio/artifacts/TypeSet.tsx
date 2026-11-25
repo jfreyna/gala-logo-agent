@@ -4,6 +4,7 @@ import type { TypeDirection, TypeSetArtifact } from "./types";
 import { Turn } from "./Turn";
 import { CardFooter } from "../Feedback";
 import type { Past } from "../history";
+import { LINK, PRIMARY, SECONDARY, SECONDARY_LABEL } from "../../components/states";
 
 const ALPHABET = "Aa Bb Cc 0123";
 
@@ -68,10 +69,10 @@ function TypeSpecimen({
         <button
           type="button"
           onClick={onChange}
-          className="relative flex h-[40px] min-w-px flex-[1_0_0] items-center justify-center rounded-[12px] border border-solid border-stroke-2-light dark:border-stroke-2-dark"
+          className={`relative flex h-[40px] min-w-px flex-[1_0_0] items-center justify-center rounded-[12px] ${SECONDARY}`}
           data-name="change"
         >
-          <span className="type-caption-semibold shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">Change</span>
+          <span className={`type-caption-semibold shrink-0 ${SECONDARY_LABEL}`}>Change</span>
         </button>
         <button
           type="button"
@@ -79,8 +80,8 @@ function TypeSpecimen({
           aria-pressed={chosen}
           className={`relative flex h-[40px] min-w-px flex-[1_0_0] items-center justify-center gap-[6px] rounded-[12px] ${
             chosen
-              ? "bg-button-1-default-light text-button-light-text dark:bg-button-1-default-dark"
-              : "border border-solid border-stroke-2-light text-text-neutral-1-light dark:border-stroke-2-dark dark:text-text-neutral-1-dark"
+              ? `text-button-light-text ${PRIMARY}`
+              : `text-text-neutral-1-light dark:text-text-neutral-1-dark ${SECONDARY}`
           }`}
           data-name="choose"
         >
@@ -117,7 +118,7 @@ function SavedType({ direction, brandName, onEdit, past, onBack }: { direction: 
       {past !== undefined ? (
         <CardFooter past={past} onBack={onBack} />
       ) : (
-        <button type="button" onClick={onEdit} className="type-caption-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">
+        <button type="button" onClick={onEdit} className={`type-caption-semibold shrink-0 ${LINK}`}>
           Edit
         </button>
       )}

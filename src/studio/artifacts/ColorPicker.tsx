@@ -6,6 +6,7 @@ import type { BrandColors, ColorPickerArtifact } from "./types";
 import { ArtifactCard, Turn } from "./Turn";
 import { CardFooter } from "../Feedback";
 import type { Past } from "../history";
+import { LINK, PLAIN, PRIMARY, PRIMARY_LABEL } from "../../components/states";
 
 type EyeDropperWindow = Window & { EyeDropper?: new () => { open: () => Promise<{ sRGBHex: string }> } };
 
@@ -47,7 +48,7 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
             type="button"
             onClick={pick}
             aria-label={`Pick the ${label.toLowerCase()} color`}
-            className={`relative flex size-[20px] shrink-0 items-center justify-center rounded-[999px] border border-solid ${
+            className={`relative flex size-[20px] shrink-0 items-center justify-center rounded-[999px] border border-solid ${PLAIN} ${
               filled
                 ? "border-text-blue-1-light bg-brand-tertiary-50 text-text-blue-1-light dark:border-text-blue-1-dark dark:bg-background-1-dark dark:text-text-blue-1-dark"
                 : "border-neutral-300 bg-neutral-0 text-text-blue-1-light"
@@ -123,7 +124,7 @@ export function ColorPicker({
               {data.colors.tertiary !== null && <ColorChip color={data.colors.tertiary} label="Tertiary" />}
             </div>
             {past === undefined && (
-              <button type="button" onClick={onEdit} className="type-caption-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">
+              <button type="button" onClick={onEdit} className={`type-caption-semibold shrink-0 ${LINK}`}>
                 Edit
               </button>
             )}
@@ -139,10 +140,10 @@ export function ColorPicker({
               <button
                 type="button"
                 onClick={save}
-                className="relative flex h-[40px] w-full shrink-0 items-center justify-center rounded-[12px] bg-button-1-default-light px-[20px] desktop:w-auto dark:bg-button-1-default-dark"
+                className={`relative flex h-[40px] w-full shrink-0 items-center justify-center rounded-[12px] px-[20px] desktop:w-auto ${PRIMARY}`}
                 data-name="save"
               >
-                <span className="type-caption-semibold shrink-0 text-button-light-text">Save colors</span>
+                <span className={`type-caption-semibold shrink-0 ${PRIMARY_LABEL}`}>Save colors</span>
               </button>
             </div>
           </>

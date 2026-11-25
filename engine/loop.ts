@@ -12,7 +12,7 @@
  * one opens: a stage returns "continue" only after its own sign-off.
  */
 import { CannotSet } from "../kit/src/font.ts";
-import { NOTICE_KIND, noticeFor } from "./notice.ts";
+import { NOTICE_KIND, noticeFor, stoppedNotice } from "./notice.ts";
 import type { Prompt } from "./prompt.ts";
 import { brief } from "./stages/brief.ts";
 import { colorways, pickColors } from "./stages/color.ts";
@@ -57,6 +57,8 @@ export type TurnResult = "done" | "busy" | "stopped" | "trouble";
 export async function runTurn(store: Store, prompt: Prompt, signal: AbortSignal, options: { back?: Stage } = {}): Promise<TurnResult> {
   const turn = new Turn(store, prompt, signal);
   if (!(await turn.read())) return "busy";
+  // How much of the conversation was there before the turn, so a stop can say whether anything from it was kept.
+  const before = turn.state.messages.length;
   try {
     // The person's message is read once, before the step runs; code moves the stage (steer.ts).
     await steer(turn, options);
@@ -65,7 +67,11 @@ export async function runTurn(store: Store, prompt: Prompt, signal: AbortSignal,
     }
     throw new Error(`The turn did not settle at stage ${turn.stage}.`);
   } catch (error) {
-    if (signal.aborted) return "stopped";
+    // Stop is confirmed in the chat (FRI-1715): Gala's line says so, and asks what to do next.
+    if (signal.aborted) {
+      await store.write([{ op: "artifact", kind: NOTICE_KIND, artifact: stoppedNotice(turn.stage, turn.state.messages.length > before) }]).catch(() => undefined);
+      return "stopped";
+    }
     // The cause goes to the server log; the person gets a notice that names it in plain words, with a way forward (notice.ts).
     console.error(`Turn failed at stage ${turn.stage}: ${error instanceof Error ? error.message : "unknown error"}`);
     // The same cause twice in a row at this step changes the answer: Gala's last message says what failed last time.

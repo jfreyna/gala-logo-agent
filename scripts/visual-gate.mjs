@@ -82,6 +82,11 @@ const screens = [
   { name: "fb-heardworking-desktop-light", path: "/preview/heardWorking?top=1", w: 1440, h: 995, scheme: "light" },
   { name: "fb-history-desktop-light", path: "/preview/history", w: 1440, h: 1040, scheme: "light" },
   // Failures answered (FRI-1714). Couldn't draw is also drawn in desktop dark and on a phone.
+  // Button states and small feedback (FRI-1715), drawn in desktop light.
+  { name: "fb-handedoff-desktop-light", path: "/preview/handedOff?top=1&handedOff=1", w: 1440, h: 900, scheme: "light" },
+  { name: "fb-stopped-desktop-light", path: "/preview/stopped?top=1", w: 1440, h: 900, scheme: "light" },
+  { name: "fb-downloads-desktop-light", path: "/preview/kit?top=1&downloads=SVG:saved,EPS:saving,PNG:couldnt", w: 1440, h: 900, scheme: "light" },
+  { name: "fb-backwhileworking-desktop-light", path: "/preview/backWhileWorking?top=1&panel=historyWorking", w: 1440, h: 900, scheme: "light" },
   { name: "fb-couldntdraw-desktop-light", path: "/preview/couldntDraw?top=1", w: 1440, h: 900, scheme: "light" },
   { name: "fb-couldntdraw-desktop-dark", path: "/preview/couldntDraw?top=1", w: 1440, h: 900, scheme: "dark" },
   { name: "fb-couldntdraw-mobile-light", path: "/preview/couldntDraw?top=1", w: 380, h: 812, scheme: "light" },

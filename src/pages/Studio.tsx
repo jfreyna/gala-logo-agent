@@ -15,7 +15,8 @@ import { pastCards } from "../studio/history";
 import { ECHO_KIND, echoFor, type EchoAction } from "../../convex/lib/echo";
 import { messageOf } from "../lib/errors";
 import { ConvexError } from "convex/values";
-import type { NoticeAction } from "../studio/Feedback";
+import type { DownloadState, NoticeAction } from "../studio/Feedback";
+import { HAND_OFF_MS, handsOff } from "../studio/handoff";
 import { afterRequest, couldNotStart, noticeOf, sendKeepingInput } from "../studio/failures";
 
 /** The steps the History view lists, in order, with the stages each covers. */
@@ -174,6 +175,17 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
   const [cardErrors, setCardErrors] = useState<Record<string, string>>({});
   const [memoryErrors, setMemoryErrors] = useState<Record<string, string>>({});
   const [sendError, setSendError] = useState<string | null>(null);
+  // A failed Stop request (FRI-1715): its words under the bar, until the next press.
+  const [stopError, setStopError] = useState<string | null>(null);
+  // Handed off (FRI-1715): a card action passed the next move to the message box. Off when the person types, or after 6 seconds.
+  const [handedOff, setHandedOff] = useState(0);
+  useEffect(() => {
+    if (handedOff === 0) return;
+    const timer = window.setTimeout(() => setHandedOff(0), HAND_OFF_MS);
+    return () => window.clearTimeout(timer);
+  }, [handedOff]);
+  // Where each kit download stands (gala-download-chip), by format, and "Kit" for Download kit.
+  const [downloads, setDownloads] = useState<Record<string, DownloadState>>({});
   // How the last request for a turn ended, once the retries ran out without a turn starting.
   const [startFailed, setStartFailed] = useState<string | null>(null);
   const nextEcho = useRef(0);
@@ -244,7 +256,9 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
       }
       if (isArtifactKind(message.kind) && message.artifact !== null) {
         // The engine writes each artifact in the shape its kind names.
-        return [{ id, kind: message.kind, data: message.artifact, past: past[id], error: cardErrors[id] } as unknown as StreamItem];
+        // While Gala works, a past card's "Back to this step" waits, and says so.
+        const history = past[id] === undefined ? undefined : { ...past[id], working: working !== null };
+        return [{ id, kind: message.kind, data: message.artifact, past: history, error: cardErrors[id], downloads: message.kind === "kit" ? downloads : undefined } as unknown as StreamItem];
       }
       return [{ id, kind: message.author === "gala" ? "gala" : "visitor", text: message.text ?? "" }];
     });
@@ -256,7 +270,7 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
     // Gala's "working" line, while a turn runs.
     if (working !== null) stream.push({ id: "working", kind: "working", text: working });
     return stream;
-  }, [messages, working, pending, stage, cardErrors, startFailed]);
+  }, [messages, working, pending, stage, cardErrors, startFailed, downloads]);
 
   /**
    * Sends the message and the file. The box and the attachment are cleared
@@ -293,10 +307,19 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
     });
   }
 
+  /** Saves one of the kit's files: Saving while it is fetched, Saved for a few seconds, or Couldn't, which a press tries again. */
   function saveFile(label: string) {
     const entry = kit?.downloads.find((candidate) => candidate.label === label);
-    if (entry?.url) void download(entry.url, entry.fileName);
+    const mark = (state: DownloadState) => setDownloads((current) => ({ ...current, [label]: state }));
+    if (!entry?.url) return mark("couldnt");
+    mark("saving");
+    void download(entry.url, entry.fileName).then((saved) => {
+      mark(saved ? "saved" : "couldnt");
+      if (saved) window.setTimeout(() => setDownloads((current) => (current[label] === "saved" ? { ...current, [label]: "idle" } : current)), 3000);
+    });
   }
+
+
 
   /** Goes back to a step: the same move as a spoken "go back". The engine returns the project to it, and Gala picks up in the chat. */
   function goBack(step: Stage) {
@@ -356,6 +379,8 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
 
   function onAction(action: ArtifactAction, itemId: string) {
     const messageId = itemId as Id<"messages">;
+    // "Change something", "Edit" on the brief, and "Tell me what to try" hand the next move to the box, and the bar shows it.
+    if (handsOff(action)) setHandedOff(Date.now());
     switch (action.type) {
       // "Back to this step" on a past card's footer: the same path as the Work panel's link.
       case "notice":
@@ -368,11 +393,9 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
       // Editing the brief, or the direction, happens in the chat: the prompt is readied for the person.
       case "editBrief":
         setText("Change the brief: ");
-        setFocusRequest((value) => value + 1);
-        return;
+        return setFocusRequest((value) => value + 1);
       case "changeDirection":
-        setFocusRequest((value) => value + 1);
-        return;
+        return setFocusRequest((value) => value + 1);
       case "changeType":
         return setPanel({ view: "type", messageId, cardId: action.id, group: "All", moods: null });
       // "Change typeface" and "Change symbol" take the same path as going back to that step.
@@ -402,7 +425,7 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
 
   let view: PanelView | null = null;
   if (panel?.view === "history") {
-    view = { view: "history", projectName: projectName(project.brandName), phases: phasesFor(project.stage, summaries(cards, project.stage)), formats: KIT_FORMATS, kitReady: hasKit && kit != null };
+    view = { view: "history", projectName: projectName(project.brandName), phases: phasesFor(project.stage, summaries(cards, project.stage)), formats: KIT_FORMATS, kitReady: hasKit && kit != null, downloads, working: working !== null };
   } else if (panel?.view === "memory") {
     view = { view: "memory", lines: (memories ?? []).map((memory) => ({ id: memory._id, group: memory.group, text: memory.text })), errors: memoryErrors };
   } else if (panel?.view === "color") {
@@ -525,15 +548,23 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
         onChange: (value) => {
           setText(value);
           setSendError(null);
+          setHandedOff(0);
         },
-        sendError,
+        sendError: sendError ?? stopError,
+        sendFailed: sendError !== null,
+        handedOff: handedOff !== 0,
         onSend: () => void sendMessage(),
         placeholder,
         placeholderMobile,
         // The bar says what Gala is doing in the first person: "I’m drawing three directions…".
         working: working === null || working === "" ? working : `I’m ${working.charAt(0).toLowerCase()}${working.slice(1)}…`,
         workingMobile: working === null || working === "" ? working : `${working}…`,
-        onStop: () => void stopTurn(projectId),
+        onStop: () => {
+          setStopError(null);
+          void stopTurn(projectId).then((stopped) => {
+            if (!stopped) setStopError("I couldn’t stop that. Press Stop again.");
+          });
+        },
         attachment: file !== null ? { fileName: file.file.name, previewUrl: file.previewUrl } : null,
         onAttach: (picked) => {
           setSendError(null);

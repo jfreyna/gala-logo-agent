@@ -49,8 +49,12 @@ export function StudioView({
     hints: string[];
     hintsOpen?: boolean;
     focusRequest?: number;
-    /** Why the last send failed (Send failed): shown under the bar, with the words and the file kept. */
+    /** A reason under the bar: why the last send failed (with the words and the file kept), or why Stop didn't go through. */
     sendError?: string | null;
+    /** True when that reason is a failed send: the bar shows Send failed. */
+    sendFailed?: boolean;
+    /** A card action handed the next move to the box (Handed off). */
+    handedOff?: boolean;
   };
 }) {
   const conversation = useRef<HTMLDivElement>(null);
@@ -80,7 +84,7 @@ export function StudioView({
             </div>
           </div>
           <div className="relative flex w-full max-w-[768px] shrink-0 flex-col items-start gap-[8px]" data-name="composer">
-            <PromptBar {...prompt} failed={prompt.sendError != null} />
+            <PromptBar {...prompt} failed={prompt.sendFailed ?? prompt.sendError != null} />
             {prompt.sendError != null && <InlineError>{prompt.sendError}</InlineError>}
           </div>
         </div>

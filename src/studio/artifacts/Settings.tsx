@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { chipClass, chipLabelClass, SECONDARY, SECONDARY_LABEL } from "../../components/states";
 
 /**
  * The pieces the wordmark and lockup cards share (Figma gala-wordmark
@@ -20,27 +21,13 @@ export function Tile({ caption, inverted = false, className, children }: { capti
 
 /**
  * gala-filter-chip (Figma 5548:7011) as a choice: Selected sits on the
- * one-step-up surface, Default is the quiet outlined pill.
+ * one-step-up surface, Default is the quiet outlined pill; both have the
+ * chip's states (components/states.ts).
  */
 function Choice({ label, selected, disabled, onPress }: { label: string; selected: boolean; disabled: boolean; onPress: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onPress}
-      disabled={disabled}
-      aria-pressed={selected}
-      className={`relative flex shrink-0 items-start rounded-[999px] px-[10px] py-[4px] ${
-        selected ? "bg-background-3-light dark:bg-background-3-dark" : "border border-solid border-stroke-2-light dark:border-stroke-2-dark"
-      }`}
-      data-name="gala-filter-chip"
-    >
-      <span
-        className={`type-mini-semibold shrink-0 whitespace-nowrap ${
-          selected ? "text-text-neutral-1-light dark:text-text-neutral-1-dark" : "text-text-neutral-2-light dark:text-text-neutral-2-dark"
-        }`}
-      >
-        {label}
-      </span>
+    <button type="button" onClick={onPress} disabled={disabled} aria-pressed={selected} className={chipClass(selected)} data-name="gala-filter-chip">
+      <span className={chipLabelClass(selected)}>{label}</span>
     </button>
   );
 }
@@ -69,9 +56,8 @@ export function Settings({ children }: { children: ReactNode }) {
 
 /** The card's two answers: go back and change, or sign off. */
 export function Actions({ change, approve, disabled, onChange, onApprove }: { change: string; approve: string; disabled: boolean; onChange: () => void; onApprove: () => void }) {
-  const button =
-    "relative flex h-[40px] w-full shrink-0 items-center justify-center overflow-clip rounded-[12px] border border-solid border-stroke-2-light px-[16px] desktop:w-auto desktop:min-w-px desktop:flex-[1_0_0] dark:border-stroke-2-dark";
-  const label = "type-caption-semibold shrink-0 whitespace-nowrap text-text-neutral-1-light dark:text-text-neutral-1-dark";
+  const button = `relative flex h-[40px] w-full shrink-0 items-center justify-center overflow-clip rounded-[12px] px-[16px] desktop:w-auto desktop:min-w-px desktop:flex-[1_0_0] ${SECONDARY}`;
+  const label = `type-caption-semibold shrink-0 whitespace-nowrap ${SECONDARY_LABEL}`;
   return (
     <div className="relative flex w-full shrink-0 flex-col items-start gap-[8px] overflow-clip desktop:flex-row" data-name="actions">
       <button type="button" onClick={onChange} disabled={disabled} className={button} data-name="change">

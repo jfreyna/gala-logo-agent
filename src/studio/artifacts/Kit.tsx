@@ -1,6 +1,9 @@
 import { Icon } from "../../components/Icon";
 import type { KitArtifact } from "./types";
 import { ArtifactCard, Turn } from "./Turn";
+import { LINK, PRIMARY } from "../../components/states";
+import { Thinking } from "../../components/Thinking";
+import { DownloadChip, type DownloadState } from "../Feedback";
 
 /**
  * gala-kit (Figma 5551:8131): the finished lock-up kit. Six lock-ups on
@@ -11,12 +14,16 @@ export function Kit({
   onDownloadFormat,
   onDownloadKit,
   onOpenSpec,
+  downloads = {},
 }: {
+  /** Where each download stands, by format, and "Kit" for Download kit. */
+  downloads?: Record<string, DownloadState>;
   data: KitArtifact;
   onDownloadFormat: (format: string) => void;
   onDownloadKit: () => void;
   onOpenSpec: () => void;
 }) {
+  const kit = downloads.Kit ?? "idle";
   return (
     <div className="relative flex w-full shrink-0 flex-col items-start gap-[12px]" data-name="gala-kit">
       <Turn>{data.say}</Turn>
@@ -48,29 +55,25 @@ export function Kit({
         <div className="relative flex w-full shrink-0 flex-col items-start gap-[12px] desktop:flex-row desktop:items-center desktop:justify-between" data-name="downloads">
           <div className="relative flex shrink-0 flex-wrap items-start gap-[8px]" data-name="formats">
             {data.formats.map((format) => (
-              <button
-                key={format}
-                type="button"
-                onClick={() => onDownloadFormat(format)}
-                className="relative flex shrink-0 items-center justify-center rounded-[8px] border border-solid border-stroke-2-light px-[12px] py-[8px] dark:border-stroke-2-dark"
-                data-name="format"
-              >
-                <span className="type-caption-semibold shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">{format}</span>
-              </button>
+              <DownloadChip key={format} label={format} state={downloads[format] ?? "idle"} onPress={() => onDownloadFormat(format)} />
             ))}
           </div>
           <div className="relative flex w-full shrink-0 items-center justify-between gap-[16px] desktop:w-auto desktop:justify-start" data-name="actions">
-            <button type="button" onClick={onOpenSpec} className="type-caption-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">
+            <button type="button" onClick={onOpenSpec} className={`type-caption-semibold shrink-0 ${LINK}`}>
               Spec sheet ›
             </button>
             <button
               type="button"
               onClick={onDownloadKit}
-              className="relative flex h-[40px] shrink-0 items-center justify-center gap-[6px] rounded-[12px] bg-button-1-default-light px-[16px] text-button-light-text dark:bg-button-1-default-dark"
+              disabled={kit === "saving"}
+              aria-busy={kit === "saving"}
+              className={`relative flex h-[40px] shrink-0 items-center justify-center gap-[6px] rounded-[12px] px-[16px] text-button-light-text ${PRIMARY}`}
               data-name="download"
+              data-state={kit}
             >
-              <Icon name="download" />
-              <span className="type-caption-semibold shrink-0">Download kit</span>
+              {/* The same four states as the format chips: the thinking mark while saving, a check once saved, and a retry in the label. */}
+              {kit === "saving" ? <Thinking /> : kit === "saved" ? <Icon name="checkCircle" /> : <Icon name="download" />}
+              <span className="type-caption-semibold shrink-0">{kit === "couldnt" ? "Download kit · Try again" : "Download kit"}</span>
             </button>
           </div>
         </div>

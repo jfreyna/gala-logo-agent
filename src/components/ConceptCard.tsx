@@ -1,5 +1,6 @@
 import { CheckBadge } from "./CheckBadge";
 import { Icon } from "./Icon";
+import { PRIMARY, SECONDARY } from "./states";
 
 export type Check = { label: string; pass: boolean };
 
@@ -65,8 +66,8 @@ export function ConceptCard({
         aria-pressed={chosen}
         className={`relative flex h-[40px] w-full shrink-0 items-center justify-center gap-[6px] rounded-[12px] ${
           chosen
-            ? "bg-button-1-default-light text-button-light-text dark:bg-button-1-default-dark"
-            : "border border-solid border-stroke-2-light text-text-neutral-1-light dark:border-stroke-2-dark dark:text-text-neutral-1-dark"
+            ? `text-button-light-text ${PRIMARY}`
+            : `text-text-neutral-1-light dark:text-text-neutral-1-dark ${SECONDARY}`
         }`}
         data-name="choose"
       >

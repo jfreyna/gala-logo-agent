@@ -18,6 +18,10 @@ export type HistoryView = {
   formats: string[];
   /** False until the kit exists; the format chips are dimmed until then. */
   kitReady: boolean;
+  /** True while Gala works: "Back to this step" waits, and says so (Status=Done while working). */
+  working?: boolean;
+  /** Where each format's download stands (gala-download-chip). */
+  downloads?: Record<string, "idle" | "saving" | "saved" | "couldnt">;
 };
 
 export type ArtifactView = {

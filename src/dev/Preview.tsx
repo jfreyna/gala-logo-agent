@@ -8,6 +8,7 @@ import { HeroGlows } from "../backdrops/HeroGlows";
 import { HallsHorizon } from "../backdrops/HallsHorizon";
 import { AboutRibbons } from "../backdrops/AboutRibbons";
 import { halls, panels, projects, screens } from "./fixtures";
+import { States } from "./States";
 
 /** Each backdrop and the height of its stage, in frame pixels (the stage is 1440 wide). */
 const BACKDROPS = {
@@ -21,6 +22,7 @@ const BACKDROPS = {
  * for the side-by-side check against Figma. The address picks the screen:
  *   /preview/home
  *   /preview/projects
+ *   /preview/states              (every button kind and chip in each state, for scripts/check-states.mjs)
  *   /preview/backdrop?scene=hero-silk   (one backdrop alone at its frame's size: hero-silk, halls-horizon, about-ribbons;
  *                                        &width=N draws it N wide, &below=N puts it N pixels down the page)
  *   /preview/joincard?state=signIn   (the join card's sign-in states)
@@ -29,7 +31,9 @@ const BACKDROPS = {
  *   add &working=1 or &attached=1 for those prompt bar states, &status=<line> for a working line of your own,
  *   &family=<Google family> sets the wordmark card in that typeface, and &name=<text> changes the name on it,
  *   &skip=N to leave out the first N items, &top=1 to show the start of a long conversation,
- *   &attached=1&file=<name> for an attached file, &sendError=<reason> for the bar's Send failed state
+ *   &attached=1&file=<name> for an attached file, &sendError=<reason> for the bar's Send failed state,
+ *   &handedOff=1 for the bar's Handed off state, &downloads=SVG:saved,PNG:couldnt for the kit's download chips,
+ *   &busy=1 for past cards while Gala works
  */
 export function Preview({ pathname, search }: { pathname: string; search: string }) {
   const name = pathname.replace(/^\/preview\/?/, "") || "studio";
@@ -72,6 +76,7 @@ export function Preview({ pathname, search }: { pathname: string; search: string
       />
     );
   }
+  if (name === "states") return <States />;
   if (name === "projects") {
     return <ProjectsView onNew={() => undefined} projects={projects.map((project, index) => ({ id: `sample-${index}`, ...project }))} />;
   }
@@ -89,13 +94,24 @@ export function Preview({ pathname, search }: { pathname: string; search: string
         ? (screen.working ?? ["I’m drawing three directions…", "Drawing three directions…"])
         : null;
   const noop = () => undefined;
+  const downloads = params.get("downloads")
+    ? (Object.fromEntries(params.get("downloads")!.split(",").map((entry) => entry.split(":"))) as Record<string, "idle" | "saving" | "saved" | "couldnt">)
+    : undefined;
 
   return (
     <StudioView
       projectName="Ember & Rye"
       items={screen.items.slice(Number(params.get("skip") ?? 0)).map((item) =>
         // &family and &name show the wordmark card in another typeface or with another name.
-        item.kind === "wordmark" ? { ...item, data: { ...item.data, family: params.get("family") ?? item.data.family, brandName: params.get("name") ?? item.data.brandName } } : item,
+        item.kind === "wordmark"
+          ? { ...item, data: { ...item.data, family: params.get("family") ?? item.data.family, brandName: params.get("name") ?? item.data.brandName } }
+          : // &downloads=SVG:saved,EPS:saving,PNG:couldnt shows the kit's download chips in those states.
+            item.kind === "kit" && downloads !== undefined
+            ? { ...item, downloads }
+            : // &busy=1 shows past cards as they are while Gala works: going back waits.
+              item.past !== undefined && params.get("busy") === "1"
+              ? { ...item, past: { ...item.past, working: true } }
+              : item,
       )}
       onAction={noop}
       startAtTop={params.get("top") === "1"}
@@ -134,6 +150,8 @@ export function Preview({ pathname, search }: { pathname: string; search: string
         attachment: params.get("attached") === "1" ? { fileName: params.get("file") ?? "napkin-sketch.jpg", previewUrl: null } : null,
         // &sendError=<message> shows the bar's Send failed state with that reason under it.
         sendError: params.get("sendError"),
+        // &handedOff=1 shows the bar as a card action leaves it (Handed off).
+        handedOff: params.get("handedOff") === "1",
         onAttach: noop,
         onRemoveAttachment: noop,
         hints: ["Here’s what my business does and who it’s for", "Show me the logos my competitors use", "Keep it simple enough to work at 16px"],

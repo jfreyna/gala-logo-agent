@@ -180,3 +180,15 @@ Run on 2026-11-25, port 3004, on `feature/FRI-1714-failures`, with the six frame
 The other 80 screens were again compared with `main` at `1399a18`: all unchanged.
 
 `fri1714/` holds the built screens with no frame: the same four in the modes the file leaves to the components, and two with no frame of their own: `carderror-*` (a refused card action, its words under the card) and `memoryerrors-*` (refused memory actions, under the line and under Add), both built from `gala-inline-error`.
+
+## Button states and small feedback (FRI-1715)
+
+Run on 2026-11-25, port 3004, on `feature/FRI-1715-button-states`, with the four frames this issue builds exported that day:
+- `fb-handedoff-*` (Handed off 5663:17947): 0.62%.
+- `fb-stopped-*` (Stopped 5663:18217): 0.43%.
+- `fb-downloads-*` (Downloads 5663:18327): 1.92%. The sample lock-ups differ, as on `kit-*`.
+- `fb-backwhileworking-*` (Back while working 5663:18583): 7.00%. The frame repeats one "Directions" row four times as its done rows, where the build shows the project's own steps; the frame also starts the conversation at the cards, without Gala's line above them. The frame's prompt bar shows Stop beside the placeholder while Gala works; the bar's Working state shows the working line there instead. That's the bar as it was before FRI-1712, and it's flagged, not changed.
+
+The 80 earlier screens against `main`: unchanged, except the six with Selected chips, which moved by 0.15 to 0.3% (`type-desktop-light`, `wordmark-desktop-*`, `lockup-desktop-*`, `held-desktop-light`). Selected chips now carry a background-3 border, so every chip is 27px tall, as gala-filter-chip now draws them.
+
+`fri1715/` holds the same four screens in the other modes. `states-desktop-*` is every button kind and chip at rest, in the component sets' order. A screenshot can't show hover, pressed or focus, so `npm run check:states` forces each of those states in the browser and compares the drawn colors with the component sets' values, light and dark (45 checks).

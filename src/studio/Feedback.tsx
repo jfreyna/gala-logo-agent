@@ -2,6 +2,7 @@ import { Icon } from "../components/Icon";
 import { Thinking } from "../components/Thinking";
 import type { Past } from "./history";
 import type { NoticeAction, NoticeData } from "./failures";
+import { LINK, PLAIN, PRIMARY, SECONDARY } from "../components/states";
 
 export type { NoticeAction, NoticeData };
 
@@ -29,8 +30,14 @@ export function CardFooter({ past, onBack }: { past: Past; onBack: () => void })
           {past.signedOff ? "Signed off" : "This step is behind you"}
         </p>
       </div>
-      {past.backTo !== null && (
-        <button type="button" onClick={onBack} className="type-caption-semibold shrink-0 whitespace-nowrap text-text-blue-1-light dark:text-text-blue-1-dark" data-name="back">
+      {/* While Gala works, going back waits: the footer says so, the way the Work panel's rows do (gala-button Disabled, with the reason). */}
+      {past.backTo !== null && past.working === true && (
+        <span className="type-caption-semibold shrink-0 whitespace-nowrap text-text-neutral-2-light dark:text-text-neutral-2-dark" data-name="back-waiting">
+          Back to this step when I finish
+        </span>
+      )}
+      {past.backTo !== null && past.working !== true && (
+        <button type="button" onClick={onBack} className={`type-caption-semibold shrink-0 whitespace-nowrap ${LINK}`} data-name="back">
           Back to this step
         </button>
       )}
@@ -91,7 +98,7 @@ export function Notice({ notice, onAction }: { notice: NoticeData; onAction: (ac
                     key={action.label}
                     type="button"
                     onClick={() => onAction(action)}
-                    className="relative flex h-[40px] w-full shrink-0 items-center justify-center overflow-clip rounded-[12px] bg-button-1-default-light px-[20px] desktop:w-auto dark:bg-button-1-default-dark"
+                    className={`relative flex h-[40px] w-full shrink-0 items-center justify-center overflow-clip rounded-[12px] px-[20px] desktop:w-auto ${PRIMARY}`}
                     data-name="button-primary"
                   >
                     <span className="type-caption-semibold shrink-0 whitespace-nowrap text-button-light-text">{action.label}</span>
@@ -101,7 +108,7 @@ export function Notice({ notice, onAction }: { notice: NoticeData; onAction: (ac
                     key={action.label}
                     type="button"
                     onClick={() => onAction(action)}
-                    className="relative flex h-[40px] w-full shrink-0 items-center justify-center overflow-clip rounded-[12px] border border-solid border-stroke-2-light px-[16px] desktop:w-auto dark:border-stroke-2-dark"
+                    className={`relative flex h-[40px] w-full shrink-0 items-center justify-center overflow-clip rounded-[12px] px-[16px] desktop:w-auto ${SECONDARY}`}
                     data-name="button-secondary"
                   >
                     <span className="type-caption-semibold shrink-0 whitespace-nowrap text-text-neutral-1-light dark:text-text-neutral-1-dark">{action.label}</span>
@@ -127,5 +134,39 @@ export function InlineError({ children }: { children: string }) {
       <span aria-hidden="true" className="size-[6px] shrink-0 rounded-full bg-error-text-light dark:bg-error-text-dark" data-name="dot" />
       <p className="type-caption-medium min-w-px flex-[1_0_0] text-error-text-light [word-break:break-word] dark:text-error-text-dark">{children}</p>
     </div>
+  );
+}
+
+/** Where a download stands (gala-download-chip): Idle, Saving while the file is fetched, Saved for a few seconds, or Couldn't with a retry in the button itself. */
+export type DownloadState = "idle" | "saving" | "saved" | "couldnt";
+
+/**
+ * gala-download-chip (Figma 5662:16938): one of the kit's formats, with
+ * progress. Hover lifts it like a secondary button; Saving shows the
+ * thinking mark; Saved a check; Couldn't says so in the error color, and
+ * pressing it again tries again.
+ */
+export function DownloadChip({ label, state, disabled = false, onPress }: { label: string; state: DownloadState; disabled?: boolean; onPress: () => void }) {
+  const couldnt = state === "couldnt";
+  return (
+    <button
+      type="button"
+      onClick={onPress}
+      disabled={disabled || state === "saving"}
+      aria-busy={state === "saving"}
+      className={`relative flex shrink-0 items-center justify-center rounded-[8px] border border-solid px-[12px] py-[8px] ${state === "saving" || state === "saved" ? "gap-[6px]" : ""} ${
+        couldnt
+          ? "border-error-text-light dark:border-error-text-dark"
+          : "border-stroke-2-light enabled:hover:border-text-blue-1-light enabled:hover:bg-neutral-0 dark:border-stroke-2-dark dark:enabled:hover:border-text-blue-1-dark dark:enabled:hover:bg-background-2-dark"
+      } ${PLAIN}`}
+      data-name="gala-download-chip"
+      data-state={state}
+    >
+      {state === "saving" && <Thinking className="text-text-neutral-2-light dark:text-text-neutral-2-dark" />}
+      {state === "saved" && <Icon name="checkCircle" className="text-text-green-1-light dark:text-text-green-1-dark" />}
+      <span className={`type-caption-semibold shrink-0 whitespace-nowrap ${couldnt ? "text-error-text-light dark:text-error-text-dark" : "text-text-neutral-1-light dark:text-text-neutral-1-dark"}`}>
+        {couldnt ? `${label} · Try again` : label}
+      </span>
+    </button>
   );
 }

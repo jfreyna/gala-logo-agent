@@ -98,6 +98,7 @@ function Entry({ item, onAction }: { item: StreamItem; onAction: (action: Artifa
           onDownloadFormat={(format) => onAction({ type: "downloadFormat", format })}
           onDownloadKit={() => onAction({ type: "downloadKit" })}
           onOpenSpec={() => onAction({ type: "openSpec" })}
+          downloads={item.downloads}
         />
       );
     case "picks":

@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
 import { Icon } from "../components/Icon";
+import { PLAIN, PRIMARY } from "../components/states";
+import { useReducedMotion } from "../lib/motion";
+
+/** What the box asks when a card action hands the next move to it (gala-prompt-bar State=Handed off). */
+const HANDED_OFF = "Tell me what you’d like to change…";
 
 /** A reference file the person has attached and not yet sent. */
 export type Attachment = { fileName: string; previewUrl: string | null };
@@ -26,6 +31,7 @@ export function PromptBar({
   hintsOpen = false,
   focusRequest = 0,
   failed = false,
+  handedOff = false,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -47,10 +53,36 @@ export function PromptBar({
   focusRequest?: number;
   /** Send failed (FRI-1712): the words and the file are kept, and the border says so. */
   failed?: boolean;
+  /**
+   * Handed off (FRI-1715): a card action passed the next move to this box.
+   * A 2px button-1 border eases in, and the placeholder asks what to change,
+   * typing itself in once. The page turns it off when the person types, or
+   * after 6 seconds.
+   */
+  handedOff?: boolean;
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const form = useRef<HTMLFormElement>(null);
   const [showHints, setShowHints] = useState(hintsOpen);
+  const reduced = useReducedMotion();
+  const [typed, setTyped] = useState(0);
+
+  // The hand-off placeholder types itself in once, a letter at a time; all at once when motion is reduced.
+  useEffect(() => {
+    if (!handedOff) {
+      setTyped(0);
+      return;
+    }
+    if (reduced) {
+      setTyped(HANDED_OFF.length);
+      return;
+    }
+    setTyped(0);
+    const timer = window.setInterval(() => setTyped((count) => (count >= HANDED_OFF.length ? count : count + 1)), 28);
+    return () => window.clearInterval(timer);
+  }, [handedOff, reduced]);
+  const shownPlaceholder = handedOff ? HANDED_OFF.slice(0, typed) : placeholder;
+  const shownPlaceholderMobile = handedOff ? HANDED_OFF.slice(0, typed) : placeholderMobile;
 
   // Put the cursor at the end of whichever prompt field is on screen.
   useEffect(() => {
@@ -98,10 +130,14 @@ export function PromptBar({
       ref={form}
       onSubmit={submit}
       className={`relative flex w-full shrink-0 items-stretch rounded-[20px] border border-solid bg-neutral-0 dark:bg-background-1-dark ${
-        failed ? "border-error-text-light dark:border-error-text-dark" : "border-form-stroke-light dark:border-form-background-dark"
-      }`}
+        failed
+          ? "border-error-text-light dark:border-error-text-dark"
+          : handedOff
+            ? "border-2 border-button-1-default-light dark:border-button-1-default-dark"
+            : "border-form-stroke-light dark:border-form-background-dark"
+      } transition-[border-color] duration-200 ease-out`}
       data-name="gala-prompt-bar"
-      data-state={failed ? "Send failed" : undefined}
+      data-state={failed ? "Send failed" : handedOff ? "Handed off" : undefined}
     >
       {showHints && hints.length > 0 && (
         <div
@@ -117,7 +153,7 @@ export function PromptBar({
                   onChange(hint);
                   setShowHints(false);
                 }}
-                className="type-body-regular w-full shrink-0 text-center text-text-blue-1-light dark:text-text-blue-1-dark"
+                className={`type-body-regular w-full shrink-0 rounded-[4px] text-center text-text-blue-1-light dark:text-text-blue-1-dark ${PLAIN}`}
               >
                 {hint}
               </button>
@@ -129,7 +165,7 @@ export function PromptBar({
         type="button"
         onClick={() => setShowHints((value) => !value)}
         aria-expanded={showHints}
-        className="relative flex shrink-0 items-center gap-[6px] overflow-clip border-r border-solid border-form-stroke-light pl-[12px] pr-[10px] desktop:pl-[16px] desktop:pr-[12px] dark:border-stroke-1-dark"
+        className={`relative flex shrink-0 items-center gap-[6px] overflow-clip border-r border-solid border-form-stroke-light pl-[12px] pr-[10px] desktop:pl-[16px] desktop:pr-[12px] dark:border-stroke-1-dark ${PLAIN}`}
         data-name="hints"
       >
         <span className="type-caption-medium shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">Hints</span>
@@ -140,7 +176,7 @@ export function PromptBar({
           type="button"
           onClick={() => fileInput.current?.click()}
           aria-label="Attach a reference file"
-          className="relative flex size-[40px] shrink-0 items-center justify-center overflow-clip rounded-[12px] text-text-neutral-2-light dark:text-text-neutral-2-dark"
+          className={`relative flex size-[40px] shrink-0 items-center justify-center overflow-clip rounded-[12px] text-text-neutral-2-light dark:text-text-neutral-2-dark ${PLAIN}`}
           data-name="attach"
         >
           <Icon name="paperclip" />
@@ -161,7 +197,7 @@ export function PromptBar({
               type="button"
               onClick={onRemoveAttachment}
               aria-label={`Remove ${attachment.fileName}`}
-              className="shrink-0 text-text-neutral-2-light dark:text-text-neutral-2-dark"
+              className={`shrink-0 rounded-[4px] text-text-neutral-2-light dark:text-text-neutral-2-dark ${PLAIN}`}
             >
               <Icon name="remove" />
             </button>
@@ -180,18 +216,22 @@ export function PromptBar({
               onChange={(event) => onChange(event.target.value)}
               onKeyDown={onKeyDown}
               rows={1}
-              placeholder={placeholder}
-              aria-label={placeholder}
-              className="prompt-field type-body-regular hidden min-w-px flex-[1_0_0] resize-none bg-transparent text-text-neutral-1-light outline-none placeholder:text-text-neutral-2-light desktop:block dark:text-text-neutral-1-dark dark:placeholder:text-text-neutral-2-dark"
+              placeholder={shownPlaceholder}
+              aria-label={handedOff ? HANDED_OFF : placeholder}
+              className={`prompt-field type-body-regular hidden min-w-px flex-[1_0_0] resize-none bg-transparent text-text-neutral-1-light outline-none desktop:block dark:text-text-neutral-1-dark ${
+                handedOff ? "placeholder:text-text-blue-1-light dark:placeholder:text-text-blue-1-dark" : "placeholder:text-text-neutral-2-light dark:placeholder:text-text-neutral-2-dark"
+              }`}
             />
             <textarea
               value={value}
               onChange={(event) => onChange(event.target.value)}
               onKeyDown={onKeyDown}
               rows={1}
-              placeholder={placeholderMobile}
-              aria-label={placeholderMobile}
-              className="prompt-field type-body-regular min-w-px flex-[1_0_0] resize-none bg-transparent text-text-neutral-1-light outline-none placeholder:truncate placeholder:text-text-neutral-2-light desktop:hidden dark:text-text-neutral-1-dark dark:placeholder:text-text-neutral-2-dark"
+              placeholder={shownPlaceholderMobile}
+              aria-label={handedOff ? HANDED_OFF : placeholderMobile}
+              className={`prompt-field type-body-regular min-w-px flex-[1_0_0] resize-none bg-transparent text-text-neutral-1-light outline-none placeholder:truncate desktop:hidden dark:text-text-neutral-1-dark ${
+                handedOff ? "placeholder:text-text-blue-1-light dark:placeholder:text-text-blue-1-dark" : "placeholder:text-text-neutral-2-light dark:placeholder:text-text-neutral-2-dark"
+              }`}
             />
           </>
         )}
@@ -200,7 +240,7 @@ export function PromptBar({
             type="button"
             onClick={onStop}
             aria-label="Stop"
-            className="relative flex size-[44px] shrink-0 items-center justify-center overflow-clip rounded-[12px] bg-button-1-default-light text-button-light-text desktop:size-[48px] dark:bg-button-1-default-dark"
+            className={`relative flex size-[44px] shrink-0 items-center justify-center overflow-clip rounded-[12px] text-button-light-text desktop:size-[48px] ${PRIMARY}`}
             data-name="send"
           >
             <Icon name="stop" />
@@ -210,7 +250,7 @@ export function PromptBar({
             type="submit"
             aria-label="Send"
             aria-disabled={!canSend}
-            className={`relative flex size-[44px] shrink-0 items-center justify-center overflow-clip rounded-[12px] bg-button-1-default-light text-button-light-text desktop:size-[48px] dark:bg-button-1-default-dark ${canSend ? "" : "opacity-40"}`}
+            className={`relative flex size-[44px] shrink-0 items-center justify-center overflow-clip rounded-[12px] text-button-light-text desktop:size-[48px] ${PRIMARY} ${canSend ? "" : "pointer-events-none opacity-40"}`}
             data-name="send"
           >
             <Icon name="arrowUp" />

@@ -42,11 +42,11 @@ export function requestTurn(projectId: string, back?: string): Promise<string | 
   return post("/api/turn", back === undefined ? { projectId } : { projectId, back }).catch(() => null);
 }
 
-/** Stops the turn in progress. */
-export function stopTurn(projectId: string): Promise<void> {
+/** Stops the turn in progress. True when the server stopped it, or no turn was running. */
+export function stopTurn(projectId: string): Promise<boolean> {
   return post("/api/stop", { projectId }).then(
-    () => undefined,
-    () => undefined,
+    (state) => state === "stopped" || state === "idle",
+    () => false,
   );
 }
 
@@ -58,9 +58,21 @@ export function fileMemoryLine(memoryId: string, text: string): Promise<boolean>
   );
 }
 
-/** Saves a stored file under its own name. Storage addresses are on another origin, so a plain link can't name the download. */
-export async function download(url: string, fileName: string): Promise<void> {
-  const blob = await (await fetch(url)).blob();
+/**
+ * Saves a stored file under its own name. Storage addresses are on another
+ * origin, so a plain link can't name the download. True when the file was
+ * fetched and handed to the browser; false when it couldn't be fetched, so
+ * the button can say so (FRI-1712 gap N).
+ */
+export async function download(url: string, fileName: string): Promise<boolean> {
+  let blob: Blob;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return false;
+    blob = await response.blob();
+  } catch {
+    return false;
+  }
   const address = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = address;
@@ -69,4 +81,5 @@ export async function download(url: string, fileName: string): Promise<void> {
   link.click();
   link.remove();
   URL.revokeObjectURL(address);
+  return true;
 }

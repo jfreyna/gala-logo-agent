@@ -42,7 +42,12 @@ export const STEP_ORDER: { stage: Stage; kinds: string[]; canReturn: boolean }[]
 export const HISTORY_KINDS = ["brief", "direction", "typeSet", "wordmark", "conceptSet", "variationSet", "lockup", "colorPicker", "colorwaySet"] as const;
 
 /** How a read-only card's footer reads. `backTo` is the step "Back to this step" returns to, or null when going back there is not possible. */
-export type Past = { signedOff: boolean; backTo: Stage | null };
+export type Past = {
+  signedOff: boolean;
+  backTo: Stage | null;
+  /** True while Gala works: going back waits, and the footer says so (FRI-1715). */
+  working?: boolean;
+};
 
 type Message = { id: string; author: string; kind: string; artifact: Record<string, any> | null };
 

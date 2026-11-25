@@ -3,6 +3,7 @@ import { CardFooter } from "../Feedback";
 import type { Past } from "../history";
 import type { DirectionArtifact } from "./types";
 import { ArtifactCard, Chip, FieldLabel, Turn } from "./Turn";
+import { PRIMARY, PRIMARY_LABEL, SECONDARY, SECONDARY_LABEL } from "../../components/states";
 
 function Row({ label, center = false, children }: { label: string; center?: boolean; children: ReactNode }) {
   return (
@@ -62,18 +63,18 @@ export function Direction({
           <button
             type="button"
             onClick={onApprove}
-            className="relative flex h-[40px] w-full shrink-0 items-center justify-center rounded-[12px] bg-button-1-default-light px-[20px] desktop:order-2 desktop:w-auto dark:bg-button-1-default-dark"
+            className={`relative flex h-[40px] w-full shrink-0 items-center justify-center rounded-[12px] px-[20px] desktop:order-2 desktop:w-auto ${PRIMARY}`}
             data-name="looks-right"
           >
-            <span className="type-caption-semibold shrink-0 text-button-light-text">Looks right</span>
+            <span className={`type-caption-semibold shrink-0 ${PRIMARY_LABEL}`}>Looks right</span>
           </button>
           <button
             type="button"
             onClick={onChange}
-            className="relative flex h-[40px] w-full shrink-0 items-center justify-center rounded-[12px] border border-solid border-stroke-2-light px-[16px] desktop:order-1 desktop:w-auto dark:border-stroke-2-dark"
+            className={`relative flex h-[40px] w-full shrink-0 items-center justify-center rounded-[12px] px-[16px] desktop:order-1 desktop:w-auto ${SECONDARY}`}
             data-name="change"
           >
-            <span className="type-caption-semibold shrink-0 text-text-neutral-1-light dark:text-text-neutral-1-dark">Change something</span>
+            <span className={`type-caption-semibold shrink-0 ${SECONDARY_LABEL}`}>Change something</span>
           </button>
         </div>
         )}

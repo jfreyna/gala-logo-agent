@@ -293,6 +293,37 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholderMobile: "Pick A, B or C.",
   },
   wordmark: { items: [{ id: "pick", kind: "visitor", text: "A, Young Serif." }, wordmark], placeholder: "Approve the wordmark, or ask for a change.", placeholderMobile: "Approve, or ask for a change." },
+  // Button states and small feedback (FRI-1715).
+  handedOff: {
+    items: [
+      {
+        id: "direction",
+        kind: "direction",
+        data: {
+          say: "Here’s the direction I’d take. Tell me if it’s off before I draw anything.",
+          mood: "Warm, plain-spoken, a little worn",
+          posture: "Steady and grounded, never trendy",
+          energy: "Slow heat: calm, with one bright accent",
+          references: ["Hand-painted signs", "Oven arches", "Flour sacks", "Market stalls"],
+        },
+      },
+    ],
+    placeholder: "Or tell me what to change in the direction.",
+    placeholderMobile: "Or tell me what to change in the direction.",
+  },
+  stopped: {
+    items: [
+      { id: "ask", kind: "visitor", text: "Make the brush thicker in all three" },
+      { id: "stopped", kind: "notice", notice: { kind: "Stopped", title: "Stopped", say: "Stopped. Nothing from that turn was kept. Tell me what to do next.", actions: [] } },
+    ],
+    placeholder: "Tell me what to do next.",
+    placeholderMobile: "Tell me what to do next.",
+  },
+  backWhileWorking: {
+    items: [conceptSet, { id: "working", kind: "working", text: "Drawing three directions from your peel idea" }],
+    placeholder: "Pick A, B or C, or tell me what to change.",
+    placeholderMobile: "Pick A, B or C.",
+  },
   // Feedback loops (FRI-1712), failures answered (FRI-1714).
   couldntDraw: {
     items: [
@@ -542,6 +573,26 @@ export const panels: Record<string, PanelView> = {
     view: "history",
     projectName: BRAND,
     kitReady: false,
+    formats: ["SVG", "EPS", "PNG", "Square", "Social"],
+    phases: [
+      { key: "brief", name: "Brief", summary: "Ember & Rye, a wood-fired bakery in Madison", status: "done" },
+      { key: "research", name: "Research", summary: "6 competitors and 4 neighbors reviewed", status: "done" },
+      { key: "type", name: "Type", summary: "Young Serif · Serif, Old Style Garalde", status: "done" },
+      { key: "wordmark", name: "Wordmark", summary: "Ember & Rye in Young Serif, as typed", status: "done" },
+      { key: "directions", name: "Directions", summary: "3 directions, waiting on your pick", status: "current", thumbs: [marks.hearth, marks.peel, marks.rising] },
+      { key: "variations", name: "Variations", summary: "Three refinements of your pick", status: "upcoming" },
+      { key: "stressTest", name: "Stress test", summary: "16px, circle, inverted, poster", status: "upcoming" },
+      { key: "lockup", name: "Lockup", summary: "Symbol and wordmark, side by side and stacked", status: "upcoming" },
+      { key: "color", name: "Color", summary: "Palette and three colorways", status: "upcoming" },
+      { key: "kit", name: "Kit", summary: "SVG, EPS, PNG, square and social images", status: "upcoming" },
+    ],
+  },
+  // Back while working (FRI-1715): the done rows wait for Gala, and say so.
+  historyWorking: {
+    view: "history",
+    projectName: BRAND,
+    kitReady: false,
+    working: true,
     formats: ["SVG", "EPS", "PNG", "Square", "Social"],
     phases: [
       { key: "brief", name: "Brief", summary: "Ember & Rye, a wood-fired bakery in Madison", status: "done" },
