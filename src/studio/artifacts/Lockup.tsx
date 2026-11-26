@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { useGoogleFont } from "../../lib/googleFont";
+import { linesOfName, TWO_LINE_TYPE } from "./nameLines";
 import type { LockupArtifact, LockupLayout, LockupSpaceBetween } from "./types";
 import { ArtifactCard, Turn } from "./Turn";
 import { Actions, Field, Heading, Settings, Tile } from "./Settings";
@@ -63,14 +64,18 @@ export function Lockup({
   onBack: () => void;
 }) {
   useGoogleFont(data.family, data.brandName);
+  // On two lines (FRI-1728): left-aligned beside the symbol, centered under it, as the kit sets them.
+  const lines = linesOfName(data.brandName, data);
 
   /** The symbol and the name, drawn at one of the frames' sizes. The sizes switch at the same width the layout does. */
   function draw(drawing: Drawing) {
+    // A name on two lines is drawn at the kit's own ratio to the symbol (LOCKUP_RATIOS), so the block sits against the symbol as it does in the files.
+    const type: [number, number] = lines.length > 1 ? [0, 1].map((at) => drawing.mark[at]! * TWO_LINE_TYPE[drawing.layout]) as [number, number] : drawing.type;
     const size = {
       "--mark": `${drawing.mark[0]}px`,
       "--mark-desktop": `${drawing.mark[1]}px`,
-      "--type": `${drawing.type[0]}px`,
-      "--type-desktop": `${drawing.type[1]}px`,
+      "--type": `${type[0]}px`,
+      "--type-desktop": `${type[1]}px`,
       "--gap": `${drawing.gap[0] * data.gapScale}px`,
       "--gap-desktop": `${drawing.gap[1] * data.gapScale}px`,
     } as CSSProperties;
@@ -78,10 +83,14 @@ export function Lockup({
       <div className={`relative flex shrink-0 items-center justify-center gap-[var(--gap)] desktop:gap-[var(--gap-desktop)] ${drawing.layout === "stacked" ? "flex-col" : ""}`} style={size} data-name={`lockup/${drawing.layout}`}>
         <img alt="" src={data.markUrl} className={`size-[var(--mark)] shrink-0 object-contain desktop:size-[var(--mark-desktop)] ${drawing.inverted ? "invert" : ""}`} data-name="mark" />
         <p
-          className={`shrink-0 whitespace-nowrap text-[length:var(--type)] leading-[normal] desktop:text-[length:var(--type-desktop)] ${drawing.inverted ? "text-[#ffffff]" : "text-[#0d0d0d]"}`}
+          className={`shrink-0 whitespace-nowrap text-[length:var(--type)] leading-[normal] desktop:text-[length:var(--type-desktop)] ${drawing.layout === "stacked" ? "text-center" : "text-left"} ${drawing.inverted ? "text-[#ffffff]" : "text-[#0d0d0d]"}`}
           style={{ fontFamily: `"${data.family}", serif`, letterSpacing: `${data.letterSpacingEm}em` }}
         >
-          {data.brandName}
+          {lines.map((line, index) => (
+            <span key={index} className="block">
+              {line}
+            </span>
+          ))}
         </p>
       </div>
     );

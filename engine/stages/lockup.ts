@@ -3,19 +3,21 @@
  * person approves it, changes the layout or the space between the two, or
  * goes back to change the symbol.
  *
- * Jev reads Layout and Space between from what the person said
- * (settings.ts). There are no drawing checks here: the symbol passed its
+ * Jev reads Layout, Space between and Lines (the name on one line or two)
+ * from what the person said (settings.ts). Lines starts as the wordmark
+ * set it, and the lockup's own value is kept from then on. There are no drawing checks here: the symbol passed its
  * stress test. Color opens only when the lockup is approved.
  */
 import type { Shape } from "../gemini.ts";
 import { WORKING } from "../lines.ts";
-import { describeSettings, GAP_SCALE, isValue, LAYOUT, readSettings, SPACE_BETWEEN, type Layout, type SpaceBetween } from "../settings.ts";
+import { nameLines } from "../../kit/src/index.ts";
+import { describeSettings, GAP_SCALE, isValue, LAYOUT, LINES, readSettings, SPACE_BETWEEN, type Layout, type Lines, type SpaceBetween } from "../settings.ts";
 import type { StoredMessage } from "../store.ts";
 import { keptCard, type Outcome, type Turn } from "../turn.ts";
 import { openColors } from "./color.ts";
 import { chosenConcept } from "./directions.ts";
 import { familyOf } from "./type.ts";
-import { letterSpacingOf } from "./wordmark.ts";
+import { letterSpacingOf, linesArtifact, linesOf, ONE_WORD, settleLines } from "./wordmark.ts";
 
 const SAY: Shape = { type: "OBJECT", properties: { say: { type: "STRING" } }, required: ["say"] };
 
@@ -29,21 +31,27 @@ async function show(turn: Turn, previous: StoredMessage | null): Promise<Outcome
     spaceBetween: isValue(SPACE_BETWEEN, before.spaceBetween) ? before.spaceBetween : "asSet",
   };
 
+  // The name's lines: this card's own when it has been shown before, else as the wordmark set them.
+  const setNow = linesOf(previous?.artifact ?? turn.current("wordmark")?.artifact);
+  let lines = setNow;
+  let refused = false;
+
   const said = [...turn.heldFor("lockup"), turn.said].filter((text) => text !== "").join("\n");
   let unsureAbout: string[] = [];
   if (said !== "") {
-    const read = await readSettings(said, { layout: { setting: LAYOUT, current: current.layout }, spaceBetween: { setting: SPACE_BETWEEN, current: current.spaceBetween } }, turn.signal);
+    const read = await readSettings(said, { layout: { setting: LAYOUT, current: current.layout }, spaceBetween: { setting: SPACE_BETWEEN, current: current.spaceBetween }, lines: { setting: LINES, current: setNow.lines } }, turn.signal);
     console.log(describeSettings("lockup", read));
     current.layout = read.layout.value as Layout;
     current.spaceBetween = read.spaceBetween.value as SpaceBetween;
-    unsureAbout = [...(read.layout.unsure ? ["the layout"] : []), ...(read.spaceBetween.unsure ? ["the space between the symbol and the name"] : [])];
+    unsureAbout = [...(read.layout.unsure ? ["the layout"] : []), ...(read.spaceBetween.unsure ? ["the space between the symbol and the name"] : []), ...(read.lines.unsure ? ["whether the name is on one line or two"] : [])];
+    ({ lines, refused } = await settleLines(said, turn.nameAsSet, family, letterSpacingOf(turn), setNow, read.lines.value as Lines, read.lines.asked, turn.signal));
   }
 
   const wordsChecked = await turn.composeCard(
     () =>
       turn.think<{ say: string }>({
         section: "conversation",
-        task: "The symbol passed its stress test and is approved, and this step is the lockup: the symbol and the wordmark together. Say that in a sentence or two, and which layout is shown. The kit will hold both layouts. Then ask the person to approve the lockup, or to ask for a change to the layout, the space between the two, or the symbol. If you are unsure about something they asked for, ask about that in one short question.",
+        task: "The symbol passed its stress test and is approved, and this step is the lockup: the symbol and the wordmark together. Say that in a sentence or two, and which layout is shown, with the name on one line or two. The kit will hold both layouts. Then ask the person to approve the lockup, or to ask for a change to the layout, the space between the two, the name's lines, or the symbol. If you are unsure about something they asked for, ask about that in one short question.",
         facts: {
           step: "lockup",
           symbol: mark.name,
@@ -51,6 +59,9 @@ async function show(turn: Turn, previous: StoredMessage | null): Promise<Outcome
           typeface: family,
           layout: LAYOUT.values[current.layout].label,
           spaceBetween: SPACE_BETWEEN.values[current.spaceBetween].label,
+          lines: LINES.values[lines.lines].label,
+          ...(lines.lines === "twoLines" ? { nameLines: nameLines(turn.nameAsSet, lines.breakAfter ?? undefined) } : {}),
+          ...(refused ? { twoLines: ONE_WORD } : {}),
           unsureWhatThePersonWantsFor: unsureAbout.length > 0 ? unsureAbout : null,
           comesNext: "color",
         },
@@ -78,6 +89,7 @@ async function show(turn: Turn, previous: StoredMessage | null): Promise<Outcome
         layout: current.layout,
         spaceBetween: current.spaceBetween,
         gapScale: GAP_SCALE[current.spaceBetween],
+        ...linesArtifact(lines),
         approved: false,
       },
     },

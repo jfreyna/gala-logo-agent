@@ -14,7 +14,7 @@
 
 import type { Role } from "./color.ts";
 import { normalizeHex } from "./color.ts";
-import { loadFont, setText, type FetchLike } from "./font.ts";
+import { loadFont, setLines, type FetchLike } from "./font.ts";
 import { iconArtwork, primaryLockup, socialArtwork, squareArtwork, stackedLockup, wordmarkArtwork, type Artwork } from "./layout.ts";
 import { PNG_LONG_EDGE, naturalSize, toEps, toPng, toSvg, type Fills } from "./render.ts";
 import { colorwayVariant, onGround } from "./ground.ts";
@@ -35,6 +35,8 @@ export type KitInput = {
   mark?: { bytes: Uint8Array; mime: "image/png" | "image/jpeg" | "image/svg+xml" };
   /** The wordmark text, e.g. "Ember & Rye". */
   name: string;
+  /** For a name on two lines: how many of its words go on the first line, the rest on the second. Leave it out for one line. */
+  breakAfter?: number;
   /** A Google Fonts family. */
   fontFamily: string;
   /** Default 400; a family without that weight falls back to its default. */
@@ -98,12 +100,25 @@ export function slugify(name: string): string {
   return slug || "logo";
 }
 
+/** The words of a name: what it breaks between when it is set on two lines. */
+export function wordsOf(name: string): string[] {
+  return name.trim().split(/\s+/).filter((word) => word !== "");
+}
+
+/** The name's lines: the whole name, or its words split after `breakAfter` of them. */
+export function nameLines(name: string, breakAfter?: number): string[] {
+  const words = wordsOf(name);
+  if (breakAfter === undefined || breakAfter < 1 || breakAfter >= words.length) return [name.trim()];
+  return [words.slice(0, breakAfter).join(" "), words.slice(breakAfter).join(" ")];
+}
+
 function validate(input: KitInput): void {
   if (typeof input.name !== "string" || input.name.trim() === "") throw new Error("kit: the name is empty");
   if (input.name.length > 60) throw new Error("kit: the name is longer than 60 characters");
   if (input.letterSpacing !== undefined && !(Number.isFinite(input.letterSpacing) && Math.abs(input.letterSpacing) <= 0.5)) throw new Error("kit: letterSpacing must be between -0.5 and 0.5 em");
   if (input.gapScale !== undefined && !(Number.isFinite(input.gapScale) && input.gapScale > 0 && input.gapScale <= 4)) throw new Error("kit: gapScale must be above 0 and at most 4");
   if (input.layout !== undefined && input.layout !== "primary" && input.layout !== "stacked") throw new Error("kit: layout must be primary or stacked");
+  if (input.breakAfter !== undefined && !(Number.isInteger(input.breakAfter) && input.breakAfter >= 1 && input.breakAfter < wordsOf(input.name).length)) throw new Error("kit: breakAfter must leave at least one word on each line");
   normalizeHex(input.colors.primary);
   normalizeHex(input.colors.secondary);
   if (input.colors.tertiary !== undefined) normalizeHex(input.colors.tertiary);
@@ -120,7 +135,7 @@ export async function buildKit(input: KitInput, options: KitOptions = {}): Promi
   const fetcher = options.fetch ?? (globalThis.fetch as unknown as FetchLike);
   const name = input.name.trim();
   const [mark, font] = await Promise.all([input.mark === undefined ? null : traceMark(input.mark.bytes), loadFont(input.fontFamily, input.fontWeight ?? 400, fetcher)]);
-  const setType = (fontSize: number) => setText(font, name, fontSize, input.letterSpacing ?? 0);
+  const setType = (fontSize: number, align?: "center" | "left") => setLines(font, nameLines(name, input.breakAfter), fontSize, input.letterSpacing ?? 0, align);
   const gapScale = input.gapScale ?? 1;
 
   // With no mark the kit is the wordmark alone.

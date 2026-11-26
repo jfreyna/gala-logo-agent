@@ -33,7 +33,7 @@
  */
 
 import * as hb from "harfbuzzjs";
-import { parsePath, type Point, type Segment } from "./path.ts";
+import { bounds, parsePath, type Point, type Segment } from "./path.ts";
 
 export type FetchLike = (url: string, init?: { headers?: Record<string, string> }) => Promise<{ ok: boolean; status: number; text(): Promise<string>; arrayBuffer(): Promise<ArrayBuffer> }>;
 
@@ -200,6 +200,10 @@ export type SetText = {
   capHeight: number;
   /** The glyphs the name was set in, by the font's glyph ids, in drawing order. Fewer than its letters when the font joined some into ligatures. */
   glyphs: number[];
+  /** Where the last line's baseline is, below the first's at y = 0. 0 for a name on one line. */
+  lastBaseline: number;
+  /** How many lines the name is set on. */
+  lines: number;
 };
 
 /** The optional ligatures, off: what a browser does when letter spacing is not 0. */
@@ -271,5 +275,67 @@ export function setText(loaded: LoadedFont, text: string, fontSize: number, lett
       if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) throw new Error("kit: the font produced a non-finite coordinate");
     }
   }
-  return { segments, capHeight: (loaded.capHeight / loaded.unitsPerEm) * fontSize, glyphs: infos.map((info) => info.codepoint) };
+  return { segments, capHeight: (loaded.capHeight / loaded.unitsPerEm) * fontSize, glyphs: infos.map((info) => info.codepoint), lastBaseline: 0, lines: 1 };
+}
+
+/**
+ * The typeface's own distance from one baseline to the next, in ems:
+ * ascender minus descender plus line gap, as HarfBuzz reads them from the
+ * font (its typo metrics when the font asks for them, else hhea). That is
+ * the line height a browser draws for `line-height: normal`, which is how
+ * the wordmark and lockup cards set the name, so a name on two lines sits
+ * the same in the files as on the cards. Nothing here is tuned to a name.
+ */
+export function lineAdvanceEm(loaded: LoadedFont): number {
+  const { ascender, descender, lineGap } = loaded.font.hExtents();
+  const advance = (ascender - descender + Math.max(lineGap, 0)) / loaded.unitsPerEm;
+  // A font with no usable vertical metrics: 1.2 em, the common default line height of type.
+  return Number.isFinite(advance) && advance > 0 ? advance : 1.2;
+}
+
+export type Align = "center" | "left";
+
+/**
+ * Sets the name on one or more lines, as outlines. One line is `setText`
+ * exactly. With more, each line is set on its own, aligned on its ink
+ * (centered on x = 0, or with its left edge at x = 0), and each baseline
+ * sits one line advance (`lineAdvanceEm`) below the last. The first line's
+ * baseline is at y = 0, and `lastBaseline` says where the last one is, so
+ * a layout can center or hang the whole block.
+ *
+ * The guard's threshold is zero: a line moves down only when its ink would
+ * reach into the line above, and then only until the two inks touch. Zero,
+ * not a margin, because any margin would be a number tuned by eye; the
+ * typeface's own advance is the spacing, and the guard exists only so a
+ * font that states metrics too small for its own letters (a display face
+ * with tall swashes, say) can never draw one line over another.
+ *
+ * Reach (gate 3b): the guard keeps the lines apart, it does not make the
+ * spacing pleasing. Lines are aligned on their ink, not their advance, so a
+ * letter's side bearing never shifts a line off center.
+ */
+export function setLines(loaded: LoadedFont, lines: string[], fontSize: number, letterSpacing = 0, align: Align = "center"): SetText {
+  if (lines.length <= 1) return setText(loaded, lines[0] ?? "", fontSize, letterSpacing);
+  const advance = lineAdvanceEm(loaded) * fontSize;
+  const segments: Segment[] = [];
+  const glyphs: number[] = [];
+  let baseline = 0;
+  let inkBottom = -Infinity;
+  lines.forEach((line, index) => {
+    const set = setText(loaded, line, fontSize, letterSpacing);
+    const box = bounds(set.segments);
+    if (index > 0) baseline = Math.max(baseline + advance, inkBottom - box.y);
+    const dx = align === "center" ? -(box.x + box.width / 2) : -box.x;
+    for (const segment of set.segments) segments.push(moved(segment, dx, baseline));
+    glyphs.push(...set.glyphs);
+    inkBottom = baseline + box.y + box.height;
+  });
+  return { segments, capHeight: (loaded.capHeight / loaded.unitsPerEm) * fontSize, glyphs, lastBaseline: baseline, lines: lines.length };
+}
+
+function moved(segment: Segment, dx: number, dy: number): Segment {
+  const at = (p: Point): Point => ({ x: p.x + dx, y: p.y + dy });
+  if (segment.op === "M" || segment.op === "L") return { op: segment.op, p: at(segment.p) };
+  if (segment.op === "C") return { op: "C", c1: at(segment.c1), c2: at(segment.c2), p: at(segment.p) };
+  return segment;
 }

@@ -70,6 +70,9 @@ const NO_IMAGES: CantDo = {
   kitCanFinish: false,
 };
 
+/** The name on one line or two (FRI-1728), at the wordmark and the lockup. */
+const NAME_LINES = "set the name on one line or two, broken between its words (a name of one word stays on one line)";
+
 const SET_ASIDE: CantDo = { what: "use a draft that was set aside", reason: "a set-aside draft failed one of the checks", kitCanFinish: false };
 const LETTERS_IN_MARK: CantDo = { what: "put letters inside the symbol", reason: "the name is set in type beside the symbol, and a mark with lettering is set aside", kitCanFinish: false };
 const TWO_COLORS: CantDo = { what: "put two or more colors inside the symbol", reason: "the symbol is drawn in one color", kitCanFinish: true };
@@ -96,11 +99,11 @@ export const STEP_FACTS: Record<Stage, StepFacts> = {
     hints: HINTS.type,
   },
   wordmark: {
-    canDo: ["set the case: as typed, all caps or lowercase", "set the letter spacing: tight, as drawn or wide", "go back and change the typeface", "use this wordmark"],
+    canDo: ["set the case: as typed, all caps or lowercase", "set the letter spacing: tight, as drawn or wide", NAME_LINES, "go back and change the typeface", "use this wordmark"],
     cantDo: [
       NO_IMAGES,
       { what: "change the weight, the slant or a single letter of the wordmark", reason: "the wordmark takes the typeface as drawn, with only its case and spacing set", kitCanFinish: true },
-      { what: "change the name beyond its case", reason: "the name is the brand's name from the brief", kitCanFinish: false },
+      { what: "change the letters or words of the name", reason: "the name is the brand's name from the brief; only its case and its lines are set here", kitCanFinish: false },
     ],
     wayOut: "pick another typeface whose weight you like, or use this wordmark and finish the details from the kit",
     hints: HINTS.type,
@@ -125,12 +128,12 @@ export const STEP_FACTS: Record<Stage, StepFacts> = {
   },
   stressTest: {
     canDo: ["approve the mark", "ask for a change, and I'll draw three new variations from it"],
-    cantDo: [NO_IMAGES],
+    cantDo: [NO_IMAGES, { what: "set the name on two lines, or change how the name sits with the symbol", reason: "the name is set at the lockup, next", kitCanFinish: false }],
     wayOut: "approve the mark to go on to the lockup, or describe the change you want",
     hints: HINTS.symbol,
   },
   lockup: {
-    canDo: ["set the layout: side by side or stacked", "set the space between the symbol and the name: tight, as set or wide", "change the symbol", "use this lockup"],
+    canDo: ["set the layout: side by side or stacked", "set the space between the symbol and the name: tight, as set or wide", NAME_LINES, "change the symbol", "use this lockup"],
     cantDo: [
       NO_IMAGES,
       { what: "change the size of the symbol relative to the name, in either direction", reason: "the lockup sets only the layout and the space between", kitCanFinish: true },

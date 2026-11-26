@@ -13,11 +13,16 @@
  * real ink would come closer to the mark than the gap. Every artwork is cropped tight to its ink; clear
  * space is a rule in the spec sheet, not padding in the file.
  *
+ * A name on two lines (FRI-1728) follows the same rules as one block: in
+ * the primary lock-up the block is centered on the mark and its lines are
+ * left-aligned; in the stacked lock-up and the wordmark the lines are
+ * centered. The line advance is the typeface's own (font.ts, `setLines`).
+ *
  * The square (1024x1024) and the social image (1200x630) are not drawn in
  * the frames; their sizes and the 60% / 50% fill are gate-1 proposals.
  */
 
-import type { SetText } from "./font.ts";
+import type { Align, SetText } from "./font.ts";
 import { bounds, transform, unionBoxes, type Box, type Segment } from "./path.ts";
 import type { TracedMark } from "./trace.ts";
 
@@ -55,7 +60,11 @@ function crop(shapes: Shape[]): Artwork {
   return { width: box.width, height: box.height, shapes: shapes.map((s) => place(s, -box.x, -box.y)) };
 }
 
-export type TypeSetter = (fontSize: number) => SetText;
+/**
+ * Sets the name at a size. `align` says how its lines line up when it is on
+ * more than one (font.ts, `setLines`); a name on one line ignores it.
+ */
+export type TypeSetter = (fontSize: number, align?: Align) => SetText;
 
 /**
  * `gapScale` multiplies the space between the mark and the name: 1 is the
@@ -65,9 +74,17 @@ export function primaryLockup(mark: TracedMark, setType: TypeSetter, gapScale = 
   const m = unitMark(mark);
   const mb = bounds(m.segments);
   const markShape = place(m, 0, (UNIT - mb.height) / 2); // ink centered in its box
-  const type = setType(UNIT * LOCKUP_RATIOS.primary.type);
+  // A name on two lines is one block: from the first line's cap height to
+  // the last line's baseline. It is centered on the mark's center line,
+  // where one line's cap height is centered, and each line keeps the size
+  // one line has, so the name reads the same size either way. Only if the
+  // block would be taller than the mark's box does the type shrink to fit
+  // it. The lines are left-aligned, so the gap is measured from both.
+  let type = setType(UNIT * LOCKUP_RATIOS.primary.type, "left");
+  const block = type.capHeight + type.lastBaseline;
+  if (block > UNIT) type = setType((UNIT * LOCKUP_RATIOS.primary.type * UNIT) / block, "left");
   const tb = bounds(type.segments);
-  const baseline = UNIT / 2 + type.capHeight / 2;
+  const baseline = UNIT / 2 + type.capHeight / 2 - type.lastBaseline / 2;
   const word: Shape = { part: "wordmark", segments: transform(type.segments, 1, mb.width + UNIT * LOCKUP_RATIOS.primary.gap * gapScale - tb.x, baseline), fillRule: "nonzero" };
   return crop([markShape, word]);
 }
@@ -76,7 +93,8 @@ export function stackedLockup(mark: TracedMark, setType: TypeSetter, gapScale = 
   const m = unitMark(mark);
   const mb = bounds(m.segments);
   const markShape = place(m, -mb.width / 2, 0);
-  const type = setType(UNIT * LOCKUP_RATIOS.stacked.type);
+  // On two lines, each line is centered on the mark, and the block hangs from the first line.
+  const type = setType(UNIT * LOCKUP_RATIOS.stacked.type, "center");
   const tb = bounds(type.segments);
   const gap = UNIT * LOCKUP_RATIOS.stacked.gap * gapScale;
   // The name hangs from its cap height, the way the design draws it. But a
@@ -94,7 +112,8 @@ export function iconArtwork(mark: TracedMark): Artwork {
 }
 
 export function wordmarkArtwork(setType: TypeSetter): Artwork {
-  const type = setType(UNIT);
+  // On two lines, the lines are centered on each other.
+  const type = setType(UNIT, "center");
   return crop([{ part: "wordmark", segments: type.segments, fillRule: "nonzero" }]);
 }
 

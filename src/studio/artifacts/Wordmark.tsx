@@ -1,4 +1,5 @@
 import { useGoogleFont } from "../../lib/googleFont";
+import { linesOfName } from "./nameLines";
 import type { WordmarkArtifact, WordmarkCase, WordmarkSpacing } from "./types";
 import { ArtifactCard, Turn } from "./Turn";
 import { Actions, Field, Heading, Settings, Tile } from "./Settings";
@@ -45,9 +46,19 @@ export function Wordmark({
   // The weight the kit drew the name in (FRI-1711): a family with no Regular is set in the weight a browser picks for it.
   const weight = data.weight ?? 400;
   const type = { fontFamily: `"${data.family}", serif`, fontWeight: weight, letterSpacing: `${data.letterSpacingEm}em` };
+  // On two lines (FRI-1728) the lines are centered on each other, at the typeface's own line height, as the kit sets them.
+  const lines = linesOfName(data.brandName, data);
+  // The frames' heights hold one line. On two lines the hero and tiles keep those heights as a floor and grow to fit, with room above and below, so no line is clipped.
+  const two = lines.length > 1;
+  const heroHeight = two ? "min-h-[120px] py-[8px] desktop:min-h-[180px]" : "h-[120px] desktop:h-[180px]";
+  const tileHeight = two ? "min-h-[64px] py-[8px] desktop:min-h-[96px]" : "h-[64px] desktop:h-[96px]";
   const name = (className: string) => (
-    <p className={`shrink-0 whitespace-nowrap leading-[normal] ${className}`} style={type}>
-      {data.brandName}
+    <p className={`shrink-0 whitespace-nowrap text-center leading-[normal] ${className}`} style={type}>
+      {lines.map((line, index) => (
+        <span key={index} className="block">
+          {line}
+        </span>
+      ))}
     </p>
   );
   return (
@@ -55,17 +66,17 @@ export function Wordmark({
       <Turn>{data.say}</Turn>
       <ArtifactCard name="wordmark" gap={12}>
         <Heading title="Wordmark" detail={`${data.family} · ${weightName(weight)}`} />
-        <div className="relative flex h-[120px] w-full shrink-0 flex-col items-center justify-center overflow-clip rounded-[12px] bg-neutral-0 desktop:h-[180px]" data-name="hero">
+        <div className={`relative flex w-full shrink-0 flex-col items-center justify-center overflow-clip rounded-[12px] bg-neutral-0 ${heroHeight}`} data-name="hero">
           {name("text-[40px] text-[#0d0d0d] desktop:text-[72px]")}
         </div>
         <div className="relative flex w-full shrink-0 flex-col items-start gap-[12px] overflow-clip desktop:flex-row" data-name="sizes">
-          <Tile caption="At 32px" className="h-[64px] desktop:h-[96px]">
+          <Tile caption="At 32px" className={tileHeight}>
             {name("text-[32px] text-[#0d0d0d]")}
           </Tile>
-          <Tile caption="At 16px" className="h-[64px] desktop:h-[96px]">
+          <Tile caption="At 16px" className={tileHeight}>
             {name("text-[16px] text-[#0d0d0d]")}
           </Tile>
-          <Tile caption="Inverted" inverted className="h-[64px] desktop:h-[96px]">
+          <Tile caption="Inverted" inverted className={tileHeight}>
             {name("text-[32px] text-[#ffffff]")}
           </Tile>
         </div>

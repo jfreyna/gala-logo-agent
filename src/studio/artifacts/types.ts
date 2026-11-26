@@ -1,3 +1,4 @@
+import type { NameLines } from "./nameLines";
 /**
  * What each artifact in the chat stream carries. An artifact is a message
  * whose `kind` names one of these, with the matching data in `artifact`.
@@ -103,7 +104,7 @@ export type WordmarkArtifact = {
   approved: boolean;
   /** The weight the name is drawn in (FRI-1711 `info.weight`). Absent on cards from before it was stored: Regular. */
   weight?: number;
-};
+} & NameLines;
 
 /** Gala's line that opens the symbol step. It is drawn as a plain message. */
 export type SymbolOpenerArtifact = { say: string; ideas?: string[]; answered?: "idea" | "goAhead" | "noSymbol" | null };
@@ -126,7 +127,7 @@ export type LockupArtifact = {
   gapScale: number;
   /** True once the person signs it off; color opens then. */
   approved: boolean;
-};
+} & NameLines;
 
 export type StressTestArtifact = {
   say: string;

@@ -22,7 +22,7 @@ import { briefOf } from "./brief.ts";
 import { chosenConcept } from "./directions.ts";
 import { lockupOf } from "./lockup.ts";
 import { familyOf } from "./type.ts";
-import { letterSpacingOf } from "./wordmark.ts";
+import { letterSpacingOf, nameBreakOf } from "./wordmark.ts";
 
 const SAY: Shape = { type: "OBJECT", properties: { say: { type: "STRING" } }, required: ["say"] };
 const LINES: Shape = { type: "OBJECT", properties: { lines: { type: "ARRAY", items: { type: "STRING" } } }, required: ["lines"] };
@@ -95,6 +95,7 @@ export async function kit(turn: Turn): Promise<Outcome> {
     // What the person signed off: the wordmark's letter spacing, and the lockup's gap and layout.
     letterSpacing: letterSpacingOf(turn),
     ...lockupOf(turn),
+    breakAfter: nameBreakOf(turn),
     colors: { primary: colors.primary, secondary: colors.secondary, ...(colors.tertiary !== null ? { tertiary: colors.tertiary } : {}) },
     // A white ground on screen becomes the kit's neutral gray for the square and the social image.
     colorway: {
