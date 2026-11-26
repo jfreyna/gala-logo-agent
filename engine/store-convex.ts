@@ -99,7 +99,7 @@ export class ConvexStore implements Store {
   }
 }
 
-/** Whether the person with this token owns the project. Asked before a turn is stopped at their request. */
+/** Whether the person with this token owns the project. Asked before a turn is started, joined or stopped at their request. */
 export async function ownsProject(projectId: string, token: string): Promise<boolean> {
   return (await call<{ owns: boolean }>("/engine/owns", { projectId }, token)).owns;
 }

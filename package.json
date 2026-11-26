@@ -48,6 +48,7 @@
     "check:buttons": "node --experimental-strip-types --no-warnings engine/checks/buttons.check.ts",
     "check:keep-symbol": "node --experimental-strip-types --no-warnings engine/checks/keep-symbol.check.ts",
     "check:try-again": "node --experimental-strip-types --no-warnings engine/checks/try-again.check.ts",
+    "check:turn-guard": "node --experimental-strip-types --no-warnings engine/checks/turn-guard.check.ts",
     "check:two-line": "node --experimental-strip-types --no-warnings engine/checks/two-line.check.ts",
     "check:colors-as-picked": "node --experimental-strip-types --no-warnings engine/checks/colors-as-picked.check.ts",
     "sweep:fonts": "node --experimental-strip-types --no-warnings engine/checks/font-sweep.ts",

@@ -7,8 +7,12 @@
  *   GET  /api/fonts   Google's type classes and moods, for the type tray.
  *
  * The person's sign-in token arrives in the Authorization header and is
- * passed straight to storage, which is what checks it. This server never
- * decides who someone is, never stores the token, and never logs it.
+ * passed straight to storage, which is what checks it. Before a turn is
+ * started, joined or stopped, storage is asked whether the token is good
+ * and its holder owns the project; only after storage has said yes does
+ * this server read which account the token names, to count that account's
+ * turns. It never decides who someone is, never stores the token, and
+ * never logs it.
  *
  * The browser receives states ("working", "done") from these routes and
  * nothing else. Everything Gala says reaches the browser through storage,
@@ -22,13 +26,38 @@ import { runTurn, type TurnResult } from "./loop.ts";
 import { headingFor } from "./memory.ts";
 import { assertComplete, loadPrompt, type Prompt } from "./prompt.ts";
 import { isStage } from "./steps.ts";
+import type { Stage } from "./store.ts";
 import { ConvexStore, fileMemoryLine, ownsProject, StorageError } from "./store-convex.ts";
 
+type Running = { controller: AbortController; finished: Promise<TurnResult | "signin"> };
+
 /** Turns in progress, by project. One per project; storage's lock says the same. */
-const running = new Map<string, { controller: AbortController; finished: Promise<TurnResult | "signin"> }>();
+const running = new Map<string, Running>();
+
+/** Turns in progress, by account. */
+const turnsByAccount = new Map<string, number>();
 
 /** More turns than this at once and new ones are asked to wait: each one draws and checks several images. */
 const MAX_TURNS_AT_ONCE = 12;
+
+/**
+ * Turns one account may run at once, out of MAX_TURNS_AT_ONCE. One person
+ * works on one project at a time; two allow a second tab or a quick switch
+ * without a "busy", and keep any one account from holding every slot.
+ */
+const MAX_TURNS_PER_ACCOUNT = 2;
+
+/**
+ * No turn outlives storage's lock on its project, TURN_LIFETIME_MS in
+ * convex/lib/turn.ts: past it the turn's id stops working anyway, so the
+ * turn is stopped and its slot freed. The server's bundle doesn't carry
+ * convex/, so the value is repeated here; check:turn-guard fails if the two
+ * ever differ.
+ */
+export const TURN_DEADLINE_MS = 12 * 60 * 1000;
+
+/** The limits turns run under. Exported so a check can shorten the deadline; the server itself never changes them. */
+export const turnLimits = { atOnce: MAX_TURNS_AT_ONCE, perAccount: MAX_TURNS_PER_ACCOUNT, deadlineMs: TURN_DEADLINE_MS };
 
 let prompt: Prompt | null = null;
 
@@ -81,6 +110,80 @@ function tokenTimes(token: string): string {
   }
 }
 
+/**
+ * The account a token names: its `sub` claim, the same subject storage
+ * compares with a project's owner. Read only after storage has accepted
+ * this token (ownerOf), so the claim is one Frilly signed.
+ */
+function accountOf(token: string): string | null {
+  try {
+    const claims = JSON.parse(Buffer.from(token.split(".")[1]!, "base64url").toString("utf8")) as { sub?: unknown };
+    return typeof claims.sub === "string" && claims.sub !== "" ? claims.sub : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether this request may act on the project, asked of storage before
+ * anything else happens: the account when the token is good and its holder
+ * owns the project; "signin" when storage refused the token, so the page
+ * can sign in afresh; "refused" when the holder doesn't own the project, or
+ * storage couldn't say.
+ */
+async function ownerOf(projectId: string, token: string): Promise<{ account: string } | "signin" | "refused"> {
+  try {
+    if (!(await ownsProject(projectId, token))) return "refused";
+  } catch (error) {
+    return error instanceof StorageError && error.status === 401 ? "signin" : "refused";
+  }
+  const account = accountOf(token);
+  return account === null ? "refused" : { account };
+}
+
+/**
+ * Starts a turn and holds its slot, counted against its account. The slot
+ * is freed when the turn ends or at the deadline, whichever comes first;
+ * at the deadline the turn is stopped, and the answer says so even if a
+ * call to storage is still on its way back.
+ */
+function startTurn(projectId: string, account: string, token: string, current: Prompt, options: { back?: Stage; retry: boolean }): Running {
+  const controller = new AbortController();
+  turnsByAccount.set(account, (turnsByAccount.get(account) ?? 0) + 1);
+  let freed = false;
+  const free = () => {
+    if (freed) return;
+    freed = true;
+    clearTimeout(deadline);
+    const left = (turnsByAccount.get(account) ?? 1) - 1;
+    if (left > 0) turnsByAccount.set(account, left);
+    else turnsByAccount.delete(account);
+    // A turn stopped at its deadline may end late, after a new turn on the same project has its slot.
+    if (running.get(projectId) === entry) running.delete(projectId);
+  };
+  let reachDeadline!: (result: "stopped") => void;
+  const deadlineReached = new Promise<"stopped">((resolve) => (reachDeadline = resolve));
+  const deadline = setTimeout(() => {
+    console.warn("Turn stopped: it reached the lifetime of storage's lock.");
+    controller.abort();
+    free();
+    reachDeadline("stopped");
+  }, turnLimits.deadlineMs);
+  // The turn's id: random, and from here on the proof that this turn was opened by the project's owner.
+  const store = new ConvexStore({ projectId, turnId: randomUUID(), token });
+  console.log(`Turn asked for; sign-in token ${tokenTimes(token)}.`);
+  const ended = runTurn(store, current, controller.signal, options)
+    .catch((error): TurnResult | "signin" => {
+      // Storage refused to open the turn. A refused sign-in is told apart, so the page can sign in afresh and ask again.
+      console.warn(`Turn not opened: ${error instanceof Error ? error.message : "unknown error"}`);
+      return error instanceof StorageError && error.status === 401 ? "signin" : "trouble";
+    })
+    .finally(free);
+  const entry: Running = { controller, finished: Promise.race([ended, deadlineReached]) };
+  running.set(projectId, entry);
+  return entry;
+}
+
 /** A storage id: letters and digits only, so it is safe to put in a URL or a map key. */
 function idOf(value: unknown): string | null {
   return typeof value === "string" && /^[a-z0-9]{8,64}$/i.test(value) ? value : null;
@@ -97,22 +200,17 @@ async function turn(request: IncomingMessage, response: ServerResponse): Promise
   if (token === null || projectId === null || back === null) return json(response, 400, { state: "refused" });
   if (prompt === null) return json(response, 503, { state: "unavailable" });
 
+  // Storage checks the token and the owner before a slot is taken or a running turn is joined.
+  const owner = await ownerOf(projectId, token);
+  if (owner === "signin") return json(response, 401, { state: "signin" });
+  if (owner === "refused") return json(response, 403, { state: "refused" });
+
+  // Read after the check, since another request may have started this project's turn meanwhile. From here
+  // until the turn is started nothing waits, so parallel requests can't both pass a cap that has one place left.
   let entry = running.get(projectId);
   if (entry === undefined) {
-    if (running.size >= MAX_TURNS_AT_ONCE) return json(response, 429, { state: "busy" });
-    const controller = new AbortController();
-    // The turn's id: random, and from here on the proof that this turn was opened by the project's owner.
-    const store = new ConvexStore({ projectId, turnId: randomUUID(), token });
-    console.log(`Turn asked for; sign-in token ${tokenTimes(token)}.`);
-    const finished = runTurn(store, prompt, controller.signal, { back, retry })
-      .catch((error): TurnResult | "signin" => {
-        // Storage refused to open the turn. A refused sign-in is told apart, so the page can sign in afresh and ask again.
-        console.warn(`Turn not opened: ${error instanceof Error ? error.message : "unknown error"}`);
-        return error instanceof StorageError && error.status === 401 ? "signin" : "trouble";
-      })
-      .finally(() => running.delete(projectId));
-    entry = { controller, finished };
-    running.set(projectId, entry);
+    if (running.size >= turnLimits.atOnce || (turnsByAccount.get(owner.account) ?? 0) >= turnLimits.perAccount) return json(response, 429, { state: "busy" });
+    entry = startTurn(projectId, owner.account, token, prompt, { back, retry });
   }
 
   // The answer stays open while Gala works, with a line every few seconds
@@ -129,10 +227,10 @@ async function stop(request: IncomingMessage, response: ServerResponse): Promise
   const token = tokenOf(request);
   const projectId = idOf((await readJson(request))?.projectId);
   if (token === null || projectId === null) return json(response, 400, { state: "refused" });
+  // Storage decides whether this person owns the project before anything is said about it, even whether a turn runs.
+  if (typeof (await ownerOf(projectId, token)) === "string") return json(response, 403, { state: "refused" });
   const entry = running.get(projectId);
   if (entry === undefined) return json(response, 200, { state: "idle" });
-  // Storage decides whether this person owns the project; only then is the turn stopped.
-  if (!(await ownsProject(projectId, token).catch(() => false))) return json(response, 403, { state: "refused" });
   entry.controller.abort();
   json(response, 200, { state: "stopped" });
 }

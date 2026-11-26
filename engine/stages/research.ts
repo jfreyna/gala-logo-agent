@@ -13,7 +13,7 @@ const reference: Shape = {
   type: "OBJECT",
   properties: {
     name: { type: "STRING" },
-    site: { type: "STRING", nullable: true, description: "The brand's own website address, as the search found it (for example https://www.example.com), or null" },
+    site: { type: "STRING", nullable: true, description: "The brand's home page origin as the search found it: scheme and host only, no path or query (for example https://www.example.com), or null" },
     note: { type: "STRING", description: "One short sentence on how its logo looks and what that means for this brief" },
   },
   required: ["name", "site", "note"],

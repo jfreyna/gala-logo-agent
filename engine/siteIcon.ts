@@ -9,8 +9,11 @@
  * PNG. Nothing found means null, and the card shows its designed default
  * image.
  *
- * The address comes from a model's search, so it is treated as untrusted:
- * only https on the standard port, only host names (no addresses typed in
+ * The address comes from a model's search, so it is treated as untrusted.
+ * Only the site's origin is fetched: whatever path, query, fragment or
+ * userinfo the model wrote is dropped and never sent, and the host itself
+ * is kept short, because the name still reaches DNS. Then, as for every
+ * address fetched here: only https on the standard port, only host names (no addresses typed in
  * as numbers), every name must resolve to public addresses only, redirects
  * are followed by hand and checked the same way, every answer is capped in
  * size and time. That keeps it off the Sprite's own connectors and any
@@ -33,6 +36,16 @@ const STORED_SIDE = 256;
 const MAX_BYTES = 2_000_000;
 const TIMEOUT_MS = 8_000;
 const MAX_REDIRECTS = 3;
+
+/**
+ * The longest host a model may name, and the most labels in it. A brand's
+ * home host is short (www.brand.co.uk has four labels), and a host name
+ * isn't a message: a long one could carry words out to a DNS server in its
+ * labels. 63 characters is a single DNS label's own ceiling, ample for a
+ * real brand's host.
+ */
+const MAX_HOST_LENGTH = 63;
+const MAX_HOST_LABELS = 4;
 
 function isPublicAddress(address: string): boolean {
   if (isIP(address) === 4) {
@@ -70,6 +83,28 @@ export async function safeUrl(raw: string, base?: URL): Promise<URL | null> {
     return null;
   }
   return url;
+}
+
+/**
+ * The site's origin, https://host/, from the address a model wrote, or
+ * null. Path, query, fragment and userinfo are dropped. A scheme other
+ * than https (or http, read as https), another port, or a host that is
+ * too long, has too many labels or isn't made of plain labels is refused
+ * before any lookup.
+ */
+export function originOf(site: string): string | null {
+  const text = site.trim();
+  let url: URL;
+  try {
+    url = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(text) ? text : `https://${text}`);
+  } catch {
+    return null;
+  }
+  if ((url.protocol !== "https:" && url.protocol !== "http:") || (url.port !== "" && url.port !== "443")) return null;
+  const host = url.hostname.toLowerCase();
+  const labels = host.split(".");
+  if (host.length > MAX_HOST_LENGTH || labels.length > MAX_HOST_LABELS || !labels.every((label) => /^[a-z0-9-]+$/.test(label))) return null;
+  return `https://${host}/`;
 }
 
 /** Refused at connect time: the name resolved to an address that is not public. */
@@ -281,8 +316,9 @@ export function storable(type: string, bytes: Uint8Array): Uint8Array | null {
 
 /** The brand's site icon as PNG bytes, or null. Never throws. */
 export async function siteIcon(site: string | null, signal?: AbortSignal): Promise<Uint8Array | null> {
-  if (site === null || site.trim() === "") return null;
-  const home = await safeUrl(/^https?:\/\//i.test(site.trim()) ? site.trim().replace(/^http:/i, "https:") : `https://${site.trim()}`);
+  const origin = site === null ? null : originOf(site);
+  if (origin === null) return null;
+  const home = await safeUrl(origin);
   if (home === null) return null;
   const page = await get(home, signal, { errorPage: true }).catch(() => null);
   const candidates = page !== null && page.type.includes("html") ? candidatesIn(new TextDecoder().decode(page.bytes)) : [];
