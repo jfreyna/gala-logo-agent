@@ -11,8 +11,6 @@ const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
  * upload is seconds old; ten minutes leaves room for a slow connection and a
  * retry. Any file stored earlier (another account's reference, a drawn mark,
  * a kit file) can't be claimed this way, even by someone who learned its id.
- * This narrows what a named file can be, but doesn't tie a file to the
- * person who stored it: nothing records who asked for an upload address.
  */
 const FRESH_UPLOAD_MS = 10 * 60 * 1000;
 

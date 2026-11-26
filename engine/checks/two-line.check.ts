@@ -10,7 +10,7 @@
  *
  * What this proves:
  *   1. Jev reads "one line or two" from varied wording at the wordmark and
- *      the lockup (two requests from a test walk among them), together
+ *      the lockup (two of them phrased the way a person asked), together
  *      with the settings read in the same call, and a message about
  *      something else leaves it alone;
  *   2. a two-word name breaks after its first word with no question asked;
@@ -27,7 +27,7 @@
  *      their path data) for the primary, stacked and wordmark lock-ups in
  *      every variant, a name-only kit's wordmark too (its square is drawn
  *      from it), and one line when no break is set;
- *   5. at the stress test, the test walk's 7:48 request gets the can't-do
+ *   5. at the stress test, a request to set the name on two lines gets the can't-do
  *      with "the name is set at the lockup, next", and nothing is drawn;
  *   6. the step facts: the wordmark and the lockup can set the lines; the
  *      setting is kept on the card, carried from the wordmark to the
@@ -369,7 +369,7 @@ h.check("6c. a whole turn at the wordmark writes two lines onto the card, and ke
   assertEqual([after.case, after.lines, after.breakAfter], ["allCaps", "twoLines", 1], "case changed, lines kept");
 });
 
-h.check("6d. a whole turn at the lockup: the test walk's 7:51 request sets the name on two lines, stacked, and draws no new symbol", async () => {
+h.check("6d. a whole turn at the lockup: a request to stack the name under the symbol sets it on two lines, stacked, and draws no new symbol", async () => {
   const store = projectAt("lockup");
   store.project.brandName = TWO;
   Object.assign(store.latest("wordmark").artifact!, { brandName: TWO });

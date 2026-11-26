@@ -7,7 +7,7 @@ Gala takes a person from a brief to a finished logo kit, in five steps: discover
 This repository holds the web app, its storage, the engine that does the work, and the kit pipeline.
 
 - **Live:** https://gala.frillyconcierge.com
-- **Demo video:** (link to come)
+- **Demo video:** https://youtu.be/XZ4PGqv5Zyg
 - **Built for:** Fly.io's Hacksgiving 2026. Gala runs on a Fly.io Sprite and does all of its model work through two Sprites connectors, Gemini and TypeSafe.
 
 ## How Gala uses the Sprites connectors
@@ -75,7 +75,7 @@ How a turn runs:
 
 ## What is withheld, and how it is guarded
 
-The persona prompt, the instructions for each step and the hall rules are not in this repository and never were. `engine/standin-prompt.ts` is a short stand-in with the same sections, so the code runs from a fresh clone.
+The persona prompt, the instructions for each step and the hall rules are not in this repository and never were. `engine/standin-prompt.ts` is a short stand-in with the same sections, so the code runs from a fresh clone. The prompt document is what is withheld; alongside it, the code hands each turn a short task line of its own, written in the engine's stages, saying what that turn must produce.
 
 - **Where the real prompt lives:** in the environment of Gala's Convex project, split across numbered values (one value holds 8 KiB). One internal function joins them (`convex/prompt.ts`), and one route returns it to a caller holding the shared secret.
 - **On the Sprite:** the server fetches it once at boot and keeps it in memory (`engine/prompt.ts`). It is never written to disk.
@@ -141,7 +141,7 @@ The front page and About sit on three small scenes, built in `src/backdrops/` fr
 
 ## Checks
 
-Each prints `N/N passed`, or `N/M, run incomplete` when a check could not run. Each file says at the top what it proves and what it does not.
+Each prints `N/N passed`, or `N/M, run incomplete` when a check could not run. Each file says at the top what it proves and what it does not. The table is a selection: it lists the main checks, and `package.json` has the rest.
 
 | Command | What it checks | Runs |
 |---|---|---|

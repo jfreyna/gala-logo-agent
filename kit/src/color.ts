@@ -2,7 +2,7 @@
  * Color math for the kit: hex parsing, the 50 to 900 ladder, WCAG contrast
  * and a straight CMYK conversion. Pure and dependency-free.
  *
- * The ladder follows the method of Frilly's tenant dashboard colors page,
+ * The ladder follows Frilly's palette method,
  * re-implemented here: each brand color is its own anchor; it is
  * taken into OKLCH (Bjorn Ottosson's OKLab), its hue is held, lightness walks
  * a fixed ladder, chroma is the anchor's chroma scaled by a per-step curve,
