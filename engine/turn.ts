@@ -31,6 +31,21 @@ export type Request = {
   drawing: string | null;
   /** Any other change to the step's work, in the person's own words. */
   note: string | null;
+  /**
+   * The mark a redraw starts from, when the person named one on this step's
+   * rounds or picked one along with a change. Checked against the cards
+   * before it is set (steer.ts). Absent or null: the step's own default.
+   */
+  startFrom?: MarkRef | null;
+};
+
+/** A mark on one of a step's rounds: its files, its name, and where its round sits in the step. */
+export type MarkRef = {
+  id: string;
+  name: string;
+  markFileId: string;
+  sourceFileId: string;
+  round?: { round: number; of: number; roundsAfterIt: number };
 };
 
 /**

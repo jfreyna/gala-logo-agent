@@ -13,7 +13,8 @@ import type { Operation } from "../store.ts";
 import { markFrom, markSvg } from "../marks.ts";
 import { asked, optionId, type Outcome, type Turn } from "../turn.ts";
 import { briefOf } from "./brief.ts";
-import { chosenConcept } from "./directions.ts";
+import { pickedRound, placeOf, roundsOf } from "../rounds.ts";
+import { broughtBackLine, chosenConcept } from "./directions.ts";
 import { directionOf } from "./research.ts";
 import { familyOf } from "./type.ts";
 import { letterSpacingOf } from "./wordmark.ts";
@@ -148,13 +149,31 @@ export async function colorways(turn: Turn): Promise<Outcome> {
   const next = turn.take();
   const picker = turn.latest("colorPicker")!.artifact!;
   const colors = picker.colors as BrandColors;
-  const card = turn.current("colorwaySet");
-  const current = card !== null && JSON.stringify(card.artifact!.colors) === JSON.stringify(colors);
+  // Every round of colorways in the current colors; a pick on any of them counts (rounds.ts).
+  const rounds = roundsOf(turn, "colorwaySet");
+  const card = rounds[rounds.length - 1] ?? null;
 
-  if (current) {
-    const set = card.artifact!;
-    if (set.chosenId !== null) {
+  if (card !== null) {
+    const picked = pickedRound(rounds);
+    if (picked !== null) {
+      const set = picked.artifact!;
+      // A pick on an earlier round brings that round back as the newest card, with Gala's line naming it, so the kit reads the newest card.
+      const bringBack =
+        picked.id !== card.id
+          ? [
+              {
+                op: "artifact" as const,
+                kind: "colorwaySet",
+                artifact: {
+                  ...set,
+                  say: await broughtBackLine(turn, "colorways", set.colorways.find((entry: { id: string }) => entry.id === set.chosenId)?.name || "That colorway", rounds, picked),
+                  broughtBack: placeOf(rounds, picked),
+                },
+              },
+            ]
+          : [];
       await turn.write([
+        ...bringBack,
         { op: "choice", step: "colorways", chosen: set.chosenId, discarded: set.colorways.filter((entry: { id: string }) => entry.id !== set.chosenId).map((entry: { id: string }) => entry.id) },
         { op: "project", stage: "kit" },
       ]);

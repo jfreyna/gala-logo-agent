@@ -15,6 +15,7 @@ import heavyRaw from "./marks/hearth-heavy.svg?raw";
 import withNameRaw from "./marks/hearth-with-name.svg?raw";
 import type { HallEntry } from "../components/HallTile";
 import type { StreamItem } from "../studio/streamTypes";
+import { echoState } from "../studio/echoState";
 import type { PanelView } from "../studio/panel/types";
 import type { Check } from "../studio/artifacts/types";
 
@@ -471,6 +472,27 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
           ],
         },
       },
+    ],
+    placeholder: "Pick 1, 2 or 3, or ask for a change.",
+    placeholderMobile: "Pick 1, 2 or 3.",
+  },
+  // FRI-1718: a Pick whose turn ended with no reply. The echo's state comes from echoState itself: the turn is over, so it settles to Sent.
+  echoSettled: {
+    items: [
+      {
+        id: "variations",
+        kind: "variationSet",
+        data: {
+          say: "Three refinements of Hearth.",
+          chosenId: null,
+          concepts: [
+            { id: "1", letter: "1", name: "Narrow", rationale: "A narrower arch and a smaller flame.", markUrl: marks.narrow, checks: pass("16px", "Circle", "Inverted") },
+            { id: "2", letter: "2", name: "Heavy", rationale: "A wider arch and a tighter flame.", markUrl: marks.heavy, checks: pass("16px", "Circle", "Inverted") },
+            { id: "3", letter: "3", name: "Mark and name", rationale: "The arch over the name in Young Serif.", markUrl: marks.withName, checks: pass("16px", "Circle", "Inverted") },
+          ],
+        },
+      },
+      { id: "echo", kind: "action", label: "Picked Heavy", state: echoState({ wakes: true, later: [], working: null, waitingOnGala: false }) },
     ],
     placeholder: "Pick 1, 2 or 3, or ask for a change.",
     placeholderMobile: "Pick 1, 2 or 3.",

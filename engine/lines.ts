@@ -70,3 +70,22 @@ export const KIT_LINE =
 
 /** The same, for a logo of the name alone: nothing in it names a mark or a lock-up. */
 export const NAME_ONLY_KIT_LINE = "Your wordmark kit is ready. You have it in color, all black and all white, in SVG and EPS, plus a quick-reference sheet for your hex and CMYK values.";
+
+/**
+ * Said when the person picked from an earlier round of the step and no
+ * checked line could be written: which one, and which round it came from.
+ */
+export function pickedEarlierLine(name: string, roundsAfterIt: number): string {
+  const which = roundsAfterIt <= 1 ? "the round before" : `${roundsAfterIt} rounds back`;
+  return `${name} it is, from ${which}.`;
+}
+
+/**
+ * Said when the person asked for an earlier round back, with no change,
+ * and no checked line could be written: which one, which round, and what
+ * to do next.
+ */
+export function broughtBackFixedLine(name: string, roundsAfterIt: number): string {
+  const which = roundsAfterIt <= 1 ? "the round before" : `${roundsAfterIt} rounds back`;
+  return `Here’s the round with ${name} again, from ${which}. Pick one, or tell me what to change.`;
+}

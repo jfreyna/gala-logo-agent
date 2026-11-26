@@ -13,6 +13,7 @@ import { download, fileMemoryLine, requestTurn, stopTurn } from "../lib/turn";
 import { groupsOf, mainClass, rankFamilies, topMoods, useTrayData } from "../lib/typeTray";
 import { pastCards } from "../studio/history";
 import { ECHO_KIND, echoFor, type EchoAction } from "../../convex/lib/echo";
+import { echoState } from "../studio/echoState";
 import { messageOf } from "../lib/errors";
 import { ConvexError } from "convex/values";
 import type { DownloadState, NoticeAction } from "../studio/Feedback";
@@ -247,10 +248,9 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
         return [{ id, kind: "notice", notice: noticeOf(message.artifact as Record<string, any>) }];
       }
       if (message.kind === ECHO_KIND && message.artifact !== null) {
-        // Sending until Gala's working line appears or Gala answers; Sent after. An action that wakes no one is done at once.
+        // Sending until Gala's working line appears, anything is written after it, or the turn it asked for has ended (echoState.ts).
         const echo = message.artifact as { sending: string; sent: string; wakes: boolean };
-        const answered = working !== null || all.slice(at + 1).some((later) => later.author === "gala");
-        const state = echo.wakes && !answered ? "Sending" : "Sent";
+        const state = echoState({ wakes: echo.wakes, later: all.slice(at + 1), working, waitingOnGala: project?.waitingOnGala === true });
         return [{ id, kind: "action", label: state === "Sending" ? echo.sending : echo.sent, state }];
       }
       if (message.kind === "upload" && message.upload) {
@@ -272,7 +272,7 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
     // Gala's "working" line, while a turn runs.
     if (working !== null) stream.push({ id: "working", kind: "working", text: working });
     return stream;
-  }, [messages, working, pending, stage, cardErrors, startFailed, downloads]);
+  }, [messages, working, pending, stage, cardErrors, startFailed, downloads, project?.waitingOnGala]);
 
   /**
    * Sends the message and the file. The box and the attachment are cleared
