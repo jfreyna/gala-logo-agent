@@ -1,0 +1,7 @@
+# Gala, by Frilly. Search engines and AI crawlers are welcome.
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /studio/
+
+Sitemap: https://gala.frillyconcierge.com/sitemap.xml

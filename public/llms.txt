@@ -1,0 +1,18 @@
+# Gala
+
+> Your logo design partner. Gala is a free web app by Frilly that takes a person from a brief to a finished logo kit.
+
+Gala works in five steps: discovery; form and type in black and white; concepts and a stress test; color; and the kit. Every choice comes in threes, and each step waits for the person's sign-off before the next one opens. The order is the typeface, then the name set in it as a wordmark, then the symbol, then the two together as a lockup, then color. The kit holds the lockups as SVG, EPS and PNG, with a short spec.
+
+Gemini writes Gala's words and draws each mark, which Gala then traces to vector paths. Jev, TypeSafe's structured evaluator, makes every choice and every check: which type classes fit the brief, whether a draft passes its checks, and how a mark holds up at 16px or inverted. Both run through Fly.io Sprites connectors. Gala runs on a Fly.io Sprite.
+
+Signing in uses a Frilly account (Google, or email and password).
+
+## Pages
+
+- [Gala](https://gala.frillyconcierge.com/): the front page, where a person starts.
+- [About Gala](https://gala.frillyconcierge.com/about): what Gala is and how it works.
+
+## Maker
+
+- [Frilly](https://frilly.ai/): Frilly makes Gala.
