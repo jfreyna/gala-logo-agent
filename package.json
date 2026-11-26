@@ -42,6 +42,7 @@
     "check:earlier-cards": "node --experimental-strip-types --no-warnings engine/checks/earlier-cards.check.ts",
     "check:honest": "node --experimental-strip-types --no-warnings engine/checks/honest.check.ts",
     "check:knows": "node --experimental-strip-types --no-warnings engine/checks/knows.check.ts",
+    "check:measure": "node --experimental-strip-types --no-warnings engine/checks/measure.check.ts",
     "check:no-clip": "node --experimental-strip-types --no-warnings engine/checks/no-clip.check.ts",
     "check:buttons": "node --experimental-strip-types --no-warnings engine/checks/buttons.check.ts",
     "check:keep-symbol": "node --experimental-strip-types --no-warnings engine/checks/keep-symbol.check.ts",

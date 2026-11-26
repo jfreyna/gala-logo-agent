@@ -190,13 +190,19 @@ export function judgeView(source: Image): Image {
  * same", and a different mark that ignores the request can still read as
  * different, which is why both are asked.
  */
-export async function compareDrawing(drawing: Image, options: { request: string[] | null; start: Image | null; signal?: AbortSignal }): Promise<{ showsRequest: boolean | null; differsFromStart: boolean | null }> {
-  if (options.request === null && options.start === null) return { showsRequest: null, differsFromStart: null };
+export async function compareDrawing(
+  drawing: Image,
+  options: { request: string[] | null; start: Image | null; others?: string[] | null; signal?: AbortSignal },
+): Promise<{ showsRequest: boolean | null; differsFromStart: boolean | null; showsOthers: boolean | null }> {
+  const others = options.others ?? null;
+  if (options.request === null && options.start === null) return { showsRequest: null, differsFromStart: null, showsOthers: null };
   const answers = (await ask({
-    state: { ...(options.request !== null ? { request: options.request } : {}) },
+    state: { ...(options.request !== null ? { request: options.request } : {}), ...(others !== null ? { otherRequests: others } : {}) },
     images: { drawing: judgeView(drawing), ...(options.start !== null ? { start: judgeView(options.start) } : {}) },
     questions: {
       ...(options.request !== null ? { showsRequest: { type: "noul", instructions: "`request` is what the person asked to see or change in the mark. Does `drawing` show it?" } as const } : {}),
+      // FRI-1725: when one request is measured with boxes (measure.ts), the rest are asked about on their own.
+      ...(others !== null ? { showsOthers: { type: "noul", instructions: "`otherRequests` are things the person asked to see or change in the mark. Does `drawing` show all of them?" } as const } : {}),
       ...(options.start !== null ? { differsFromStart: { type: "noul", instructions: "`drawing` was drawn starting from `start`. Is it visibly a different mark from `start`, beyond small differences in the edges? Answer no if the shapes are the same." } as const } : {}),
     },
     signal: options.signal,
@@ -204,5 +210,6 @@ export async function compareDrawing(drawing: Image, options: { request: string[
   return {
     showsRequest: answers.showsRequest === undefined ? null : answers.showsRequest.noul >= YES,
     differsFromStart: answers.differsFromStart === undefined ? null : answers.differsFromStart.noul >= YES,
+    showsOthers: answers.showsOthers === undefined ? null : answers.showsOthers.noul >= YES,
   };
 }

@@ -1,8 +1,9 @@
 /**
  * Jev, TypeSafe's structured evaluator, through the Sprites connector.
  *
- * Jev answers three kinds of question about a state: yes or no (`noul`), a
- * pick from named options (`choice`) and a score on a rubric (`score`).
+ * Jev answers four kinds of question about a state: yes or no (`noul`), a
+ * pick from named options (`choice`), a score on a rubric (`score`) and
+ * where something is in an image (`box`).
  * Gala uses it wherever an answer comes from a known set, and for every
  * check on a draft or a reply. A generative model writes; Jev decides.
  */
@@ -12,13 +13,24 @@ import { ModelError, type Image } from "./gemini.ts";
 export type YesNo = { type: "noul"; instructions: string };
 export type Choice = { type: "choice"; instructions: string; criteria: Record<string, string | null> };
 export type Score = { type: "score"; instructions: string; criteria: string[] };
-export type Question = YesNo | Choice | Score;
+/**
+ * Where one thing is in an image: its edges as fractions 0 to 1 from the
+ * image's top-left corner, plus `confidence`. One box per question. There
+ * is no "not found": an absent part still gets a box, so a box is asked
+ * beside a `noul` "is it there?" and ignored when that comes back low.
+ * TypeSafe marks `box` a preview: its format and answers can change.
+ */
+export type BoxQuestion = { type: "box"; instructions: string };
+export type Edges = { top: number; bottom: number; left: number; right: number };
+export type Question = YesNo | Choice | Score | BoxQuestion;
 
 export type Answer<Q extends Question> = Q extends YesNo
   ? { noul: number }
   : Q extends Choice
     ? { choice: string; confidence: number; probabilities: Record<string, number> }
-    : { score: number; confidence: number };
+    : Q extends BoxQuestion
+      ? { box: Edges; confidence: number }
+      : { score: number; confidence: number };
 
 /** At or above this, a yes/no answer counts as yes. */
 export const YES = 0.5;
@@ -40,6 +52,8 @@ export async function ask<Q extends Record<string, Question>>(options: {
 }): Promise<{ [K in keyof Q]: Answer<Q[K]> }> {
   const images = options.images ?? {};
   const hasImages = Object.keys(images).length > 0;
+  // TypeSafe refuses an image or a box question without this header.
+  const dangerZone = hasImages || Object.values(options.questions).some((question) => question.type === "box");
   const body = {
     model: config.jevModel,
     state: { ...options.state, ...Object.fromEntries(Object.keys(images).map((key) => [key, key])) },
@@ -61,7 +75,7 @@ export async function ask<Q extends Record<string, Question>>(options: {
     try {
       const response = await fetch(`${config.typesafeUrl}/v1/systemone`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(hasImages ? { "TypeSafe-Danger-Zone-Images": "true" } : {}) },
+        headers: { "Content-Type": "application/json", ...(dangerZone ? { "TypeSafe-Danger-Zone-Images": "true" } : {}) },
         body: JSON.stringify(body),
         signal: options.signal ? AbortSignal.any([options.signal, timeout]) : timeout,
       });

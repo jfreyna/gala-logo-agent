@@ -4,7 +4,8 @@
  * for a pick; they differ in what the drawing starts from.
  */
 import { badges, draftThree, findings, type Draft, type Idea, type SetAside } from "../drafting.ts";
-import { compareDrawing } from "../marks.ts";
+import { compareDrawing, judgeView } from "../marks.ts";
+import { measureRound, type Measured } from "../measure.ts";
 import type { Image, Shape } from "../gemini.ts";
 import { pickedEarlierLine, WORKING } from "../lines.ts";
 import { isMarkRef, pickedRound, placeOf, roundsOf, type RoundKind } from "../rounds.ts";
@@ -77,17 +78,51 @@ export function standingRequests(turn: Turn, request: Request | null): string[] 
   return [...new Set([...turn.heldFor(...SYMBOL_STEPS), ...turn.drawingRequests(), ...(asked(request) ?? [])])];
 }
 
-/** What Jev saw in each drawing: whether it shows the request, and whether it differs from its starting mark (null when not asked). */
-export type Compared = { showsRequest: boolean | null; differsFromStart: boolean | null };
+/**
+ * What Jev saw in each drawing: whether it shows the request, and whether
+ * it differs from its starting mark (null when not asked). `measured` is
+ * set when the two came from boxes (FRI-1725): what the part did. It goes
+ * on the card, not to the words call.
+ */
+export type Compared = { showsRequest: boolean | null; differsFromStart: boolean | null; measured?: Measured | null };
 
-/** Each drawing against the request and the starting mark, side by side (marks.ts). */
-export async function compareRound(turn: Turn, drafts: Draft[], wanted: string[] | null, start: Image | null): Promise<Compared[]> {
-  return Promise.all(
+/**
+ * Each drawing against the request and the starting mark, side by side
+ * (marks.ts). When the newest request is about where one part sits or how
+ * big it is, the part is boxed in the start and in each drawing and the
+ * two answers come from the measurement (measure.ts): `showsRequest` is
+ * whether the part did what was asked (and, when other requests stand,
+ * whether the drawing shows those too, by FRI-1719's yes/no), and
+ * `differsFromStart` is yes when the part measurably changed, else
+ * FRI-1719's answer, since another part may have changed. Wherever the
+ * measurement can't be used, FRI-1719's yes/no answers stand.
+ */
+export async function compareRound(turn: Turn, drafts: Draft[], wanted: string[] | null, start: Image | null, newest: string | null = null): Promise<Compared[]> {
+  const drawings = await Promise.all(
     drafts.map(async (draft) => {
       const file = await turn.store.readFile(draft.sourceFileId);
-      return compareDrawing({ bytes: file.bytes, mime: file.contentType }, { request: wanted, start, signal: turn.signal });
+      return { bytes: file.bytes, mime: file.contentType };
     }),
   );
+  return compareDrawings(drawings, { wanted, start, newest, signal: turn.signal });
+}
+
+/** `compareRound` on images already read; the checks call it directly. */
+export async function compareDrawings(drawings: Image[], options: { wanted: string[] | null; start: Image | null; newest: string | null; signal?: AbortSignal }): Promise<Compared[]> {
+  const { wanted, start, signal } = options;
+  const newest = options.newest !== null && options.newest.trim() !== "" ? options.newest : null;
+  const measuring = start !== null && newest !== null ? await measureRound({ request: newest, start: judgeView(start), drawings: drawings.map(judgeView), signal }) : null;
+  const others = measuring === null || wanted === null ? null : wanted.filter((entry) => entry !== newest);
+  const yesNo = await Promise.all(drawings.map((drawing) => compareDrawing(drawing, { request: wanted, start, others: others !== null && others.length > 0 ? others : null, signal })));
+  return yesNo.map((answers, index) => {
+    const measured = measuring?.measured[index] ?? null;
+    if (measured === null) return { showsRequest: answers.showsRequest, differsFromStart: answers.differsFromStart, measured: null };
+    return {
+      showsRequest: measured.meets && (answers.showsOthers ?? true),
+      differsFromStart: measured.changed ? true : answers.differsFromStart,
+      measured,
+    };
+  });
 }
 
 /**
@@ -104,7 +139,7 @@ export async function roundWords(
   wanted: string[] | null,
   compared: Compared[],
 ): Promise<{ say: string; rationales: string[] } | null> {
-  const drawn = findings(drafts, round.letters).map((entry, index) => ({ ...(entry as Record<string, unknown>), ...compared[index] }));
+  const drawn = findings(drafts, round.letters).map((entry, index) => ({ ...(entry as Record<string, unknown>), showsRequest: compared[index]?.showsRequest ?? null, differsFromStart: compared[index]?.differsFromStart ?? null }));
   const checked = await turn.composeCard(
     () =>
       turn.think<{ say: string; rationales: string[] }>({
@@ -138,7 +173,7 @@ async function drawRound(turn: Turn, round: Round): Promise<Outcome> {
     shape: IDEAS_SHAPE,
   });
   const { drafts, setAside } = await draftThree(turn, concepts, { ...context, competitorImages: competitorImageList }, round.from);
-  const compared = await compareRound(turn, drafts, wanted, round.from ?? null);
+  const compared = await compareRound(turn, drafts, wanted, round.from ?? null, round.request?.drawing ?? null);
 
   const words = await roundWords(turn, round, drafts, setAside, wanted, compared);
   if (words === null) {
@@ -163,6 +198,7 @@ async function drawRound(turn: Turn, round: Round): Promise<Outcome> {
           checks: badges(draft.judgement),
           showsRequest: compared[index]!.showsRequest,
           differsFromStart: compared[index]!.differsFromStart,
+          measured: compared[index]!.measured ?? null,
         })),
         ...(round.kind === "conceptSet" ? { discarded: setAside } : { setAside }),
         chosenId: null,
