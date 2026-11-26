@@ -8,7 +8,7 @@ import { ECHO_KIND, echoFor } from "./lib/echo";
 /**
  * What a person does on one of Gala's cards: approve the direction, pick a
  * typeface, sign off the wordmark, pick a mark, sign off the lockup, save
- * colors, send picks to the halls.
+ * colors, send picks to the halls, finish the first kit download.
  *
  * This is the person's side only. It marks the card, leaves the action's
  * line in the chat on the person's side (lib/echo.ts), and notes that Gala
@@ -109,6 +109,8 @@ const action = v.union(
     loved: v.union(v.object({ quote: v.string() }), v.null()),
   }),
   v.object({ type: v.literal("declinePicks") }),
+  /** The first finished download from the kit (any format, or Download kit): Gala then offers the halls (FRI-1723). */
+  v.object({ type: v.literal("kitDownloaded") }),
 );
 
 export const act = mutation({
@@ -257,6 +259,15 @@ export const act = mutation({
         const { artifact } = await card(ctx, projectId, messageId, "picks");
         if (artifact.answered !== null && artifact.answered !== undefined) throw new ConvexError("Your picks are already in.");
         await ctx.db.patch(messageId, { artifact: { ...artifact, answered: "declined" } });
+        waitingOnGala = true;
+        break;
+      }
+      case "kitDownloaded": {
+        // Only the first one counts, and only while the project waits at the picks step. Any other download is
+        // the person saving files again: nothing to record, no one to wake, and no error under the card.
+        const { artifact } = await card(ctx, projectId, messageId, "kit");
+        if (project.stage !== "picks" || artifact.downloaded === true) break;
+        await ctx.db.patch(messageId, { artifact: { ...artifact, downloaded: true } });
         waitingOnGala = true;
         break;
       }

@@ -81,7 +81,10 @@ export function Picks({ data, onSubmit, onDecline }: { data: PicksArtifact; onSu
           <SectionLabel label="What you loved" helper="Your final logo." />
           <div className="relative flex w-full shrink-0 flex-col items-start gap-[12px] desktop:flex-row desktop:items-center" data-name="final">
             <PickThumb markUrl={data.finalMarkUrl} />
-            <CountedLineField value={lovedQuote} onChange={setLovedQuote} limit={QUOTE_LIMIT} placeholder="Why? One line, optional." label="Why you loved it" />
+            {/* Beside the thumbnail on desktop, the field takes the rest of the row and may shrink, so it fits the card with its counter (FRI-1723). */}
+            <div className="relative flex w-full min-w-0 flex-col desktop:w-auto desktop:flex-1" data-name="loved-why">
+              <CountedLineField value={lovedQuote} onChange={setLovedQuote} limit={QUOTE_LIMIT} placeholder="Why? One line, optional." label="Why you loved it" />
+            </div>
           </div>
         </div>
         <div className="relative flex w-full shrink-0 flex-col items-center gap-[8px] desktop:flex-row desktop:justify-end desktop:gap-[16px]" data-name="actions">

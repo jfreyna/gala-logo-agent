@@ -186,6 +186,8 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
   }, [handedOff]);
   // Where each kit download stands (gala-download-chip), by format, and "Kit" for Download kit.
   const [downloads, setDownloads] = useState<Record<string, DownloadState>>({});
+  // The kit cards whose first finished download was already reported to Gala, in this page's life.
+  const downloadReported = useRef(new Set<string>());
   // How the last request for a turn ended, once the retries ran out without a turn starting.
   const [startFailed, setStartFailed] = useState<string | null>(null);
   const nextEcho = useRef(0);
@@ -316,7 +318,22 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
     void download(entry.url, entry.fileName).then((saved) => {
       mark(saved ? "saved" : "couldnt");
       if (saved) window.setTimeout(() => setDownloads((current) => (current[label] === "saved" ? { ...current, [label]: "idle" } : current)), 3000);
+      if (saved) reportDownloaded();
     });
+  }
+
+  /**
+   * The first finished download tells Gala, once per kit card, so the halls
+   * card can follow it (FRI-1723). The card's `downloaded` mark survives a
+   * reload; the ref covers the moment before the mark comes back. If the
+   * call fails, the next download tries again, and the person's next
+   * message brings the halls card anyway.
+   */
+  function reportDownloaded() {
+    const kitCard = cards.findLast((card) => card.kind === "kit");
+    if (kitCard === undefined || kitCard.data.downloaded === true || downloadReported.current.has(kitCard.id)) return;
+    downloadReported.current.add(kitCard.id);
+    void act({ projectId, messageId: kitCard.id as Id<"messages">, action: { type: "kitDownloaded" } }).catch(() => downloadReported.current.delete(kitCard.id));
   }
 
 

@@ -553,7 +553,8 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
         id: "picks",
         kind: "picks",
         data: {
-          say: "One last thing, and it’s optional.",
+          // After the first download (FRI-1723): the halls card follows the kit with the files-saved line.
+          say: "Files saved. One last thing, and it’s optional.",
           drafts: [marks.rising, marks.peel, marks.wheat, marks.badge, marks.narrow, marks.heavy, marks.withName, marks.hearth].map((markUrl, index) => ({ id: String(index), markUrl })),
           finalMarkUrl: tinted(heavyRaw, PRIMARY),
           answered: null,

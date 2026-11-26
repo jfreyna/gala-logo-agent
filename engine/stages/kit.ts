@@ -4,14 +4,16 @@
  * The kit pipeline (kit/) does the work: the chosen mark, the typeface and
  * the colors go in, and the lock-ups, the square, the social image and the
  * spec sheet come out. This step stores them, zips each format for
- * download, and shows the kit card and the picks card.
+ * download, and shows the kit card alone (FRI-1723). The picks card, for
+ * the halls, waits for the first finished download, or for the person's
+ * next message, so it never pushes the kit off the screen as it arrives.
  */
 import { buildKit, slugify, type KitFile } from "../../kit/src/index.ts";
 import type { BrandColors } from "../colorways.ts";
 import type { Shape } from "../gemini.ts";
 import { ask, YES } from "../jev.ts";
 import { mentionsHex } from "../guard.ts";
-import { KIT_LINE, NAME_ONLY_KIT_LINE, PICKS_LINE, WORKING } from "../lines.ts";
+import { FILES_SAVED_LINE, KIT_LINE, NAME_ONLY_KIT_LINE, PICKS_LINE, WORKING } from "../lines.ts";
 import { headingFor } from "../memory.ts";
 import type { Operation, StoredFile } from "../store.ts";
 import type { Outcome, Turn } from "../turn.ts";
@@ -139,13 +141,6 @@ export async function kit(turn: Turn): Promise<Outcome> {
   );
 
   const fileFor = (lockup: string, variant: string) => ids.get(`svg/${slug}-${lockup}-${variant}.svg`)!;
-  // Every draft Gala showed, for the "hated" row of the picks card.
-  const drafts = turn.state.messages
-    .filter((message) => message.kind === "conceptSet" || message.kind === "variationSet")
-    .flatMap((message) => [...message.artifact!.concepts, ...(message.artifact!.discarded ?? message.artifact!.setAside ?? [])])
-    .map((draft: { id: string; markFileId: string }) => ({ id: draft.id, markFileId: draft.markFileId }))
-    // Going back puts a copy of a card in the conversation, so a draft can appear twice.
-    .filter((draft: { id: string }, index: number, all: { id: string }[]) => all.findIndex((other) => other.id === draft.id) === index);
   const remembered = await memoryOperations(turn, { mark: mark?.name ?? null, family }, { brief: briefOf(turn), chosenMark: mark?.name ?? "none: the logo is the name alone", typeface: family, colorway: colorway.name });
   // The logo as one file: the icon, or the wordmark when there is no symbol.
   const logo = nameOnly ? fileFor("wordmark", "color") : fileFor("icon", "color");
@@ -155,9 +150,16 @@ export async function kit(turn: Turn): Promise<Outcome> {
     {
       op: "artifact",
       kind: "kit",
-      artifact: { say: words?.say ?? (nameOnly ? NAME_ONLY_KIT_LINE : KIT_LINE), lockups: previews.map((preview) => ({ label: preview.label, previewFileId: fileFor(preview.lockup, preview.variant), ground: preview.ground })), formats: FORMATS },
+      // `hallsMarkFileId` is the logo the picks card will offer for the Hall of fame; `downloaded` is set by the page's first finished download.
+      artifact: {
+        say: words?.say ?? (nameOnly ? NAME_ONLY_KIT_LINE : KIT_LINE),
+        lockups: previews.map((preview) => ({ label: preview.label, previewFileId: fileFor(preview.lockup, preview.variant), ground: preview.ground })),
+        formats: FORMATS,
+        hallsMarkFileId: logo,
+        downloaded: false,
+      },
     },
-    { op: "artifact", kind: "picks", artifact: { say: PICKS_LINE, drafts, finalMarkFileId: logo, answered: null } },
+    // The project waits at the picks step with no picks card yet: `picks` below writes it.
     { op: "project", stage: "picks", latestMarkFileId: logo },
     ...remembered,
   ]);
@@ -184,10 +186,49 @@ export async function quotePasses(quote: string, signal?: AbortSignal): Promise<
   return answers.offensive.noul < YES && answers.personal.noul < YES;
 }
 
+/** Every draft Gala showed, for the "hated" row of the picks card. */
+function draftsShown(turn: Turn): { id: string; markFileId: string }[] {
+  return (
+    turn.state.messages
+      .filter((message) => message.kind === "conceptSet" || message.kind === "variationSet")
+      .flatMap((message) => [...message.artifact!.concepts, ...(message.artifact!.discarded ?? message.artifact!.setAside ?? [])])
+      .map((draft: { id: string; markFileId: string }) => ({ id: draft.id, markFileId: draft.markFileId }))
+      // Going back puts a copy of a card in the conversation, so a draft can appear twice.
+      .filter((draft: { id: string }, index: number, all: { id: string }[]) => all.findIndex((other) => other.id === draft.id) === index)
+  );
+}
+
+/**
+ * The picks step. Its card, for the halls, is written here, once, after
+ * the kit card has had the screen to itself: when the page reports the
+ * first finished download (the kit card's `downloaded`, set by `act`), or
+ * after Gala answers the person's next message if they never download.
+ * Once the card exists it is a stored message, so a reload or a second
+ * download finds it and adds nothing.
+ */
 export async function picks(turn: Turn): Promise<Outcome> {
   const next = turn.take();
   const card = turn.current("picks");
-  if (card === null || card.artifact!.answered === null) {
+  if (card === null) {
+    const kitCard = turn.current("kit");
+    // No kit card means the step was reached some other way; there is nothing to offer for the halls.
+    if (kitCard === null) {
+      if (next !== null) await turn.answer(next, "the person to download their kit from its card");
+      return "wait";
+    }
+    const downloaded = kitCard.artifact!.downloaded === true;
+    if (next !== null) await turn.answer(next, "the person to download their kit from its card");
+    else if (!downloaded) return "wait";
+    await turn.write([
+      {
+        op: "artifact",
+        kind: "picks",
+        artifact: { say: downloaded ? FILES_SAVED_LINE : PICKS_LINE, drafts: draftsShown(turn), finalMarkFileId: kitCard.artifact!.hallsMarkFileId, answered: null },
+      },
+    ]);
+    return "wait";
+  }
+  if (card.artifact!.answered === null) {
     if (next !== null) await turn.answer(next, "the person to submit their picks or choose not to");
     return "wait";
   }

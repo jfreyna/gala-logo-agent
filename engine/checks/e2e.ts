@@ -1,7 +1,7 @@
 /**
  * One full brief, end to end, on the Sprite: from the first message to a
- * chosen colorway, the kit and the picks, against the real models, with a
- * scripted person and storage held in memory.
+ * chosen colorway, the kit, the first download and the picks, against the
+ * real models, with a scripted person and storage held in memory.
  *
  *   node engine/checks/e2e.ts [folder to write the cards and marks to]
  *
@@ -167,6 +167,15 @@ h.check("kit: choosing a colorway hands the choices to buildKit and stores 38 fi
   assertEqual(store.kit.downloads.map((file) => file.label), ["SVG", "EPS", "PNG", "Square", "Social", "Kit"], "downloads");
   assertEqual(store.latest("kit").artifact!.lockups.length, 6, "lock-up previews");
   assertEqual(store.project.stage, "picks", "stage");
+  // FRI-1723: the kit card arrives alone; the halls card waits for the first download.
+  assertEqual(store.messages.filter((message) => message.kind === "picks").length, 0, "halls cards with the kit");
+});
+
+h.check("halls card: the first finished download brings the files-saved line and the picks card, once", async () => {
+  press("kit", { downloaded: true });
+  await turn();
+  assertEqual(store.messages.filter((message) => message.kind === "picks").length, 1, "halls cards");
+  assertEqual(store.latest("picks").artifact!.say, "Files saved. One last thing, and it’s optional.", "the halls card's line");
 });
 
 h.check("picks: the picks card lists every draft Gala showed", async () => {
