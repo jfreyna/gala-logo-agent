@@ -229,7 +229,7 @@ export function describeReading(stage: Stage, reading: Reading): string {
   return `Steering at ${stage}: pick ${score(reading.pick)}, back ${score(reading.back)}, change ${score(reading.change)}, later ${score(reading.later)}${extra}`;
 }
 
-type Details = { option: string; backTo: string; laterStep?: string; laterIdea?: string | null; startFrom?: string; typeface: string | null; nameAs: string | null; drawing: string | null; note: string | null };
+export type Details = { option: string; backTo: string; laterStep?: string; laterIdea?: string | null; startFrom?: string; typeface: string | null; nameAs: string | null; drawing: string | null; note: string | null };
 
 /** The marks on this step's rounds a person can name to work from, by key, as the details call is told them. */
 type Named = { key: string; label: string };
@@ -297,6 +297,14 @@ async function details(turn: Turn, options: Option[], earlier: Step[], later: St
   });
 }
 
+/** A free-text detail, or null when it is empty or fails the reply check. */
+async function mayKeep(turn: Turn, value: string | null): Promise<string | null> {
+  if (value === null) return null;
+  if (await turn.mayShow({ line: "", card: [value] })) return value;
+  console.warn("Steering: a detail was dropped because it failed the reply check.");
+  return null;
+}
+
 /** The Google family by that name, ignoring case, spacing and punctuation, or null. */
 export async function googleFamily(name: string): Promise<string | null> {
   const plain = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "");
@@ -317,9 +325,16 @@ export function asksForSomething(request: Request | null): request is Request {
   return request !== null && (request.typeface !== null || request.nameAs !== null || request.drawing !== null || request.note !== null || (request.startFrom ?? null) !== null);
 }
 
-/** The details checked against what is real. A detail that doesn't check out is named in `problem`. */
-async function checked(turn: Turn, found: Details, rounds: RoundOption[]): Promise<{ request: Request; problem: Record<string, unknown> | null }> {
-  const request: Request = { ...NOTHING, drawing: found.drawing?.trim() || null, note: found.note?.trim() || null };
+/**
+ * The details checked against what is real. A detail that doesn't check out
+ * is named in `problem`. The two free-text details are written by a model
+ * and end up on cards the person sees, so each passes the same reply check
+ * as anything Gala shows; one that fails is dropped, as if no such detail
+ * was given, and only the check's name and score are logged.
+ */
+export async function checked(turn: Turn, found: Details, rounds: RoundOption[]): Promise<{ request: Request; problem: Record<string, unknown> | null }> {
+  const [drawing, note] = await Promise.all([found.drawing, found.note].map((value) => mayKeep(turn, value?.trim() || null)));
+  const request: Request = { ...NOTHING, drawing: drawing ?? null, note: note ?? null };
   // A named mark is used only if it is a real mark on one of this step's rounds.
   const named = found.startFrom === undefined || found.startFrom === "none" ? undefined : rounds.find((option) => option.key === found.startFrom);
   if (named !== undefined) request.startFrom = markOf(named);

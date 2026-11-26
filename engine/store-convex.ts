@@ -14,7 +14,7 @@
  * logged.
  */
 import { config } from "./config.ts";
-import type { Operation, Project, Store } from "./store.ts";
+import { FileTooLarge, type Operation, type Project, type Store } from "./store.ts";
 
 export class StorageError extends Error {
   readonly status: number;
@@ -92,16 +92,49 @@ export class ConvexStore implements Store {
     return ((await response.json()) as { fileId: string }).fileId;
   }
 
-  async readFile(fileId: string): Promise<{ bytes: Uint8Array; contentType: string }> {
+  async readFile(fileId: string, options: { maxBytes?: number } = {}): Promise<{ bytes: Uint8Array; contentType: string }> {
     const response = await fetch(`${config.storageUrl}/engine/file?id=${encodeURIComponent(fileId)}`, { headers: this.turnHeaders("application/json"), signal: AbortSignal.timeout(60_000) });
     if (!response.ok) throw new StorageError(response.status, `Storage could not read a file (${response.status})`);
-    return { bytes: new Uint8Array(await response.arrayBuffer()), contentType: response.headers.get("Content-Type") ?? "application/octet-stream" };
+    const contentType = response.headers.get("Content-Type") ?? "application/octet-stream";
+    if (options.maxBytes === undefined) return { bytes: new Uint8Array(await response.arrayBuffer()), contentType };
+    // The stated size is checked before the body is read; a body that runs past it anyway is cut off unread.
+    const max = options.maxBytes;
+    if (Number(response.headers.get("Content-Length") ?? "0") > max) {
+      await response.body?.cancel();
+      throw new FileTooLarge("The file is larger than asked for.");
+    }
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    const reader = response.body?.getReader();
+    while (reader !== undefined) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.length;
+      if (size > max) {
+        await reader.cancel().catch(() => undefined);
+        throw new FileTooLarge("The file is larger than asked for.");
+      }
+      chunks.push(value);
+    }
+    return { bytes: new Uint8Array(Buffer.concat(chunks)), contentType };
   }
 }
 
 /** Whether the person with this token owns the project. Asked before a turn is started, joined or stopped at their request. */
 export async function ownsProject(projectId: string, token: string): Promise<boolean> {
   return (await call<{ owns: boolean }>("/engine/owns", { projectId }, token)).owns;
+}
+
+/**
+ * Whether storage accepts this sign-in token. It asks the owner route about
+ * no project: that route checks the token before anything else, and the
+ * answer about the project is ignored. Any refusal or failure is a no.
+ */
+export async function signedIn(token: string): Promise<boolean> {
+  return call("/engine/owns", { projectId: "" }, token).then(
+    () => true,
+    () => false,
+  );
 }
 
 /** Files a line the person added to memory under a heading. Outside any turn, so it carries the person's token. */

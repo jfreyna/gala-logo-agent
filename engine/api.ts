@@ -27,7 +27,7 @@ import { headingFor } from "./memory.ts";
 import { assertComplete, loadPrompt, type Prompt } from "./prompt.ts";
 import { isStage } from "./steps.ts";
 import type { Stage } from "./store.ts";
-import { ConvexStore, fileMemoryLine, ownsProject, StorageError } from "./store-convex.ts";
+import { ConvexStore, fileMemoryLine, ownsProject, signedIn, StorageError } from "./store-convex.ts";
 
 type Running = { controller: AbortController; finished: Promise<TurnResult | "signin"> };
 
@@ -241,6 +241,8 @@ async function memory(request: IncomingMessage, response: ServerResponse): Promi
   const memoryId = idOf(body?.memoryId);
   const text = typeof body?.text === "string" ? body.text.slice(0, 500) : null;
   if (token === null || memoryId === null || text === null) return json(response, 400, { state: "refused" });
+  // Storage checks the token before Jev is asked anything; storage checks whose line it is when it's filed.
+  if (!(await signedIn(token))) return json(response, 403, { state: "refused" });
   try {
     const group = await headingFor(text);
     await fileMemoryLine(memoryId, group, token);

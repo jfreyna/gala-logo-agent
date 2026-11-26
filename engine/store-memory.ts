@@ -4,7 +4,7 @@
  * on the Sprite against the real models with a scripted person and no
  * sign-in. It is never used to serve anyone.
  */
-import type { HeldIdea, MemoryLine, Operation, Project, Stage, Store, StoredFile, StoredMessage } from "./store.ts";
+import { FileTooLarge, type HeldIdea, type MemoryLine, type Operation, type Project, type Stage, type Store, type StoredFile, type StoredMessage } from "./store.ts";
 
 export class MemoryStore implements Store {
   project: { id: string; brandName: string; stage: Stage } = { id: "project", brandName: "", stage: "brief" };
@@ -118,9 +118,10 @@ export class MemoryStore implements Store {
     return fileId;
   }
 
-  async readFile(fileId: string): Promise<{ bytes: Uint8Array; contentType: string }> {
+  async readFile(fileId: string, options: { maxBytes?: number } = {}): Promise<{ bytes: Uint8Array; contentType: string }> {
     const file = this.files.get(fileId);
     if (file === undefined) throw new Error("File not found.");
+    if (options.maxBytes !== undefined && file.bytes.length > options.maxBytes) throw new FileTooLarge("The file is larger than asked for.");
     return file;
   }
 }

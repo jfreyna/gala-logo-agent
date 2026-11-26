@@ -87,7 +87,13 @@ function send(response, status, headers, body) {
 
 const server = createServer(async (request, response) => {
   // Only the path is ever read or logged; the query string is dropped here.
-  const { pathname } = new URL(request.url ?? "/", "http://localhost");
+  // A target that doesn't parse as an address (two slashes and nothing else, say) is answered, never left to end the server.
+  let pathname;
+  try {
+    ({ pathname } = new URL(request.url ?? "/", "http://localhost"));
+  } catch {
+    return send(response, 400, { "Content-Type": "text/plain; charset=utf-8" }, "Bad request");
+  }
 
   if (pathname === "/healthz") {
     return send(response, 200, { "Content-Type": "text/plain; charset=utf-8" }, "ok");

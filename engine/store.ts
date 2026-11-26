@@ -62,5 +62,9 @@ export interface Store {
   write(operations: Operation[]): Promise<void>;
   end(): Promise<void>;
   saveFile(bytes: Uint8Array, contentType: string): Promise<string>;
-  readFile(fileId: string): Promise<{ bytes: Uint8Array; contentType: string }>;
+  /** With `maxBytes`, a larger file is refused with FileTooLarge before its bytes are read. */
+  readFile(fileId: string, options?: { maxBytes?: number }): Promise<{ bytes: Uint8Array; contentType: string }>;
 }
+
+/** A file larger than the reader asked for; its bytes were not read. */
+export class FileTooLarge extends Error {}

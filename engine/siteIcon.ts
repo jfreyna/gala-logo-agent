@@ -16,7 +16,9 @@
  * address fetched here: only https on the standard port, only host names (no addresses typed in
  * as numbers), every name must resolve to public addresses only, redirects
  * are followed by hand and checked the same way, every answer is capped in
- * size and time. That keeps it off the Sprite's own connectors and any
+ * size and time, each site gets a few places to look and a total time
+ * budget (name lookups included), and an image's stated size is capped
+ * before it is drawn. That keeps it off the Sprite's own connectors and any
  * private network. The address is checked again when each connection is
  * made, by the lookup the connection itself uses, so a name that resolves
  * differently between the check and the fetch (DNS rebinding) is refused.
@@ -36,6 +38,24 @@ const STORED_SIDE = 256;
 const MAX_BYTES = 2_000_000;
 const TIMEOUT_MS = 8_000;
 const MAX_REDIRECTS = 3;
+
+/**
+ * Limits on the whole job for one site: the icon links read from its page
+ * (the best ones come first, so a real site's icon is among them), the
+ * total time spent on the site, and the time one name lookup may take. A
+ * name lookup can't be cancelled, so past its limit it is no longer waited
+ * for. Exported so a check can shorten them; Gala never changes them.
+ */
+export const iconLimits = { candidates: 8, siteBudgetMs: 20_000, lookupMs: 5_000 };
+
+/**
+ * The largest image side Gala draws, and how much longer one side may be
+ * than the other. An icon is roughly square and an og:image about 2 to 1;
+ * a stated size past these is a file that would make the renderer allocate
+ * far more than any icon needs, so it isn't drawn.
+ */
+const MAX_SIDE = 8_192;
+const MAX_RATIO = 4;
 
 /**
  * The longest host a model may name, and the most labels in it. A brand's
@@ -65,8 +85,28 @@ function isPublicAddress(address: string): boolean {
   return true;
 }
 
+/** A name lookup, waited for no longer than its limit or the signal. */
+function lookupWithin(host: string, signal?: AbortSignal): Promise<LookupAddress[]> {
+  const limit = signal === undefined ? AbortSignal.timeout(iconLimits.lookupMs) : AbortSignal.any([signal, AbortSignal.timeout(iconLimits.lookupMs)]);
+  return new Promise((resolve, reject) => {
+    if (limit.aborted) return reject(new Error("The lookup was not waited for."));
+    const give = () => reject(new Error("The lookup took too long."));
+    limit.addEventListener("abort", give, { once: true });
+    lookup(host, { all: true }).then(
+      (addresses) => {
+        limit.removeEventListener("abort", give);
+        resolve(addresses);
+      },
+      (error: unknown) => {
+        limit.removeEventListener("abort", give);
+        reject(error);
+      },
+    );
+  });
+}
+
 /** The address as a URL Gala may fetch, or null. */
-export async function safeUrl(raw: string, base?: URL): Promise<URL | null> {
+export async function safeUrl(raw: string, base?: URL, signal?: AbortSignal): Promise<URL | null> {
   let url: URL;
   try {
     url = new URL(raw, base);
@@ -77,7 +117,7 @@ export async function safeUrl(raw: string, base?: URL): Promise<URL | null> {
   const host = url.hostname.replace(/^\[|\]$/g, "");
   if (isIP(host) !== 0 || !host.includes(".") || host.endsWith(".internal") || host.endsWith(".local") || host === "localhost") return null;
   try {
-    const addresses = await lookup(host, { all: true });
+    const addresses = await lookupWithin(host, signal);
     if (addresses.length === 0 || !addresses.every((entry) => isPublicAddress(entry.address))) return null;
   } catch {
     return null;
@@ -183,7 +223,7 @@ export async function get(start: URL, signal?: AbortSignal, options: { errorPage
     const answer = await request(url, signal ? AbortSignal.any([signal, timeout]) : timeout, wanted).catch(() => null);
     if (answer === null) return null;
     if (answer.status >= 300 && answer.status < 400) {
-      const checked = answer.location === null ? null : await safeUrl(answer.location, url);
+      const checked = answer.location === null ? null : await safeUrl(answer.location, url, signal);
       if (checked === null) return null;
       url = checked;
       continue;
@@ -288,7 +328,57 @@ function asRaster(bytes: Uint8Array): Raster | null {
   return inIco ? asRaster(inIco) : null;
 }
 
-const isSvg = (type: string, bytes: Uint8Array) => type === "image/svg+xml" || /^\s*(<\?xml[^>]*>\s*)?(<!--[\s\S]*?-->\s*)*<svg\b/i.test(new TextDecoder().decode(bytes.subarray(0, 512)));
+/**
+ * True when the bytes are an SVG: the type says so, or the first 512 bytes
+ * open with an svg tag after an optional XML declaration and comments.
+ * Read in one pass, so no body can make the test slow.
+ */
+function isSvg(type: string, bytes: Uint8Array): boolean {
+  if (type === "image/svg+xml") return true;
+  const text = new TextDecoder().decode(bytes.subarray(0, 512));
+  let at = 0;
+  const skipSpace = () => {
+    while (at < text.length && /\s/.test(text[at]!)) at++;
+  };
+  skipSpace();
+  if (text.startsWith("<?xml", at)) {
+    const end = text.indexOf(">", at);
+    if (end === -1) return false;
+    at = end + 1;
+    skipSpace();
+  }
+  while (text.startsWith("<!--", at)) {
+    const end = text.indexOf("-->", at + 4);
+    if (end === -1) return false;
+    at = end + 3;
+    skipSpace();
+  }
+  return /^<svg\b/i.test(text.slice(at, at + 5));
+}
+
+/** True when an image of this stated size is one Gala draws: no side past MAX_SIDE, and no more than MAX_RATIO to 1. */
+function drawableSize(width: number, height: number): boolean {
+  return width > 0 && height > 0 && Math.max(width, height) <= MAX_SIDE && Math.max(width, height) <= MAX_RATIO * Math.min(width, height);
+}
+
+/**
+ * An SVG's stated size, from its root tag: plain numbers (or px) for width
+ * and height, else the viewBox. Null when it says neither in a way read
+ * here (percentages or other units), so nothing unread decides how big the
+ * drawing is.
+ */
+function svgSize(text: string): [number, number] | null {
+  const root = /<svg\b[^>]*>/i.exec(text.slice(0, 4_096))?.[0];
+  if (root === undefined) return null;
+  const plain = (value: string | null) => (value === null ? undefined : /^\s*(\d+(?:\.\d+)?)\s*(px)?\s*$/i.exec(value) ? Number.parseFloat(value) : null);
+  const width = plain(attribute(root, "width"));
+  const height = plain(attribute(root, "height"));
+  if (width === null || height === null) return null;
+  if (width !== undefined && height !== undefined) return [width, height];
+  const box = (attribute(root, "viewBox") ?? "").trim().split(/[\s,]+/).map(Number);
+  if (box.length !== 4 || box.some((entry) => !Number.isFinite(entry))) return null;
+  return [width ?? box[2]!, height ?? box[3]!];
+}
 
 /** An image scaled to `side` pixels wide, as PNG. */
 function scaled(image: { href: string; width: number; height: number }, side: number): Uint8Array {
@@ -303,10 +393,12 @@ export function storable(type: string, bytes: Uint8Array): Uint8Array | null {
       // Drawn only if it refers to nothing outside itself: the renderer would try to load a linked file.
       const text = new TextDecoder().decode(bytes);
       if (/(xlink:)?href\s*=\s*["'](?!#|data:)/i.test(text)) return null;
+      const size = svgSize(text);
+      if (size === null || !drawableSize(size[0], size[1])) return null;
       return rasterize(text, STORED_SIDE);
     }
     const raster = asRaster(bytes);
-    if (raster === null || Math.min(raster.width, raster.height) < MIN_SIDE) return null;
+    if (raster === null || Math.min(raster.width, raster.height) < MIN_SIDE || !drawableSize(raster.width, raster.height)) return null;
     const href = `data:${raster.mime};base64,${Buffer.from(raster.bytes).toString("base64")}`;
     return scaled({ href, width: raster.width, height: raster.height }, Math.min(STORED_SIDE, raster.width));
   } catch {
@@ -318,17 +410,21 @@ export function storable(type: string, bytes: Uint8Array): Uint8Array | null {
 export async function siteIcon(site: string | null, signal?: AbortSignal): Promise<Uint8Array | null> {
   const origin = site === null ? null : originOf(site);
   if (origin === null) return null;
-  const home = await safeUrl(origin);
+  // One budget for the whole site: the page, every candidate, every lookup and redirect.
+  const budget = AbortSignal.timeout(iconLimits.siteBudgetMs);
+  const within = signal === undefined ? budget : AbortSignal.any([signal, budget]);
+  const home = await safeUrl(origin, undefined, within);
   if (home === null) return null;
-  const page = await get(home, signal, { errorPage: true }).catch(() => null);
-  const candidates = page !== null && page.type.includes("html") ? candidatesIn(new TextDecoder().decode(page.bytes)) : [];
+  const page = await get(home, within, { errorPage: true }).catch(() => null);
+  const candidates = page !== null && page.type.includes("html") ? candidatesIn(new TextDecoder().decode(page.bytes)).slice(0, iconLimits.candidates) : [];
   const base = page?.url ?? home;
   // Last, Google's public favicon service, which serves the same site's own icon when the site turns readers away.
   const google = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(home.hostname)}&sz=256`;
   for (const candidate of [...candidates, "/favicon.ico", google]) {
-    const url = await safeUrl(candidate, base);
+    if (within.aborted) return null;
+    const url = await safeUrl(candidate, base, within);
     if (url === null) continue;
-    const file = await get(url, signal).catch(() => null);
+    const file = await get(url, within).catch(() => null);
     if (file === null) continue;
     const png = storable(file.type, file.bytes);
     if (png !== null) return png;

@@ -14,7 +14,16 @@ import { recall } from "./memory.ts";
 import { instructionsFor, type Prompt } from "./prompt.ts";
 import { factsFor, STEP_FACTS } from "./stepFacts.ts";
 import { STEPS, stepIndex, stepIndexOfKind } from "./steps.ts";
-import type { Operation, Project, Stage, Store, StoredMessage } from "./store.ts";
+import { FileTooLarge, type Operation, type Project, type Stage, type Store, type StoredMessage } from "./store.ts";
+
+/**
+ * The most reference images one turn opens, and their bytes in all. Each
+ * image is sent to the model, encoded again for every try, so a pile of
+ * attachments costs the whole server's memory; four is more than a brief
+ * needs, and 20 MB is two files at the upload limit.
+ */
+const MAX_IMAGES = 4;
+const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 
 /**
  * The exits shown after a second dead end, stored on the step's card:
@@ -232,14 +241,40 @@ export class Turn {
       .join("\n");
   }
 
-  /** Reference images the person attached since Gala last answered (`unanswered`). */
+  /** Attached reference images this turn didn't open (past the limits in attachedImages), by file id. */
+  readonly notOpened = new Map<string, string>();
+
+  /**
+   * Reference images the person attached since Gala last answered
+   * (`unanswered`), oldest first, at most MAX_IMAGES of them and
+   * MAX_IMAGE_BYTES in all; the same file attached twice is read once. Each
+   * file's size is checked against what is left before its bytes are read.
+   * An image past the limits is not opened, and is named in `notOpened`, so
+   * the conversation and the step can say so.
+   */
   async attachedImages(): Promise<Image[]> {
     const images: Image[] = [];
+    const seen = new Set<string>();
+    let left = MAX_IMAGE_BYTES;
     for (const message of this.unanswered()) {
       if (message.upload === null || !message.upload.contentType.startsWith("image/")) continue;
-      const file = await this.store.readFile(message.upload.fileId);
-      images.push({ bytes: file.bytes, mime: file.contentType });
+      const { fileId, fileName } = message.upload;
+      if (seen.has(fileId)) continue;
+      seen.add(fileId);
+      if (images.length >= MAX_IMAGES) {
+        this.notOpened.set(fileId, fileName);
+        continue;
+      }
+      try {
+        const file = await this.store.readFile(fileId, { maxBytes: left });
+        left -= file.bytes.length;
+        images.push({ bytes: file.bytes, mime: file.contentType });
+      } catch (error) {
+        if (!(error instanceof FileTooLarge)) throw error;
+        this.notOpened.set(fileId, fileName);
+      }
     }
+    if (this.notOpened.size > 0) console.log(`Attached images: ${images.length} opened, ${this.notOpened.size} past the limit`);
     return images;
   }
 
@@ -253,7 +288,7 @@ export class Turn {
     for (const message of this.state.messages) {
       const role = message.author === "visitor" ? "user" : "model";
       let text = message.text ?? "";
-      if (message.upload !== null) text = `${text}\n[attached a reference: ${message.upload.fileName}]`.trim();
+      if (message.upload !== null) text = `${text}\n[attached a reference: ${message.upload.fileName}${this.notOpened.has(message.upload.fileId) ? "; not opened, past the limit" : ""}]`.trim();
       // A notice is Gala's line about what failed; the model reads its words.
       if (message.kind === "notice" && message.author === "gala") text = typeof message.artifact?.say === "string" ? message.artifact.say : "";
       else if (message.kind === "action" && message.author === "visitor") text = typeof message.artifact?.sent === "string" ? `[pressed a button on the card: ${message.artifact.sent}]` : "";

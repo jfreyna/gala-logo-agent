@@ -42,12 +42,16 @@ export async function brief(turn: Turn): Promise<Outcome> {
   if (turn.unanswered().length === 0) return "wait";
   await turn.status(WORKING.brief);
   const images = await turn.attachedImages();
+  // References past the limit were never opened: Gala is told which, so it says so and never describes them.
+  const notOpened = [...turn.notOpened.values()];
   const moveChecked = await turn.composeCard(
     () =>
       turn.think<BriefMove>({
         section: "brief",
-        task: "Update the brief from what the person has said, and say what comes next. If a reference image is attached, say what you see in it.",
-        facts: { briefSoFar: turn.latest("brief")?.artifact ?? null },
+        task:
+          "Update the brief from what the person has said, and say what comes next. If a reference image is attached, say what you see in it." +
+          (notOpened.length > 0 ? " The references in referencesNotOpened were not opened: say plainly that you didn't open them, and never describe them." : ""),
+        facts: { briefSoFar: turn.latest("brief")?.artifact ?? null, ...(notOpened.length > 0 ? { referencesNotOpened: notOpened } : {}) },
         shape: SHAPE,
         images,
       }),
