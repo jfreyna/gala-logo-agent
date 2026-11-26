@@ -87,7 +87,7 @@ export type Steering =
    * details hold one: Gala offers to do exactly that and asks. The offer is
    * already stored on the step's card (steer.ts), so a yes runs it as is.
    */
-  | { act: "offer"; moveToOffer: string };
+  | { act: "offer"; moveToOffer: string; symbolName?: string };
 
 export class Turn {
   state!: Project;
@@ -429,6 +429,13 @@ export class Turn {
         task: "The person asked for something that belongs to a later step. Say you have kept it for that step, without doing it now. Then say which step the project is on and which step comes next, and ask for what this step is waiting for.",
         facts: { keptForStep: keptFor, whatWasKept: next.idea, currentStep: STEPS[at]!.name, nextStep: STEPS[at + 1]?.name ?? null },
         whatHappened: [`Kept the person's request for ${keptFor}, to be read when that step opens. Nothing was drawn or changed.`],
+      });
+    } else if (next.act === "offer" && next.symbolName !== undefined) {
+      // FRI-1724: a change to the name or the typeface after the symbol was approved. Gala asks whether to keep the symbol.
+      await this.converse(waitingFor, {
+        task: "The person asked to change how the name is set (its case or its typeface) after the symbol, symbolName, was approved. Say you will make that change, and ask in one short question whether to keep symbolName: moveToOffer, or draw new symbols. Do nothing yet.",
+        facts: { moveToOffer: next.moveToOffer, symbolName: next.symbolName },
+        whatHappened: [`Offered to ${next.moveToOffer}, and stored the offer. Nothing was drawn or changed yet.`],
       });
     } else if (next.act === "offer") {
       await this.converse(waitingFor, {

@@ -511,6 +511,24 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholder: "Ask for a change, or start a new project.",
     placeholderMobile: "Ask for a change.",
   },
+  // FRI-1724: after the kit, a lowercase name, and Keep it / Draw new ones (frames 5677:17956 and siblings). At the kit, the kit's placeholder.
+  keepSymbol: {
+    items: [
+      { id: "said", kind: "visitor", text: "Can we make the name all lowercase?" },
+      {
+        id: "keep-line",
+        kind: "gala",
+        text: "Lowercase it is. Keep your symbol, Balanced Flick?",
+        reply: {
+          view: { primary: "Keep it", secondary: "Draw new ones", state: "Default", pressed: null },
+          primary: { type: "answerOffer", answer: "yes", cardId: "stress" },
+          secondary: { type: "answerOffer", answer: "no", cardId: "stress" },
+        },
+      },
+    ],
+    placeholder: "Ask for a change, or start a new project.",
+    placeholderMobile: "Ask for a change.",
+  },
   // FRI-1722: the stress test card with Change something and Approve (frames 5677:18152 and siblings).
   stressActions: {
     items: [

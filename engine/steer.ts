@@ -341,26 +341,75 @@ async function checked(turn: Turn, found: Details, rounds: RoundOption[]): Promi
  * buttons (convex/studio.ts `answerOffer`, FRI-1722): the answer waits on the
  * card for the turn the press wakes.
  */
-export type Offer = { request: Request; moveToOffer: string; afterMessages: number; pressed?: "yes" | "no" };
+export type Offer = { request: Request; moveToOffer: string; afterMessages: number; pressed?: "yes" | "no"; keepSymbol?: KeepSymbol };
+
+/**
+ * FRI-1724: the offer to keep the approved symbol through a change to the
+ * name's case or the typeface. `to` is the step the change goes back to; a
+ * yes keeps the symbol, any other answer takes today's path. Either way the
+ * change itself is made.
+ */
+export type KeepSymbol = { name: string; to: "wordmark" | "type" };
 
 /**
  * An offer once answered, typed or pressed, kept on its card so the reply
  * buttons under the line that made it show Done after a reload (FRI-1722).
  * The standing offer itself is cleared, as before.
  */
-export type AnsweredOffer = { afterMessages: number; answer: "yes" | "no" };
+export type AnsweredOffer = { afterMessages: number; answer: "yes" | "no"; keepSymbol?: true };
 
 /** The card's artifact with its offer cleared and the answer recorded. */
 function answering(card: StoredMessage, offer: Offer, answer: "yes" | "no"): Record<string, unknown> {
   const answered = (card.artifact!.answeredOffers as AnsweredOffer[] | undefined) ?? [];
-  return { ...card.artifact!, offer: null, answeredOffers: [...answered.filter((entry) => entry.afterMessages !== offer.afterMessages), { afterMessages: offer.afterMessages, answer }] };
+  const entry: AnsweredOffer = { afterMessages: offer.afterMessages, answer, ...(offer.keepSymbol !== undefined ? { keepSymbol: true as const } : {}) };
+  return { ...card.artifact!, offer: null, answeredOffers: [...answered.filter((kept) => kept.afterMessages !== offer.afterMessages), entry] };
 }
 
-/** The card an offer at this step is stored on: the newest round, or the lockup card. */
+/** The card an offer at this step is stored on: the newest round, the lockup card, or after the lockup the approved stress test card (FRI-1724). */
 function offerCard(turn: Turn): StoredMessage | null {
   const roundKind = ROUND_KINDS[turn.stage];
   if (roundKind !== undefined) return roundsOf(turn, roundKind).at(-1) ?? null;
-  return turn.stage === "lockup" ? turn.current("lockup") : null;
+  if (turn.stage === "lockup") return turn.current("lockup");
+  return stepIndex(turn.stage) > stepIndex("lockup") ? (approvedSymbol(turn)?.card ?? null) : null;
+}
+
+/**
+ * The approved symbol (FRI-1724): the newest stress test card, approved,
+ * with the name of the variation it tested. Null before the stress test is
+ * approved, or at a step not after it.
+ */
+export function approvedSymbol(turn: Turn): { card: StoredMessage; name: string } | null {
+  if (stepIndex(turn.stage) <= stepIndex("stressTest")) return null;
+  const card = turn.state.messages.findLast((message) => message.author === "gala" && message.kind === "stressTest" && message.artifact !== null) ?? null;
+  if (card === null || card.artifact!.approved !== true) return null;
+  const set = turn.state.messages.findLast((message) => message.kind === "variationSet" && message.artifact !== null)?.artifact;
+  const chosen = (set?.concepts as { id: string; name: string }[] | undefined)?.find((concept) => concept.id === set?.chosenId);
+  return chosen === undefined ? null : { card, name: chosen.name };
+}
+
+/**
+ * A change to the name's case or the typeface, which goes back to `to`.
+ * With an approved symbol, Gala first offers to keep it (FRI-1724); the
+ * change itself waits on the answer. Without one: today's go back.
+ */
+export async function nameChange(turn: Turn, to: "wordmark" | "type", request: Request): Promise<void> {
+  const symbol = approvedSymbol(turn);
+  const card = symbol === null ? null : offerCard(turn);
+  if (symbol === null || card === null) return goBack(turn, to, request);
+  const moveToOffer = `keep ${symbol.name} as the symbol and set it beside the new wordmark, redoing only the lockup and the kit`;
+  const stored: Offer = { request, moveToOffer, afterMessages: turn.state.messages.length, keepSymbol: { name: symbol.name, to } };
+  await turn.write([{ op: "patchArtifact", messageId: card.id, artifact: { ...card.artifact!, offer: stored } }]);
+  console.log(`Steering at ${turn.stage}: a name change after the symbol was approved, so Gala offers to keep ${symbol.name}`);
+  turn.steer({ act: "offer", moveToOffer, symbolName: symbol.name });
+}
+
+/** The answer to a keep-the-symbol offer (FRI-1724): a yes marks the symbol kept; either way the change goes back as today. */
+async function answerKeepSymbol(turn: Turn, offer: Offer, keep: boolean): Promise<void> {
+  if (keep) {
+    const symbol = approvedSymbol(turn);
+    if (symbol !== null) await turn.write([{ op: "patchArtifact", messageId: symbol.card.id, artifact: { ...symbol.card.artifact!, keptSymbol: true } }]);
+  }
+  return goBack(turn, offer.keepSymbol!.to, offer.request);
 }
 
 /**
@@ -436,6 +485,7 @@ export async function steer(turn: Turn, options: { back?: Stage } = {}): Promise
     if (standing?.offer.pressed !== undefined) {
       const answer = standing.offer.pressed;
       await turn.write([{ op: "patchArtifact", messageId: standing.card.id, artifact: answering(standing.card, standing.offer, answer) }]);
+      if (standing.offer.keepSymbol !== undefined) return answerKeepSymbol(turn, standing.offer, answer === "yes");
       if (answer === "no") return turn.steer({ act: "talk" });
       await keep(turn, { ...standing.offer.request, drawing: null }, null);
       return turn.steer({ act: "redo", request: standing.offer.request });
@@ -460,6 +510,15 @@ export async function steer(turn: Turn, options: { back?: Stage } = {}): Promise
   const choices = onScreen?.options ?? [];
   const reading = await read(turn, message, choices, onScreen?.signOff ?? false, standing?.offer.moveToOffer ?? null);
   console.log(describeReading(turn.stage, reading));
+  // A keep-the-symbol offer is answered either way: a yes keeps it, anything else takes today's path (FRI-1724).
+  if (standing?.offer.keepSymbol !== undefined) {
+    const yes = verdictOf(reading.acceptsOffer ?? 0) === "yes";
+    if (yes) {
+      const card = turn.state.messages.find((entry) => entry.id === standing.card.id) ?? standing.card;
+      await turn.write([{ op: "patchArtifact", messageId: card.id, artifact: answering(card, standing.offer, "yes") }]);
+    }
+    return answerKeepSymbol(turn, standing.offer, yes);
+  }
   if (standing !== null && verdictOf(reading.acceptsOffer ?? 0) === "yes" && verdictOf(reading.back) !== "yes") {
     const card = turn.state.messages.find((entry) => entry.id === standing.card.id) ?? standing.card;
     await turn.write([{ op: "patchArtifact", messageId: card.id, artifact: answering(card, standing.offer, "yes") }]);
@@ -551,6 +610,8 @@ export async function steer(turn: Turn, options: { back?: Stage } = {}): Promise
     const asks = change === "no" ? null : request;
     // A typeface is shown only on the type card: going back with one named lands there, whichever later step was named.
     const target = asks !== null && asks.typeface !== null && stepIndex(to.stage) > stepIndex("type") ? "type" : to.stage;
+    // A change to the name or typeface after the symbol was approved: Gala offers to keep the symbol first (FRI-1724).
+    if (asks !== null && (target === "type" || target === "wordmark") && (asks.typeface !== null || asks.nameAs !== null)) return nameChange(turn, target, asks);
     return goBack(turn, target, asks);
   }
 
@@ -586,8 +647,8 @@ export async function steer(turn: Turn, options: { back?: Stage } = {}): Promise
   if (decides === null || (held !== null && !asksForSomething(request))) return turn.steer(keptOnly ?? { act: "ask" });
 
   // A typeface is shown only on the type card, and the name's case only on the wordmark card: a change to either after it goes back there.
-  if (request.typeface !== null && stepIndex(turn.stage) > stepIndex("type")) return goBack(turn, "type", request);
-  if (request.nameAs !== null && stepIndex(turn.stage) > stepIndex("wordmark")) return goBack(turn, "wordmark", request);
+  if (request.typeface !== null && stepIndex(turn.stage) > stepIndex("type")) return nameChange(turn, "type", request);
+  if (request.nameAs !== null && stepIndex(turn.stage) > stepIndex("wordmark")) return nameChange(turn, "wordmark", request);
   // A mark from this step's rounds named with nothing to change in it: that round comes back, as with "go back to it".
   if (request.startFrom && !asksForChange(request)) return bringBack(turn, request.startFrom, marks);
   // At colorways and after, a change goes to the step whose work it is, the colors kept, instead of reopening the color card.

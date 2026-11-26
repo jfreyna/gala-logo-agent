@@ -122,7 +122,17 @@ const action = v.union(
 );
 
 /** The steps whose card can carry an offer, and the card it is stored on (engine/steer.ts `offerCard`). */
-const OFFER_CARDS: Record<string, string> = { directions: "conceptSet", variations: "variationSet", lockup: "lockup" };
+const OFFER_CARDS: Record<string, string> = {
+  directions: "conceptSet",
+  variations: "variationSet",
+  lockup: "lockup",
+  // After the lockup, the keep-the-symbol offer (FRI-1724) is stored on the approved stress test card.
+  pickColors: "stressTest",
+  colorways: "stressTest",
+  kit: "stressTest",
+  picks: "stressTest",
+  done: "stressTest",
+};
 
 export const act = mutation({
   args: { projectId: v.id("projects"), messageId: v.id("messages"), action },

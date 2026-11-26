@@ -59,10 +59,26 @@ async function proceed(turn: Turn, cardId: string, answered: "idea" | "goAhead",
   return "continue";
 }
 
+/**
+ * FRI-1724: the person kept the approved symbol through a change to the
+ * name or the typeface. With the new wordmark approved, the symbol steps are
+ * skipped: the lockup is drawn again with the same mark (it reads the newest
+ * variation round), saved colors stay saved, and the kit is rebuilt.
+ */
+async function keptSymbol(turn: Turn): Promise<Outcome | null> {
+  const stress = turn.state.messages.findLast((message) => message.author === "gala" && message.kind === "stressTest" && message.artifact !== null);
+  if (stress === undefined || stress.artifact!.approved !== true || stress.artifact!.keptSymbol !== true) return null;
+  await turn.write([
+    { op: "patchArtifact", messageId: stress.id, artifact: { ...stress.artifact!, keptSymbol: "used" } },
+    { op: "project", stage: "lockup" },
+  ]);
+  return "continue";
+}
+
 export async function symbolOpener(turn: Turn): Promise<Outcome> {
   const next = turn.take();
   const card = turn.current("symbolOpener");
-  if (card === null) return open(turn);
+  if (card === null) return (await keptSymbol(turn)) ?? open(turn);
 
   // The person described what the symbol should show.
   if (next?.act === "redo") return proceed(turn, card.id, "idea", next.request);

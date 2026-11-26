@@ -80,8 +80,12 @@ export function echoFor(action: EchoAction, card: Record<string, unknown> | null
       return same("Approve");
     case "goAhead":
       return same("Go ahead");
-    case "answerOffer":
+    case "answerOffer": {
+      // The keep-the-symbol offer (FRI-1724) has its own labels.
+      const offer = artifact.offer as { keepSymbol?: unknown } | null | undefined;
+      if (offer?.keepSymbol != null) return same(action.answer === "yes" ? "Keep it" : "Draw new ones");
       return same(action.answer === "yes" ? "Yes, redraw" : "No");
+    }
     case "takeWayOut":
       return same("Back to directions");
     default:

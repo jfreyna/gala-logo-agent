@@ -30,6 +30,8 @@ type Message = { id: string; author: string; kind: string; artifact: Record<stri
 
 /** The approved labels (FRI-1722). */
 export const OFFER_LABELS = { yes: "Yes, redraw", no: "No" } as const;
+/** The keep-the-symbol offer's labels (FRI-1724). */
+export const KEEP_LABELS = { yes: "Keep it", no: "Draw new ones" } as const;
 export const GO_AHEAD = "Go ahead";
 export const EXIT_LABELS = { kit: "Finish in the kit", directions: "Back to directions" } as const;
 
@@ -49,12 +51,12 @@ function lineFrom(messages: Message[], from: number): number {
  */
 export function repliesFor(messages: Message[], pressedHere: Record<string, "primary" | "secondary">, openerStage: boolean): Record<string, LineReply> {
   const rows: Record<string, LineReply> = {};
-  const offerRow = (cardId: string, line: number, state: ReplyView["state"], pressed: ReplyView["pressed"]) => {
+  const offerRow = (cardId: string, line: number, state: ReplyView["state"], pressed: ReplyView["pressed"], keep = false) => {
     const id = messages[line]!.id;
     const here = pressedHere[id];
     const shown = state === "Default" && here !== undefined ? { state: "Working" as const, pressed: here } : { state, pressed };
     rows[id] = {
-      view: { primary: OFFER_LABELS.yes, secondary: OFFER_LABELS.no, ...shown },
+      view: { primary: (keep ? KEEP_LABELS : OFFER_LABELS).yes, secondary: (keep ? KEEP_LABELS : OFFER_LABELS).no, ...shown },
       primary: { type: "answerOffer", answer: "yes", cardId },
       secondary: { type: "answerOffer", answer: "no", cardId },
     };
@@ -62,19 +64,21 @@ export function repliesFor(messages: Message[], pressedHere: Record<string, "pri
 
   messages.forEach((message) => {
     if (message.author !== "gala" || message.artifact === null) return;
-    const answered = Array.isArray(message.artifact.answeredOffers) ? (message.artifact.answeredOffers as { afterMessages: number; answer: string }[]) : [];
+    const answered = Array.isArray(message.artifact.answeredOffers) ? (message.artifact.answeredOffers as { afterMessages: number; answer: string; keepSymbol?: true }[]) : [];
     for (const entry of answered) {
       const line = lineFrom(messages, entry.afterMessages);
-      if (line >= 0) offerRow(message.id, line, "Done", null);
+      if (line >= 0) offerRow(message.id, line, "Done", null, entry.keepSymbol === true);
     }
-    const offer = message.artifact.offer as { afterMessages: number; pressed?: "yes" | "no" } | null | undefined;
+    const offer = message.artifact.offer as { afterMessages: number; pressed?: "yes" | "no"; keepSymbol?: unknown } | null | undefined;
     if (offer !== null && offer !== undefined && typeof offer.afterMessages === "number") {
       const line = lineFrom(messages, offer.afterMessages);
-      if (line < 0) return;
-      const spokenSince = messages.slice(line + 1).some((later) => later.author === "gala");
-      if (spokenSince) offerRow(message.id, line, "Done", null);
-      else if (offer.pressed !== undefined) offerRow(message.id, line, "Working", offer.pressed === "yes" ? "primary" : "secondary");
-      else offerRow(message.id, line, "Default", null);
+      const keep = offer.keepSymbol != null;
+      if (line >= 0) {
+        const spokenSince = messages.slice(line + 1).some((later) => later.author === "gala");
+        if (spokenSince) offerRow(message.id, line, "Done", null, keep);
+        else if (offer.pressed !== undefined) offerRow(message.id, line, "Working", offer.pressed === "yes" ? "primary" : "secondary", keep);
+        else offerRow(message.id, line, "Default", null, keep);
+      }
     }
     const exits = Array.isArray(message.artifact.exits) ? (message.artifact.exits as { afterMessages: number; kitCanFinish: boolean; pressed?: string; answered?: boolean }[]) : [];
     for (const entry of exits) {
