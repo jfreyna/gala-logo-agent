@@ -92,10 +92,17 @@ const CASES: { name: string; stage: Parameters<typeof pastCards>[1]; messages: M
     expect: { cp: { signedOff: true, backTo: "pickColors" }, cw: undefined },
   },
   {
-    name: "cards with no buttons (research, stress test, kit) never get a footer",
+    name: "cards with no buttons (research, kit) never get a footer",
     stage: "picks",
-    messages: [gala("r", "research", {}), gala("s", "stressTest", { approved: true }), gala("k", "kit", {})],
-    expect: { r: undefined, s: undefined, k: undefined },
+    messages: [gala("r", "research", {}), gala("k", "kit", {})],
+    expect: { r: undefined, k: undefined },
+  },
+  {
+    // FRI-1722 gave the stress test Approve and Change something, so once past it shows the footer like every card with buttons.
+    name: "the stress test, now with buttons, shows the footer once past: signed off when approved",
+    stage: "lockup",
+    messages: [gala("s", "stressTest", { approved: true })],
+    expect: { s: { signedOff: true, backTo: "stressTest" } },
   },
 ];
 

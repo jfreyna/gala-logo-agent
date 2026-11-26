@@ -106,7 +106,7 @@ export type WordmarkArtifact = {
 };
 
 /** Gala's line that opens the symbol step. It is drawn as a plain message. */
-export type SymbolOpenerArtifact = { say: string };
+export type SymbolOpenerArtifact = { say: string; ideas?: string[]; answered?: "idea" | "goAhead" | "noSymbol" | null };
 
 export type LockupLayout = "sideBySide" | "stacked";
 export type LockupSpaceBetween = "tight" | "asSet" | "wide";
@@ -134,6 +134,8 @@ export type StressTestArtifact = {
   /** The chosen variation, black on a clear ground. */
   markUrl: string;
   checks: { sixteen: boolean; circle: boolean; inverted: boolean; poster: boolean };
+  /** Set when the person approved the mark, typed or with Approve. */
+  approved?: boolean;
 };
 
 export type BrandColors = { primary: string; secondary: string; tertiary: string | null };

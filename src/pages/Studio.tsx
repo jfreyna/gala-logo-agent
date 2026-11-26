@@ -4,6 +4,8 @@ import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { StudioView } from "../studio/StudioView";
 import { promptFor } from "../studio/promptFor";
+import { repliesFor } from "../studio/replies";
+import { STEP_FACTS } from "../../engine/stepFacts";
 import { WorkPanel } from "../studio/panel/WorkPanel";
 import type { PanelView, Phase } from "../studio/panel/types";
 import { ARTIFACT_KINDS, type ArtifactAction, type ArtifactKind, type StreamItem } from "../studio/streamTypes";
@@ -38,8 +40,6 @@ const PHASES: { key: string; name: string; stages: Stage[] }[] = [
 
 const KIT_FORMATS = ["SVG", "EPS", "PNG", "Square", "Social"];
 
-/** The prompt bar's examples (from the studio's design). */
-const HINTS = ["Here’s what my business does and who it’s for", "Show me the logos my competitors use", "Keep it simple enough to work at 16px"];
 
 /** How many more times a turn that did not run is asked for. */
 const TURN_RETRIES = 3;
@@ -145,6 +145,8 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
   const [pending, setPending] = useState<{ key: number; label: string }[]>([]);
   // The server's own message for what failed, under the control it came from (gala-inline-error), until the next action there.
   const [cardErrors, setCardErrors] = useState<Record<string, string>>({});
+  /** A reply button this page pressed, by the message it sits under, until the stored conversation shows it (FRI-1722). */
+  const [replyPress, setReplyPress] = useState<Record<string, "primary" | "secondary">>({});
   const [memoryErrors, setMemoryErrors] = useState<Record<string, string>>({});
   const [sendError, setSendError] = useState<string | null>(null);
   // A failed Stop request (FRI-1715): its words under the bar, until the next press.
@@ -212,7 +214,10 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
   const items = useMemo<StreamItem[]>(() => {
     const all = messages ?? [];
     // Cards whose step is past show their footer in place of their buttons and chips.
-    const past = stage === undefined ? {} : pastCards(all.map((message) => ({ id: message._id, author: message.author, kind: message.kind, artifact: message.artifact as Record<string, any> | null })), stage);
+    const plain = all.map((message) => ({ id: message._id, author: message.author, kind: message.kind, artifact: message.artifact as Record<string, any> | null }));
+    const past = stage === undefined ? {} : pastCards(plain, stage);
+    // Reply buttons under the lines that offered a move, and Go ahead under the symbol opener (FRI-1722).
+    const replies = repliesFor(plain, replyPress, stage === "symbolOpener");
     const stream = all.flatMap((message, at): StreamItem[] => {
       const id = message._id;
       if (message.kind === "notice" && message.author === "gala" && message.artifact !== null) {
@@ -231,9 +236,10 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
         // The engine writes each artifact in the shape its kind names.
         // While Gala works, a past card's "Back to this step" waits, and says so.
         const history = past[id] === undefined ? undefined : { ...past[id], working: working !== null };
-        return [{ id, kind: message.kind, data: message.artifact, past: history, error: cardErrors[id], downloads: message.kind === "kit" ? downloads : undefined } as unknown as StreamItem];
+        return [{ id, kind: message.kind, data: message.artifact, past: history, error: cardErrors[id], downloads: message.kind === "kit" ? downloads : undefined, reply: replies[id] } as unknown as StreamItem];
       }
-      return [{ id, kind: message.author === "gala" ? "gala" : "visitor", text: message.text ?? "" }];
+      if (message.author === "gala") return [{ id, kind: "gala", text: message.text ?? "", reply: replies[id], error: cardErrors[id] }];
+      return [{ id, kind: "visitor", text: message.text ?? "" }];
     });
     for (const echo of pending) stream.push({ id: `echo-${echo.key}`, kind: "action", label: echo.label, state: "Sending" });
     if (startFailed !== null) {
@@ -243,7 +249,7 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
     // Gala's "working" line, while a turn runs.
     if (working !== null) stream.push({ id: "working", kind: "working", text: working });
     return stream;
-  }, [messages, working, pending, stage, cardErrors, startFailed, downloads, project?.waitingOnGala]);
+  }, [messages, working, pending, stage, cardErrors, startFailed, downloads, project?.waitingOnGala, replyPress]);
 
   /**
    * Sends the message and the file. The box and the attachment are cleared
@@ -334,6 +340,38 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
       .finally(() => setPending((list) => list.filter((entry) => entry.key !== key)));
   }
 
+  /**
+   * "Finish in the kit" (FRI-1722): moves nothing. It brings the kit card
+   * into view and outlines it the way a hand-off outlines the message box
+   * (FRI-1715: a 2px button-1 line, off after the same 6 seconds).
+   */
+  function showKit() {
+    const kits = document.querySelectorAll<HTMLElement>('[data-name="gala-kit"]');
+    const card = kits[kits.length - 1];
+    if (card === undefined) return;
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    const outline = ["outline", "outline-2", "outline-offset-4", "outline-button-1-default-light", "dark:outline-button-1-default-dark", "rounded-[16px]"];
+    card.classList.add(...outline);
+    window.setTimeout(() => card.classList.remove(...outline), HAND_OFF_MS);
+  }
+
+  /** A reply button: shows Working under its line, then stores the action on the card that holds the move. A refusal puts the row back. */
+  function pressReply(lineId: string, which: "primary" | "secondary", cardId: Id<"messages">, recorded: Parameters<typeof act>[0]["action"]) {
+    if (working !== null) return;
+    setReplyPress((presses) => ({ ...presses, [lineId]: which }));
+    const card = cards.find((entry) => entry.id === cardId)?.data ?? null;
+    const echo = echoFor(recorded as EchoAction, card);
+    const key = nextEcho.current++;
+    if (echo !== null) setPending((list) => [...list, { key, label: echo.sending }]);
+    setCardErrors(({ [lineId]: _, ...rest }) => rest);
+    void act({ projectId, messageId: cardId, action: recorded })
+      .catch((error) => {
+        setReplyPress(({ [lineId]: _, ...rest }) => rest);
+        setCardErrors((errors) => ({ ...errors, [lineId]: messageOf(error) }));
+      })
+      .finally(() => setPending((list) => list.filter((entry) => entry.key !== key)));
+  }
+
   /** Try again, on a notice: asks for the turn once more. A turn still owed starts its requests over. */
   function retry() {
     if (startFailed !== null) {
@@ -383,7 +421,19 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
         setText("Change the brief: ");
         return setFocusRequest((value) => value + 1);
       case "changeDirection":
+      case "changeMark":
         return setFocusRequest((value) => value + 1);
+      // A reply button: Working at once, and the same move typing the answer makes (FRI-1722).
+      case "answerOffer":
+        return pressReply(itemId, action.answer === "yes" ? "primary" : "secondary", action.cardId as Id<"messages">, { type: "answerOffer", answer: action.answer });
+      case "goAhead":
+        return pressReply(itemId, "primary", messageId, { type: "goAhead" });
+      case "takeWayOut": {
+        const row = items.find((item) => item.id === itemId)?.reply?.view;
+        return pressReply(itemId, row?.secondary === null ? "primary" : "secondary", action.cardId as Id<"messages">, { type: "takeWayOut" });
+      }
+      case "finishInKit":
+        return showKit();
       case "changeType":
         return setPanel({ view: "type", messageId, cardId: action.id, group: "All", moods: null });
       // "Change typeface" and "Change symbol" take the same path as going back to that step.
@@ -562,7 +612,8 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
           if (file?.previewUrl) URL.revokeObjectURL(file.previewUrl);
           setFile(null);
         },
-        hints: HINTS,
+        // The step's Hints, from the same table as what Gala knows the step can do (engine/stepFacts.ts, FRI-1722).
+        hints: STEP_FACTS[project.stage].hints,
         focusRequest,
       }}
     />

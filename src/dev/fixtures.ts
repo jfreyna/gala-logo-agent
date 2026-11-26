@@ -86,6 +86,14 @@ const stressTest: StreamItem = {
   },
 };
 
+/** Reply buttons under a line, as the studio builds them (src/studio/replies.ts). */
+const offerReply = {
+  view: { primary: "Yes, redraw", secondary: "No", state: "Default" as const, pressed: null },
+  primary: { type: "answerOffer" as const, answer: "yes" as const, cardId: "variations" },
+  secondary: { type: "answerOffer" as const, answer: "no" as const, cardId: "variations" },
+};
+const goAheadReply = { view: { primary: "Go ahead", secondary: null, state: "Default" as const, pressed: null }, primary: { type: "goAhead" as const } };
+
 const colorPickerSay = "Now it’s time to pick your colors. Primary leads, secondary supports, and tertiary is optional.";
 
 const lockup = (mark: string, color: string, size: number, text: number | null, stacked = false) =>
@@ -460,6 +468,69 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholder: AFTER_BRIEF,
     placeholderMobile: AFTER_BRIEF,
   },
+  // FRI-1722: the symbol opener with Go ahead (frames 5677:18540 and siblings).
+  openerGoAhead: {
+    items: [
+      {
+        id: "opener",
+        kind: "symbolOpener",
+        data: {
+          say: "Your name is set. For the symbol, I'd start from a droplet with a soft flick, a brush stroke that turns into a tile, or a palette cut to one curve. Tell me what it should show, or I'll draw these.",
+        },
+        reply: goAheadReply,
+      },
+    ],
+    placeholder: AFTER_BRIEF,
+    placeholderMobile: AFTER_BRIEF,
+  },
+  // FRI-1722: a words-only reply that offered a move, with Yes, redraw / No (frames 5677:17564 and siblings).
+  offer: {
+    items: [
+      { id: "said", kind: "visitor", text: "Instead of nine squares, three offset bars stacked: the bottom one starts in the middle, the second shifts left, the top one shifts right and is cut to a triangle." },
+      { id: "offer-line", kind: "gala", text: "I haven't drawn that yet. Should I redraw the three with that?", reply: offerReply },
+    ],
+    placeholder: AFTER_BRIEF,
+    placeholderMobile: AFTER_BRIEF,
+  },
+  // FRI-1722: a second dead end at the kit, with its two exits (frames 5677:17760 and siblings).
+  deadEnd: {
+    items: [
+      { id: "said", kind: "visitor", text: "Make the top of the droplet green and the base purple." },
+      {
+        id: "dead-end-line",
+        kind: "gala",
+        text: "I still can't put two colors inside one symbol. You can finish that in the kit, whose vector files open in Figma, or go back to the directions.",
+        reply: {
+          view: { primary: "Finish in the kit", secondary: "Back to directions", state: "Default", pressed: null },
+          primary: { type: "finishInKit" },
+          secondary: { type: "takeWayOut", cardId: "kit" },
+        },
+      },
+    ],
+    // At the kit the bar keeps the kit's own placeholder (the Gala seat's gate-read on FRI-1721).
+    placeholder: "Ask for a change, or start a new project.",
+    placeholderMobile: "Ask for a change.",
+  },
+  // FRI-1722: the stress test card with Change something and Approve (frames 5677:18152 and siblings).
+  stressActions: {
+    items: [
+      {
+        ...stressTest,
+        data: { ...(stressTest as { data: object }).data, say: "Hearth, against the real world. It passes all four: it still reads at 16 pixels, in a circle, inverted and on a poster. Approve the mark, or ask for a change." },
+      } as StreamItem,
+    ],
+    placeholder: AFTER_BRIEF,
+    placeholderMobile: AFTER_BRIEF,
+  },
+  // FRI-1722: the echo settled under Gala's line, with no reply (frames 5677:18724 and siblings).
+  settled: {
+    items: [
+      { id: "line", kind: "gala", text: "Three variations of Wide Channels. I recommend Half Step: the shorter base keeps the stagger sharp in small avatars." },
+      { id: "echo", kind: "action", label: "Picked Half Step", state: echoState({ wakes: true, later: [], working: null, waitingOnGala: false }) },
+    ],
+    placeholder: AFTER_BRIEF,
+    placeholderMobile: AFTER_BRIEF,
+  },
   lockup: { items: [{ id: "approve", kind: "visitor", text: "Approve Hearth." }, lockupCard("sideBySide")], placeholder: "Approve the lockup, or ask for a change.", placeholderMobile: "Approve, or ask for a change." },
   // Not drawn in the design file: the lockup card with Stacked selected, for a look at the build's reading of it.
   lockupStacked: { items: [lockupCard("stacked")], placeholder: "Approve the lockup, or ask for a change.", placeholderMobile: "Approve, or ask for a change." },
@@ -510,7 +581,8 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholderMobile: AFTER_BRIEF,
   },
   pickColors: {
-    items: [stressTest, { id: "picker", kind: "colorPicker", data: { say: colorPickerSay, colors: { primary: PRIMARY, secondary: SECONDARY, tertiary: TERTIARY }, saved: false } }],
+    // Past the stress test, its card shows the footer in place of its buttons (FRI-1722), as in the studio.
+    items: [{ ...stressTest, past: { signedOff: true, backTo: "stressTest" } } as StreamItem, { id: "picker", kind: "colorPicker", data: { say: colorPickerSay, colors: { primary: PRIMARY, secondary: SECONDARY, tertiary: TERTIARY }, saved: false } }],
     placeholder: "Or describe your colors in words.",
     placeholderMobile: "Or describe your colors in words.",
   },

@@ -11,5 +11,5 @@ export const HAND_OFF_MS = 6000;
 
 /** True when this action hands the next move to the message box. */
 export function handsOff(action: { type: string; action?: { do?: string } }): boolean {
-  return action.type === "changeDirection" || action.type === "editBrief" || (action.type === "notice" && action.action?.do === "prompt");
+  return action.type === "changeDirection" || action.type === "changeMark" || action.type === "editBrief" || (action.type === "notice" && action.action?.do === "prompt");
 }

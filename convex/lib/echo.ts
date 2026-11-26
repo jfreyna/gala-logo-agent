@@ -16,7 +16,7 @@
  */
 
 /** What was pressed, as `act` receives it. Only the fields the words need. */
-export type EchoAction = { type: string; id?: string; family?: string; hated?: unknown; loved?: unknown };
+export type EchoAction = { type: string; id?: string; family?: string; hated?: unknown; loved?: unknown; answer?: string };
 
 /** The two lines: while it is on its way, and once Gala has it. */
 export type Echo = { sending: string; sent: string };
@@ -75,6 +75,15 @@ export function echoFor(action: EchoAction, card: Record<string, unknown> | null
       return { sending: "Sending your picks to the halls", sent: "Sent your picks to the halls" };
     case "declinePicks":
       return same("No picks for the halls");
+    // The reply buttons and the stress test's Approve leave the button's own words (FRI-1722).
+    case "approveMark":
+      return same("Approve");
+    case "goAhead":
+      return same("Go ahead");
+    case "answerOffer":
+      return same(action.answer === "yes" ? "Yes, redraw" : "No");
+    case "takeWayOut":
+      return same("Back to directions");
     default:
       return null;
   }

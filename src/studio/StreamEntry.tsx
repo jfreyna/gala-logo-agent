@@ -13,6 +13,7 @@ import { ColorwaySet } from "./artifacts/ColorwaySet";
 import { Kit } from "./artifacts/Kit";
 import { Picks } from "./artifacts/Picks";
 import { ActionEcho, InlineError, Notice } from "./Feedback";
+import { ReplyButtons } from "./ReplyButtons";
 import type { ArtifactAction, StreamItem } from "./streamTypes";
 
 /** Draws one item of the conversation, and under a card, the message for an action on it that failed. */
@@ -26,12 +27,27 @@ export function StreamEntry({ item, onAction }: { item: StreamItem; onAction: (a
   );
 }
 
+/** A Gala line, with its reply buttons under it when it offered a move (gala-reply-buttons, FRI-1722). */
+function GalaLine({ text, reply, onAction }: { text: string; reply: StreamItem["reply"]; onAction: (action: ArtifactAction) => void }) {
+  if (reply === undefined) return <GalaMessage>{text}</GalaMessage>;
+  return (
+    <div className="relative flex w-full shrink-0 flex-col items-start gap-[12px]" data-name="gala-line-with-reply">
+      <GalaMessage>{text}</GalaMessage>
+      <ReplyButtons
+        reply={reply.view}
+        onPrimary={() => onAction(reply.primary)}
+        onSecondary={reply.secondary === undefined ? undefined : () => onAction(reply.secondary!)}
+      />
+    </div>
+  );
+}
+
 function Entry({ item, onAction }: { item: StreamItem; onAction: (action: ArtifactAction) => void }) {
   // A card whose step is past shows its footer in place of its buttons and chips; "Back to this step" goes back to it.
   const history = { past: item.past, onBack: () => onAction({ type: "backToStep" }) };
   switch (item.kind) {
     case "gala":
-      return <GalaMessage>{item.text}</GalaMessage>;
+      return <GalaLine text={item.text} reply={item.reply} onAction={onAction} />;
     case "visitor":
       return <VisitorMessage>{item.text}</VisitorMessage>;
     case "working":
@@ -69,14 +85,14 @@ function Entry({ item, onAction }: { item: StreamItem; onAction: (action: Artifa
         />
       );
     case "symbolOpener":
-      // The opener is Gala speaking: no card, only her line.
-      return <GalaMessage>{item.data.say}</GalaMessage>;
+      // The opener is Gala speaking: no card, only the line, and Go ahead under it (FRI-1722).
+      return <GalaLine text={item.data.say} reply={item.reply} onAction={onAction} />;
     case "conceptSet":
       return <ConceptSet data={item.data} onChoose={(id) => onAction({ type: "chooseConcept", id })} {...history} />;
     case "variationSet":
       return <VariationSet data={item.data} onChoose={(id) => onAction({ type: "chooseVariation", id })} {...history} />;
     case "stressTest":
-      return <StressTest data={item.data} />;
+      return <StressTest data={item.data} onApprove={() => onAction({ type: "approveMark" })} onChange={() => onAction({ type: "changeMark" })} {...history} />;
     case "lockup":
       return (
         <Lockup

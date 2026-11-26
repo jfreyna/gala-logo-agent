@@ -39,7 +39,7 @@ export const STEP_ORDER: { stage: Stage; kinds: string[]; canReturn: boolean }[]
 ];
 
 /** The cards that carry buttons or chips, and so become read-only once past. */
-export const HISTORY_KINDS = ["brief", "direction", "typeSet", "wordmark", "conceptSet", "variationSet", "lockup", "colorPicker", "colorwaySet"] as const;
+export const HISTORY_KINDS = ["brief", "direction", "typeSet", "wordmark", "conceptSet", "variationSet", "stressTest", "lockup", "colorPicker", "colorwaySet"] as const;
 
 /** How a read-only card's footer reads. `backTo` is the step "Back to this step" returns to, or null when going back there is not possible. */
 export type Past = {
@@ -64,6 +64,7 @@ export function isSignedOff(kind: string, artifact: Record<string, any>): boolea
   switch (kind) {
     case "direction":
     case "wordmark":
+    case "stressTest":
     case "lockup":
       return artifact.approved === true;
     case "typeSet":

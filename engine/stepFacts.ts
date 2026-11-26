@@ -35,6 +35,21 @@ export type StepFacts = {
   cantDo: CantDo[];
   /** The exact way out, for the second words-only reply in a row at this step. */
   wayOut: string;
+  /** The prompt bar's Hints at this step: example lines the person can press to fill the box (FRI-1722, the founder's approved copy, one set per step group). */
+  hints: string[];
+};
+
+/**
+ * The Hints, per step group, verbatim as the founder approved them on
+ * FRI-1722 (2026-11-25). Fixed copy: each is a move the step's row can make.
+ */
+const HINTS = {
+  brief: ["Here's what my business does and who it's for", "My logo will live on a sign and an app icon", "Three things my brand must never be"],
+  type: ["Show me a rounder typeface", "Make the name lowercase", "Use the typeface I already have"],
+  symbol: ["Here's what the symbol should show", "Pick 2 and make the base heavier", "Bring back the one from the earlier round"],
+  lockup: ["Put the symbol above the name", "More space between the symbol and the name", "Change the symbol"],
+  color: ["A warm red as primary, cream as secondary", "Show it on a dark background", "Change my colors"],
+  kit: ["What's in the kit?", "Make the name lowercase and keep the symbol", "Start a new logo"],
 };
 
 /** What the kit holds, the same at every step (kit/). */
@@ -66,16 +81,19 @@ export const STEP_FACTS: Record<Stage, StepFacts> = {
     canDo: ["answer the brief's questions", "send a reference image"],
     cantDo: [],
     wayOut: "tell me the brand's name and what it does, and I'll start the research",
+    hints: HINTS.brief,
   },
   research: {
     canDo: ["approve the direction", "ask for a change to the direction"],
     cantDo: [NO_IMAGES, { what: "redo the research itself", reason: "the research runs once; the direction is what changes", kitCanFinish: false }],
     wayOut: "say what the direction should feel like instead, and I'll revise it",
+    hints: HINTS.brief,
   },
   type: {
     canDo: ["choose one of the three typefaces", "swap a card's typeface for any Google Fonts family in the tray", "ask for three new typefaces", "set the name in another case"],
     cantDo: [NO_IMAGES, { what: "use a typeface that isn't on Google Fonts", reason: "I set type only from Google Fonts' families", kitCanFinish: false }],
     wayOut: "name a Google Fonts family and I'll set the name in it, or press Choose on one of the three",
+    hints: HINTS.type,
   },
   wordmark: {
     canDo: ["set the case: as typed, all caps or lowercase", "set the letter spacing: tight, as drawn or wide", "go back and change the typeface", "use this wordmark"],
@@ -85,26 +103,31 @@ export const STEP_FACTS: Record<Stage, StepFacts> = {
       { what: "change the name beyond its case", reason: "the name is the brand's name from the brief", kitCanFinish: false },
     ],
     wayOut: "pick another typeface whose weight you like, or use this wordmark and finish the details from the kit",
+    hints: HINTS.type,
   },
   symbolOpener: {
     canDo: ["describe what the symbol should show, and I'll draw three directions", "say go ahead, and I'll draw three", "ask for a logo of the name alone"],
     cantDo: [NO_IMAGES, { what: "use a symbol the person drew or uploaded", reason: "I draw every symbol myself so it can be checked and traced", kitCanFinish: false }, LETTERS_IN_MARK],
     wayOut: "describe the symbol you have in mind in words, and I'll draw three directions from it",
+    hints: HINTS.symbol,
   },
   directions: {
     canDo: ["pick direction A, B or C", "describe a change, and I'll draw three new directions", "name a direction from an earlier round to work from"],
     cantDo: [NO_IMAGES, SET_ASIDE, LETTERS_IN_MARK],
     wayOut: "describe the mark you want in words, and I'll draw three new directions from that description",
+    hints: HINTS.symbol,
   },
   variations: {
     canDo: ["pick variation 1, 2 or 3", "describe a change, and I'll draw three new variations", "name a mark from an earlier round to work from", "go back to the directions"],
     cantDo: [NO_IMAGES, SET_ASIDE, LETTERS_IN_MARK],
     wayOut: "go back to the directions with a description of the mark you want, and I'll draw three new directions from it",
+    hints: HINTS.symbol,
   },
   stressTest: {
     canDo: ["approve the mark", "ask for a change, and I'll draw three new variations from it"],
     cantDo: [NO_IMAGES],
     wayOut: "approve the mark to go on to the lockup, or describe the change you want",
+    hints: HINTS.symbol,
   },
   lockup: {
     canDo: ["set the layout: side by side or stacked", "set the space between the symbol and the name: tight, as set or wide", "change the symbol", "use this lockup"],
@@ -115,31 +138,37 @@ export const STEP_FACTS: Record<Stage, StepFacts> = {
       { what: "add the tagline to the lockup", reason: "the lockup holds the symbol and the name only", kitCanFinish: true },
     ],
     wayOut: "use this lockup and finish the sizing from the kit, or change the symbol",
+    hints: HINTS.lockup,
   },
   pickColors: {
     canDo: ["pick a primary, a secondary and an optional tertiary color", "describe the colors in words"],
     cantDo: [NO_IMAGES, GRADIENT],
     wayOut: "type a hex value for each color, or describe them in words and I'll fill the card in",
+    hints: HINTS.color,
   },
   colorways: {
     canDo: ["pick colorway A, B or C", "edit the colors", "change the symbol or the lockup, keeping the colors"],
     cantDo: [NO_IMAGES, TWO_COLORS, GRADIENT],
     wayOut: "pick the colorway closest to what you want and finish the color from the kit, or edit your colors",
+    hints: HINTS.color,
   },
   kit: {
     canDo: ["download the files", "go back to any step to change it"],
     cantDo: [NO_IMAGES, TWO_COLORS, COMBINE_KITS],
     wayOut: "download the kit and finish the details in Figma, or go back to the step you want to change",
+    hints: HINTS.kit,
   },
   picks: {
     canDo: ["submit your best and worst picks for the halls", "choose not to submit", "go back to any step to change it"],
     cantDo: [NO_IMAGES, COMBINE_KITS],
     wayOut: "submit your picks or choose not to; the kit stays yours either way",
+    hints: HINTS.kit,
   },
   done: {
     canDo: ["download the files", "go back to any step to change it", "start a new project"],
     cantDo: [NO_IMAGES, TWO_COLORS, COMBINE_KITS],
     wayOut: "go back to the step you want to change, or start a new project",
+    hints: HINTS.kit,
   },
 };
 

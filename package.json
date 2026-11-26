@@ -43,6 +43,7 @@
     "check:honest": "node --experimental-strip-types --no-warnings engine/checks/honest.check.ts",
     "check:knows": "node --experimental-strip-types --no-warnings engine/checks/knows.check.ts",
     "check:no-clip": "node --experimental-strip-types --no-warnings engine/checks/no-clip.check.ts",
+    "check:buttons": "node --experimental-strip-types --no-warnings engine/checks/buttons.check.ts",
     "sweep:fonts": "node --experimental-strip-types --no-warnings engine/checks/font-sweep.ts",
     "check:backdrops": "node scripts/check-backdrops.mjs",
     "measure:backdrops": "node scripts/measure-backdrops.mjs"

@@ -111,7 +111,18 @@ const action = v.union(
   v.object({ type: v.literal("declinePicks") }),
   /** The first finished download from the kit (any format, or Download kit): Gala then offers the halls (FRI-1723). */
   v.object({ type: v.literal("kitDownloaded") }),
+  /** "Approve" on the stress test card: the same approval a typed one is (FRI-1722). */
+  v.object({ type: v.literal("approveMark") }),
+  /** "Go ahead" under the symbol opener: the same as saying go ahead (FRI-1722). */
+  v.object({ type: v.literal("goAhead") }),
+  /** "Yes, redraw" or "No" under the line that offered a move: the answer to the offer stored on this card (FRI-1722). */
+  v.object({ type: v.literal("answerOffer"), answer: v.union(v.literal("yes"), v.literal("no")) }),
+  /** "Back to directions" under a second dead end's line: the go back with the person's description, as typing it does (FRI-1722). */
+  v.object({ type: v.literal("takeWayOut") }),
 );
+
+/** The steps whose card can carry an offer, and the card it is stored on (engine/steer.ts `offerCard`). */
+const OFFER_CARDS: Record<string, string> = { directions: "conceptSet", variations: "variationSet", lockup: "lockup" };
 
 export const act = mutation({
   args: { projectId: v.id("projects"), messageId: v.id("messages"), action },
@@ -259,6 +270,56 @@ export const act = mutation({
         const { artifact } = await card(ctx, projectId, messageId, "picks");
         if (artifact.answered !== null && artifact.answered !== undefined) throw new ConvexError("Your picks are already in.");
         await ctx.db.patch(messageId, { artifact: { ...artifact, answered: "declined" } });
+        waitingOnGala = true;
+        break;
+      }
+      case "approveMark": {
+        if (project.stage !== "stressTest") throw new ConvexError("That step is done.");
+        const { artifact } = await card(ctx, projectId, messageId, "stressTest");
+        await ctx.db.patch(messageId, { artifact: { ...artifact, approved: true } });
+        waitingOnGala = true;
+        break;
+      }
+      case "goAhead": {
+        if (project.stage !== "symbolOpener") throw new ConvexError("That step is done.");
+        const { artifact } = await card(ctx, projectId, messageId, "symbolOpener");
+        if (artifact.answered !== null && artifact.answered !== undefined) throw new ConvexError("That step is done.");
+        await ctx.db.patch(messageId, { artifact: { ...artifact, answered: "goAhead" } });
+        waitingOnGala = true;
+        break;
+      }
+      case "answerOffer": {
+        // Only an offer still standing: Gala has written nothing since the line that made it, and it has no answer yet.
+        const kind = OFFER_CARDS[project.stage];
+        if (kind === undefined) throw new ConvexError("That step is done.");
+        const { artifact } = await card(ctx, projectId, messageId, kind);
+        const offer = artifact.offer as { afterMessages: number; pressed?: string } | null | undefined;
+        if (offer === null || offer === undefined || offer.pressed !== undefined) throw new ConvexError("That question has its answer.");
+        const messages = await ctx.db
+          .query("messages")
+          .withIndex("by_project", (q) => q.eq("projectId", projectId))
+          .order("asc")
+          .collect();
+        if (messages.slice(offer.afterMessages + 1).some((message) => message.author === "gala")) throw new ConvexError("That question has its answer.");
+        await ctx.db.patch(messageId, { artifact: { ...artifact, offer: { ...offer, pressed: action.answer } } });
+        waitingOnGala = true;
+        break;
+      }
+      case "takeWayOut": {
+        // Only the newest exits on this card, unanswered, with nothing Gala wrote after the line they sit under.
+        const message = await ctx.db.get(messageId);
+        if (message === null || message.projectId !== projectId || message.author !== "gala") throw new ConvexError("Card not found.");
+        const artifact = (message.artifact ?? {}) as Artifact;
+        const exits = Array.isArray(artifact.exits) ? (artifact.exits as { afterMessages: number; pressed?: string; answered?: boolean }[]) : [];
+        const newest = exits[exits.length - 1];
+        if (newest === undefined || newest.pressed !== undefined || newest.answered === true) throw new ConvexError("That question has its answer.");
+        const messages = await ctx.db
+          .query("messages")
+          .withIndex("by_project", (q) => q.eq("projectId", projectId))
+          .order("asc")
+          .collect();
+        if (messages.slice(newest.afterMessages + 1).some((later) => later.author === "gala")) throw new ConvexError("That question has its answer.");
+        await ctx.db.patch(messageId, { artifact: { ...artifact, exits: [...exits.slice(0, -1), { ...newest, pressed: "directions" }] } });
         waitingOnGala = true;
         break;
       }

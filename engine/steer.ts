@@ -48,7 +48,7 @@ import { markOf, optionLabel, pickedRound, roundOptions, roundsOf, type RoundKin
 import { CASE, inCase, LAYOUT, readSettings, SPACE_BETWEEN, SPACING } from "./settings.ts";
 import { earlierSteps, laterSteps, STEPS, stepIndex, SYMBOL_STEPS, type Step } from "./steps.ts";
 import type { Stage, StoredMessage } from "./store.ts";
-import type { MarkRef, Request, Steering, Turn } from "./turn.ts";
+import type { Exits, MarkRef, Request, Steering, Turn } from "./turn.ts";
 
 /**
  * Half the width of the unsure band around 0.5. One number for every
@@ -335,8 +335,26 @@ async function checked(turn: Turn, found: Details, rounds: RoundOption[]): Promi
   return { request, problem: null };
 }
 
-/** An offer Gala made: the exact request a yes runs, its words, and where the conversation stood when it was made. */
-export type Offer = { request: Request; moveToOffer: string; afterMessages: number };
+/**
+ * An offer Gala made: the exact request a yes runs, its words, and where the
+ * conversation stood when it was made. `pressed` is set by the reply
+ * buttons (convex/studio.ts `answerOffer`, FRI-1722): the answer waits on the
+ * card for the turn the press wakes.
+ */
+export type Offer = { request: Request; moveToOffer: string; afterMessages: number; pressed?: "yes" | "no" };
+
+/**
+ * An offer once answered, typed or pressed, kept on its card so the reply
+ * buttons under the line that made it show Done after a reload (FRI-1722).
+ * The standing offer itself is cleared, as before.
+ */
+export type AnsweredOffer = { afterMessages: number; answer: "yes" | "no" };
+
+/** The card's artifact with its offer cleared and the answer recorded. */
+function answering(card: StoredMessage, offer: Offer, answer: "yes" | "no"): Record<string, unknown> {
+  const answered = (card.artifact!.answeredOffers as AnsweredOffer[] | undefined) ?? [];
+  return { ...card.artifact!, offer: null, answeredOffers: [...answered.filter((entry) => entry.afterMessages !== offer.afterMessages), { afterMessages: offer.afterMessages, answer }] };
+}
 
 /** The card an offer at this step is stored on: the newest round, or the lockup card. */
 function offerCard(turn: Turn): StoredMessage | null {
@@ -356,6 +374,26 @@ export function pendingOffer(turn: Turn): { card: StoredMessage; offer: Offer } 
   if (card === null || offer === null || offer === undefined) return null;
   const galaSince = turn.state.messages.slice(offer.afterMessages + 1).some((message) => message.author === "gala");
   return galaSince ? null : { card, offer };
+}
+
+/**
+ * A "Back to directions" press waiting for this turn (FRI-1722): stored on
+ * a card's newest exits, with no answer yet and nothing Gala wrote after
+ * the line it sits under. `description` is the person's last words before
+ * that line, carried as the drawing request the way a typed "go back to the
+ * directions with this" carries it.
+ */
+export function pressedExit(turn: Turn): { card: StoredMessage; exits: Exits; all: Exits[]; description: string | null } | null {
+  for (const card of [...turn.state.messages].reverse()) {
+    if (card.author !== "gala" || card.artifact === null || !Array.isArray(card.artifact.exits)) continue;
+    const all = card.artifact.exits as Exits[];
+    const exits = all.at(-1);
+    if (exits === undefined || exits.pressed !== "directions" || exits.answered === true) return null;
+    if (turn.state.messages.slice(exits.afterMessages + 1).some((message) => message.author === "gala")) return null;
+    const said = turn.state.messages.slice(0, exits.afterMessages).findLast((message) => message.author === "visitor" && (message.text ?? "").trim() !== "");
+    return { card, exits, all, description: said?.text?.trim() ?? null };
+  }
+  return null;
 }
 
 /** The offer in plain words, from the request itself: what would be drawn, from which mark. */
@@ -393,6 +431,21 @@ export async function steer(turn: Turn, options: { back?: Stage } = {}): Promise
   const message = turn.unansweredText();
   turn.said = message;
   if (message === "") {
+    // A reply button on an offer (FRI-1722): exactly what the typed answer does. A yes runs the stored request; a no clears it, and Gala answers the press.
+    const standing = pendingOffer(turn);
+    if (standing?.offer.pressed !== undefined) {
+      const answer = standing.offer.pressed;
+      await turn.write([{ op: "patchArtifact", messageId: standing.card.id, artifact: answering(standing.card, standing.offer, answer) }]);
+      if (answer === "no") return turn.steer({ act: "talk" });
+      await keep(turn, { ...standing.offer.request, drawing: null }, null);
+      return turn.steer({ act: "redo", request: standing.offer.request });
+    }
+    // "Back to directions" after a second dead end (FRI-1722): the typed path, a go back to the directions with the person's last description.
+    const exit = pressedExit(turn);
+    if (exit !== null) {
+      await turn.write([{ op: "patchArtifact", messageId: exit.card.id, artifact: { ...exit.card.artifact!, exits: exit.all.map((entry) => (entry === exit.exits ? { ...entry, answered: true } : entry)) } }]);
+      return goBack(turn, "directions", exit.description === null ? null : { ...NOTHING, drawing: exit.description });
+    }
     // A file with no words still gets an answer, never silence. A button press has no file and is answered by its step.
     const files = turn.unanswered().flatMap((entry) => (entry.upload !== null ? [entry.upload.fileName] : []));
     if (files.length > 0) turn.steer({ act: "talk", facts: { sentAFileWithNoWords: files } });
@@ -401,13 +454,15 @@ export async function steer(turn: Turn, options: { back?: Stage } = {}): Promise
 
   // An offer is answered by the next message only: it is cleared whatever that message says, and a yes runs it exactly.
   const standing = pendingOffer(turn);
-  if (standing !== null) await turn.write([{ op: "patchArtifact", messageId: standing.card.id, artifact: { ...standing.card.artifact!, offer: null } }]);
+  if (standing !== null) await turn.write([{ op: "patchArtifact", messageId: standing.card.id, artifact: answering(standing.card, standing.offer, "no") }]);
 
   const onScreen = optionsOnScreen(turn);
   const choices = onScreen?.options ?? [];
   const reading = await read(turn, message, choices, onScreen?.signOff ?? false, standing?.offer.moveToOffer ?? null);
   console.log(describeReading(turn.stage, reading));
   if (standing !== null && verdictOf(reading.acceptsOffer ?? 0) === "yes" && verdictOf(reading.back) !== "yes") {
+    const card = turn.state.messages.find((entry) => entry.id === standing.card.id) ?? standing.card;
+    await turn.write([{ op: "patchArtifact", messageId: card.id, artifact: answering(card, standing.offer, "yes") }]);
     await keep(turn, { ...standing.offer.request, drawing: null }, null);
     return turn.steer({ act: "redo", request: standing.offer.request });
   }

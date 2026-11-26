@@ -207,9 +207,9 @@ check("studio: Hints opens the three lines, and pressing one fills the prompt", 
   await click(page, "Hints›");
   await wait(100);
   const opened = (await page.$('[data-name="gala-prompt-hints"]')) !== null;
-  await click(page, "Show me the logos my competitors use");
+  await click(page, "My logo will live on a sign and an app icon");
   await wait(100);
-  const filled = await page.evaluate(() => [...document.querySelectorAll("textarea")].some((field) => field.value === "Show me the logos my competitors use"));
+  const filled = await page.evaluate(() => [...document.querySelectorAll("textarea")].some((field) => field.value === "My logo will live on a sign and an app icon"));
   return opened && filled && (await page.$('[data-name="gala-prompt-hints"]')) === null;
 });
 

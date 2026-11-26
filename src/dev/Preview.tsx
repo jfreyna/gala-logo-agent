@@ -8,6 +8,8 @@ import { HeroGlows } from "../backdrops/HeroGlows";
 import { HallsHorizon } from "../backdrops/HallsHorizon";
 import { AboutRibbons } from "../backdrops/AboutRibbons";
 import { halls, panels, projects, screens } from "./fixtures";
+import { STEP_FACTS } from "../../engine/stepFacts";
+import type { Stage } from "../lib/stages";
 import { States } from "./States";
 
 /** Each backdrop and the height of its stage, in frame pixels (the stage is 1440 wide). */
@@ -108,7 +110,13 @@ export function Preview({ pathname, search }: { pathname: string; search: string
           : // &downloads=SVG:saved,EPS:saving,PNG:couldnt shows the kit's download chips in those states.
             item.kind === "kit" && downloads !== undefined
             ? { ...item, downloads }
-            : // &busy=1 shows past cards as they are while Gala works: going back waits.
+            : // &reply=Working|Done shows the reply buttons in that state; Working with the first button pressed (FRI-1722).
+              item.reply !== undefined && (params.get("reply") === "Working" || params.get("reply") === "Done")
+              ? { ...item, reply: { ...item.reply, view: { ...item.reply.view, state: params.get("reply") as "Working" | "Done", pressed: params.get("reply") === "Working" ? "primary" : null } } }
+              : // &approved=1 shows the stress test card once approved.
+                item.kind === "stressTest" && params.get("approved") === "1"
+                ? { ...item, data: { ...item.data, approved: true } }
+                : // &busy=1 shows past cards as they are while Gala works: going back waits.
               item.past !== undefined && params.get("busy") === "1"
               ? { ...item, past: { ...item.past, working: true } }
               : item,
@@ -155,7 +163,8 @@ export function Preview({ pathname, search }: { pathname: string; search: string
         onAttach: noop,
         onRemoveAttachment: noop,
         canAttach: screen.atBrief === true,
-        hints: ["Here’s what my business does and who it’s for", "Show me the logos my competitors use", "Keep it simple enough to work at 16px"],
+        // &stage=<stage> shows that step's Hints (FRI-1722); the brief's otherwise.
+        hints: STEP_FACTS[(params.get("stage") as Stage | null) ?? "brief"]?.hints ?? STEP_FACTS.brief.hints,
         hintsOpen: params.get("hints") === "1",
       }}
     />

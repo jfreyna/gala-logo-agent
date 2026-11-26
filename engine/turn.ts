@@ -16,6 +16,23 @@ import { factsFor, STEP_FACTS } from "./stepFacts.ts";
 import { STEPS, stepIndex, stepIndexOfKind } from "./steps.ts";
 import type { Operation, Project, Stage, Store, StoredMessage } from "./store.ts";
 
+/**
+ * The exits shown after a second dead end, stored on the step's card
+ * (FRI-1722): where the line that gets them stands, and whether "Finish in
+ * the kit" shows. `pressed` is set by the "Back to directions" button
+ * (convex/studio.ts `takeWayOut`); `answered` once steering has acted on it.
+ */
+export type Exits = { afterMessages: number; kitCanFinish: boolean; pressed?: "directions"; answered?: true };
+
+/** The steps where a kit exists, so "Finish in the kit" can show. */
+const KIT_STAGES: Stage[] = ["kit", "picks", "done"];
+
+/** The two exits in words, as the buttons do them: the way out Gala is handed when they show. */
+const EXIT_WORDS = {
+  directions: "go back to the directions with the description you gave, and I'll draw three new directions from it",
+  kit: "finish it in the kit, whose vector files open in Figma",
+};
+
 /** What a stage tells the loop: stop and wait for the person, or go on to the next stage now. */
 export type Outcome = "wait" | "continue";
 
@@ -338,7 +355,7 @@ export class Turn {
         this.think<{ say: string }>({
           section: "conversation",
           task: options.task ?? "Reply to the person's last message.",
-          facts: { step: this.stage, waitingFor, whatHappened, ...factsFor(this.stage), ...this.secondTimeFacts(), ...options.facts },
+          facts: { step: this.stage, waitingFor, whatHappened, ...factsFor(this.stage), ...this.secondTimeFacts(options.facts?.kitCanFinish === true), ...options.facts },
           shape: { type: "OBJECT", properties: { say: { type: "STRING" } }, required: ["say"] },
         }),
       (value) => ({ line: value.say }),
@@ -351,9 +368,28 @@ export class Turn {
         return !verdict.claims;
       },
     );
+    // The second dead end's exits are stored on the step's card before the line, so the buttons sit under it (FRI-1722).
+    const exits = this.exitsFor(options.facts?.kitCanFinish === true);
+    if (exits !== null) await this.write([{ op: "patchArtifact", messageId: exits.card.id, artifact: { ...exits.card.artifact!, exits: [...((exits.card.artifact!.exits as Exits[] | undefined) ?? []), exits.stored] } }]);
     if (reply !== null) await this.write([{ op: "say", text: reply.say }]);
     else if (claimed) await this.write([{ op: "say", text: NEXT_MOVE[this.stage] }]);
     else await this.decline();
+  }
+
+  /**
+   * The exits after a second dead end (FRI-1722, the Gala seat's ruling):
+   * "Back to directions" at every step after the directions, and "Finish in
+   * the kit" only when a kit exists (kit, picks, done) and the kit can
+   * finish what was asked. Null when this reply gets none. They are stored
+   * on the step's card, the kit card at done.
+   */
+  exitsFor(kitCanFinish: boolean): { card: StoredMessage; stored: Exits } | null {
+    if (!this.secondTime || stepIndex(this.stage) <= stepIndex("directions")) return null;
+    const kinds = this.stage === "done" ? ["kit"] : STEPS[stepIndex(this.stage)]!.kinds;
+    const card = this.state.messages.findLast((message) => message.author === "gala" && message.artifact !== null && kinds.includes(message.kind));
+    if (card === undefined) return null;
+    const kit = KIT_STAGES.includes(this.stage) && kitCanFinish;
+    return { card, stored: { afterMessages: this.state.messages.length, kitCanFinish: kit } };
   }
 
   /**
@@ -368,8 +404,16 @@ export class Turn {
     return newestCard !== undefined && STEPS[stepIndex(this.stage)]!.kinds.includes(newestCard.kind);
   }
 
-  private secondTimeFacts(): Record<string, unknown> {
-    return this.secondTime ? { secondTime: true, wayOut: STEP_FACTS[this.stage].wayOut } : {};
+  /**
+   * On a second dead end, the step's way out. Where the exits show as
+   * buttons (FRI-1722), the way out Gala says is those same moves, so the
+   * words and the buttons agree.
+   */
+  private secondTimeFacts(kitCanFinish = false): Record<string, unknown> {
+    if (!this.secondTime) return {};
+    if (stepIndex(this.stage) <= stepIndex("directions")) return { secondTime: true, wayOut: STEP_FACTS[this.stage].wayOut };
+    const kit = KIT_STAGES.includes(this.stage) && kitCanFinish;
+    return { secondTime: true, wayOut: kit ? `${EXIT_WORDS.kit}, or ${EXIT_WORDS.directions}` : EXIT_WORDS.directions };
   }
 
   /**
