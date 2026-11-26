@@ -326,19 +326,31 @@ check("studio: on a phone the prompt bar's working line stays on one line, and i
   return short.shown === "Reading your brief…" && oneLine(short) && !short.cut && oneLine(long) && long.cut;
 });
 
-check("studio: no fades; a gap of 28px (20px on a phone) between the conversation and the prompt bar, and 64px (32px) of padding at the conversation's end", async () => {
+check("studio: no fades; the scroll area runs from the header's bottom edge to the prompt bar's top edge, desktop and phone", async () => {
+  // The viewport fix folded into FRI-1721: the conversation scrolls right up to the header and down to the prompt bar.
   const measure = (page) =>
     page.evaluate(() => {
       const box = (name) => document.querySelector(`[data-name="${name}"]`).getBoundingClientRect();
       return {
-        gap: Math.round(box("composer").top - box("conversation-area").bottom),
-        padding: parseFloat(getComputedStyle(document.querySelector('[data-name="conversation-content"]')).paddingBottom),
+        top: Math.round(box("conversation").top - box("gala-header").bottom),
+        bottom: Math.round(box("gala-prompt-bar").top - box("conversation").bottom),
         fades: document.querySelectorAll('[data-name^="fade/"]').length,
       };
     });
   const desktop = await measure(await open("/preview/directions"));
   const phone = await measure(await open("/preview/directions", { width: 380, height: 812 }));
-  return desktop.gap === 28 && desktop.padding === 64 && desktop.fades === 0 && phone.gap === 20 && phone.padding === 32 && phone.fades === 0;
+  return desktop.top === 0 && desktop.bottom === 0 && desktop.fades === 0 && phone.top === 0 && phone.bottom === 0 && phone.fades === 0;
+});
+
+check("studio: at rest the first item starts 48px (24px on a phone) below the header", async () => {
+  const measure = (page) =>
+    page.evaluate(() => {
+      const first = document.querySelector('[data-name="conversation-content"]').firstElementChild.getBoundingClientRect();
+      return Math.round(first.top - document.querySelector('[data-name="gala-header"]').getBoundingClientRect().bottom);
+    });
+  const desktop = await measure(await open("/preview/directions?top=1"));
+  const phone = await measure(await open("/preview/directions?top=1", { width: 380, height: 812 }));
+  return desktop === 48 && phone === 24;
 });
 
 check("studio: scrolled to the newest item, it rests 92px (52px on a phone) above the prompt bar", async () => {

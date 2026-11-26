@@ -46,6 +46,8 @@ export function StudioView({
     attachment: Attachment | null;
     onAttach: (file: File) => void;
     onRemoveAttachment: () => void;
+    /** The attach button, shown only at the brief (FRI-1721). */
+    canAttach?: boolean;
     hints: string[];
     hintsOpen?: boolean;
     focusRequest?: number;
@@ -70,13 +72,18 @@ export function StudioView({
       <Header state="signedIn" context={projectName} onOpenWork={onOpenWork} menuOpen={menuOpen} />
       <div className="relative flex min-h-px w-full flex-[1_0_0] items-start overflow-clip" data-name="main">
         <div
-          className="relative flex h-full min-w-px flex-[1_0_0] flex-col items-center gap-[20px] overflow-clip px-[16px] pb-[16px] pt-[24px] desktop:gap-[28px] desktop:px-[24px] desktop:pb-[32px] desktop:pt-[48px]"
+          className="relative flex h-full min-w-px flex-[1_0_0] flex-col items-center overflow-clip px-[16px] pb-[16px] desktop:px-[24px] desktop:pb-[32px]"
           data-name="body"
         >
-          {/* The conversation clips with a hard edge. Its last item rests 64px (32px on a phone) above the bottom of the scroll area, then the 28px (20px) gap, then the prompt bar. */}
+          {/*
+            The scroll area runs from the header's bottom edge to the prompt bar's top edge, so content passes right up
+            to both, with no fade (FRI-1709; the viewport fix folded into FRI-1721). The spacing lives inside the
+            scrolling content: at rest the first item starts 48px (24px on a phone) below the header, and the last rests
+            92px (52px) above the prompt bar, FRI-1709's numbers.
+          */}
           <div className="relative flex min-h-px w-full max-w-[768px] flex-[1_0_0] flex-col items-start" data-name="conversation-area">
             <div ref={conversation} className="conversation relative flex min-h-px w-full flex-[1_0_0] flex-col items-start overflow-y-auto" data-name="conversation">
-              <div className={`relative flex w-full shrink-0 flex-col items-start gap-[20px] pb-[32px] desktop:gap-[28px] desktop:pb-[64px] ${restAtBottom ? "mt-auto" : ""}`} data-name="conversation-content">
+              <div className={`relative flex w-full shrink-0 flex-col items-start gap-[20px] pb-[52px] pt-[24px] desktop:gap-[28px] desktop:pb-[92px] desktop:pt-[48px] ${restAtBottom ? "mt-auto" : ""}`} data-name="conversation-content">
                 {items.map((item) => (
                   <StreamEntry key={item.id} item={item} onAction={(action) => onAction(action, item.id)} />
                 ))}

@@ -4,6 +4,7 @@
  * the engine exists. Nothing here ships: the preview route that reads it is
  * compiled out of production builds.
  */
+import { AFTER_BRIEF } from "../studio/promptFor";
 import hearthRaw from "./marks/hearth.svg?raw";
 import monogramRaw from "./marks/monogram.svg?raw";
 import peelRaw from "./marks/peel.svg?raw";
@@ -178,14 +179,17 @@ const typeSignedOff: StreamItem = {
   past: { signedOff: true, backTo: "type" },
 };
 
-export const screens: Record<string, { items: StreamItem[]; placeholder: string; placeholderMobile: string; working?: [string, string] }> = {
+/** Screens at the brief show the attach button; every other screen shows the bar without it, and its words (FRI-1721). */
+export const screens: Record<string, { items: StreamItem[]; placeholder: string; placeholderMobile: string; working?: [string, string]; atBrief?: true }> = {
   studio: {
+    atBrief: true,
     items: [opening, visitorBrief, { id: "working", kind: "working", text: "Looking at competitors and neighbors" }],
     placeholder: "Tell me about the brand you're building.",
     placeholderMobile: "Tell me about your brand.",
     working: ["I’m drawing three directions…", "Drawing three directions…"],
   },
   brief: {
+    atBrief: true,
     items: [
       opening,
       visitorBrief,
@@ -208,6 +212,7 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholderMobile: "Tell me who it’s for.",
   },
   briefComplete: {
+    atBrief: true,
     items: [
       visitorBrief,
       {
@@ -263,6 +268,7 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholderMobile: "Or tell me what to change in the direction.",
   },
   upload: {
+    atBrief: true,
     items: [
       opening,
       { id: "upload", kind: "upload", fileName: "napkin-sketch.jpg", sizeLabel: "1.2 MB", imageUrl: marks.hearth, text: "Here’s a napkin sketch of the idea. The flame matters most." },
@@ -322,8 +328,8 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
   },
   backWhileWorking: {
     items: [conceptSet, { id: "working", kind: "working", text: "Drawing three directions from your peel idea" }],
-    placeholder: "Pick A, B or C, or tell me what to change.",
-    placeholderMobile: "Pick A, B or C.",
+    placeholder: AFTER_BRIEF,
+    placeholderMobile: AFTER_BRIEF,
   },
   // Feedback loops (FRI-1712), failures answered (FRI-1714).
   couldntDraw: {
@@ -400,6 +406,7 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholderMobile: "Approve, or ask for a change.",
   },
   sendFailed: {
+    atBrief: true,
     items: [{ id: "ask", kind: "gala", text: "Tell me who you’re building this for, and give me a sense of the place. A photo or a sketch helps." }],
     placeholder: "Tell me about the brand you're building.",
     placeholderMobile: "Tell me about your brand.",
@@ -450,13 +457,13 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
         },
       },
     ],
-    placeholder: "Describe a symbol, or say go ahead.",
-    placeholderMobile: "Describe a symbol, or say go ahead.",
+    placeholder: AFTER_BRIEF,
+    placeholderMobile: AFTER_BRIEF,
   },
   lockup: { items: [{ id: "approve", kind: "visitor", text: "Approve Hearth." }, lockupCard("sideBySide")], placeholder: "Approve the lockup, or ask for a change.", placeholderMobile: "Approve, or ask for a change." },
   // Not drawn in the design file: the lockup card with Stacked selected, for a look at the build's reading of it.
   lockupStacked: { items: [lockupCard("stacked")], placeholder: "Approve the lockup, or ask for a change.", placeholderMobile: "Approve, or ask for a change." },
-  directions: { items: [visitorBrief, conceptSet], placeholder: "Pick A, B or C, or tell me what to change.", placeholderMobile: "Pick A, B or C." },
+  directions: { items: [visitorBrief, conceptSet], placeholder: AFTER_BRIEF, placeholderMobile: AFTER_BRIEF },
   variations: {
     items: [
       {
@@ -473,8 +480,8 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
         },
       },
     ],
-    placeholder: "Pick 1, 2 or 3, or ask for a change.",
-    placeholderMobile: "Pick 1, 2 or 3.",
+    placeholder: AFTER_BRIEF,
+    placeholderMobile: AFTER_BRIEF,
   },
   // FRI-1718: a Pick whose turn ended with no reply. The echo's state comes from echoState itself: the turn is over, so it settles to Sent.
   echoSettled: {
@@ -494,13 +501,13 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
       },
       { id: "echo", kind: "action", label: "Picked Heavy", state: echoState({ wakes: true, later: [], working: null, waitingOnGala: false }) },
     ],
-    placeholder: "Pick 1, 2 or 3, or ask for a change.",
-    placeholderMobile: "Pick 1, 2 or 3.",
+    placeholder: AFTER_BRIEF,
+    placeholderMobile: AFTER_BRIEF,
   },
   stress: {
     items: [{ id: "go", kind: "visitor", text: "Go with A. Test it before we refine it." }, stressTest],
-    placeholder: "Approve Hearth, or ask for a change.",
-    placeholderMobile: "Approve, or change it.",
+    placeholder: AFTER_BRIEF,
+    placeholderMobile: AFTER_BRIEF,
   },
   pickColors: {
     items: [stressTest, { id: "picker", kind: "colorPicker", data: { say: colorPickerSay, colors: { primary: PRIMARY, secondary: SECONDARY, tertiary: TERTIARY }, saved: false } }],

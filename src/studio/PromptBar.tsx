@@ -14,6 +14,10 @@ export type Attachment = { fileName: string; previewUrl: string | null };
  * and the send button. States: Empty (send dimmed), Typing, Attached (a file
  * chip before the prompt), Working (Gala's status in place of the prompt,
  * and a stop button).
+ *
+ * After the brief the attach button is gone (gala-prompt-bar / no clip,
+ * Figma 5676:17707, FRI-1721). A file picked at the brief and not yet sent
+ * keeps its chip and still sends; the engine answers it.
  */
 export function PromptBar({
   value,
@@ -27,6 +31,7 @@ export function PromptBar({
   attachment,
   onAttach,
   onRemoveAttachment,
+  canAttach = true,
   hints,
   hintsOpen = false,
   focusRequest = 0,
@@ -45,6 +50,8 @@ export function PromptBar({
   attachment: Attachment | null;
   onAttach: (file: File) => void;
   onRemoveAttachment: () => void;
+  /** Shows the attach button. True only while the project is at the brief (FRI-1721). */
+  canAttach?: boolean;
   /** Example lines for the current step. Pressing one fills the prompt. */
   hints: string[];
   /** Shows the hints open from the start. Used by the dev preview only. */
@@ -172,16 +179,20 @@ export function PromptBar({
         <span className="type-caption-medium relative left-[-6px] w-0 shrink-0 whitespace-nowrap text-text-blue-1-light dark:text-text-blue-1-dark">›</span>
       </button>
       <div className="relative flex min-w-px flex-[1_0_0] items-center gap-[8px] overflow-clip p-[8px]" data-name="input-row">
-        <button
-          type="button"
-          onClick={() => fileInput.current?.click()}
-          aria-label="Attach a reference file"
-          className={`relative flex size-[40px] shrink-0 items-center justify-center overflow-clip rounded-[12px] text-text-neutral-2-light dark:text-text-neutral-2-dark ${PLAIN}`}
-          data-name="attach"
-        >
-          <Icon name="paperclip" />
-        </button>
-        <input ref={fileInput} type="file" accept="image/*,application/pdf" onChange={pickFile} className="hidden" />
+        {canAttach && (
+          <>
+            <button
+              type="button"
+              onClick={() => fileInput.current?.click()}
+              aria-label="Attach a reference file"
+              className={`relative flex size-[40px] shrink-0 items-center justify-center overflow-clip rounded-[12px] text-text-neutral-2-light dark:text-text-neutral-2-dark ${PLAIN}`}
+              data-name="attach"
+            >
+              <Icon name="paperclip" />
+            </button>
+            <input ref={fileInput} type="file" accept="image/*,application/pdf" onChange={pickFile} className="hidden" />
+          </>
+        )}
         {attachment !== null && (
           <div
             className="relative flex shrink-0 items-center gap-[8px] overflow-clip rounded-[8px] border border-solid border-stroke-1-light bg-background-1-light desktop:border-form-stroke-light py-[4px] pl-[4px] pr-[8px] dark:border-stroke-1-dark dark:bg-background-2-dark"

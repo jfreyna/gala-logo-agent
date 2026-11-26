@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { StudioView } from "../studio/StudioView";
+import { promptFor } from "../studio/promptFor";
 import { WorkPanel } from "../studio/panel/WorkPanel";
 import type { PanelView, Phase } from "../studio/panel/types";
 import { ARTIFACT_KINDS, type ArtifactAction, type ArtifactKind, type StreamItem } from "../studio/streamTypes";
@@ -60,36 +61,6 @@ type Open =
 
 function isArtifactKind(kind: string): kind is ArtifactKind {
   return (ARTIFACT_KINDS as readonly string[]).includes(kind);
-}
-
-/** The prompt bar's placeholder at each step, for desktop and for a phone (from the studio's design). */
-function placeholders(stage: Stage, hasBrief: boolean, chosenMark: string | null): [string, string] {
-  switch (stage) {
-    case "brief":
-      return hasBrief ? ["Tell me who it’s for, mostly.", "Tell me who it’s for."] : ["Tell me about the brand you're building.", "Tell me about your brand."];
-    case "research":
-      return ["Or tell me what to change in the direction.", "Or tell me what to change in the direction."];
-    case "type":
-      return ["Pick A, B or C, or name a font you like.", "Pick A, B or C."];
-    case "wordmark":
-      return ["Approve the wordmark, or ask for a change.", "Approve, or ask for a change."];
-    case "symbolOpener":
-      return ["Describe a symbol, or say go ahead.", "Describe a symbol, or say go ahead."];
-    case "directions":
-      return ["Pick A, B or C, or tell me what to change.", "Pick A, B or C."];
-    case "variations":
-      return ["Pick 1, 2 or 3, or ask for a change.", "Pick 1, 2 or 3."];
-    case "stressTest":
-      return [chosenMark !== null ? `Approve ${chosenMark}, or ask for a change.` : "Approve, or change it.", "Approve, or change it."];
-    case "lockup":
-      return ["Approve the lockup, or ask for a change.", "Approve, or ask for a change."];
-    case "pickColors":
-      return ["Or describe your colors in words.", "Or describe your colors in words."];
-    case "colorways":
-      return ["Pick A, B or C, or ask for other colors.", "Pick A, B or C."];
-    default:
-      return ["Ask for a change, or start a new project.", "Ask for a change."];
-  }
 }
 
 /** How the Wordmark row says the case ("Ember & Rye in Young Serif, as typed"). */
@@ -436,9 +407,7 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
   if (project === undefined) return <div className="min-h-full bg-background-2-light dark:bg-background-1-dark" />;
 
   const latest = (kind: ArtifactKind) => cards.findLast((card) => card.kind === kind) ?? null;
-  const variations = latest("variationSet")?.data;
-  const chosenMark: string | null = variations?.concepts.find((concept: { id: string }) => concept.id === variations.chosenId)?.name ?? null;
-  const [placeholder, placeholderMobile] = placeholders(project.stage, latest("brief") !== null, chosenMark);
+  const bar = promptFor(project.stage, latest("brief") !== null);
 
   let view: PanelView | null = null;
   if (panel?.view === "history") {
@@ -571,8 +540,8 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
         sendFailed: sendError !== null,
         handedOff: handedOff !== 0,
         onSend: () => void sendMessage(),
-        placeholder,
-        placeholderMobile,
+        placeholder: bar.placeholder,
+        placeholderMobile: bar.placeholderMobile,
         // The bar says what Gala is doing in the first person: "I’m drawing three directions…".
         working: working === null || working === "" ? working : `I’m ${working.charAt(0).toLowerCase()}${working.slice(1)}…`,
         workingMobile: working === null || working === "" ? working : `${working}…`,
@@ -587,6 +556,7 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
           setSendError(null);
           setFile({ file: picked, previewUrl: picked.type.startsWith("image/") ? URL.createObjectURL(picked) : null });
         },
+        canAttach: bar.canAttach,
         onRemoveAttachment: () => {
           setSendError(null);
           if (file?.previewUrl) URL.revokeObjectURL(file.previewUrl);

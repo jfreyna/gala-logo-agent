@@ -154,6 +154,7 @@ export function Preview({ pathname, search }: { pathname: string; search: string
         handedOff: params.get("handedOff") === "1",
         onAttach: noop,
         onRemoveAttachment: noop,
+        canAttach: screen.atBrief === true,
         hints: ["Here’s what my business does and who it’s for", "Show me the logos my competitors use", "Keep it simple enough to work at 16px"],
         hintsOpen: params.get("hints") === "1",
       }}
