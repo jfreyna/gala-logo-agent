@@ -284,8 +284,32 @@ function KitSpec({ data, onBack, onClose }: { data: KitView; onBack: () => void;
   return (
     <Shell header={<SubHeader heading="Spec sheet" onBack={onBack} onClose={onClose} />}>
       <div className="relative flex min-h-px w-full flex-[1_0_0] flex-col items-start gap-[24px] overflow-y-auto p-[16px]" data-name="spec-sheet">
+        {data.colorway !== undefined && (
+          <SpecSection title="Colorway">
+            <div
+              className={`relative flex h-[180px] w-full shrink-0 items-center justify-center overflow-clip rounded-[12px] ${data.colorway.paper === null ? "bg-neutral-0" : ""}`}
+              style={data.colorway.paper === null ? undefined : { backgroundColor: data.colorway.paper }}
+              data-name="paper"
+            >
+              <div className="relative flex max-w-full shrink-0 items-center justify-center p-[18px]" data-name="logo">
+                <img alt={`${data.brandName} in the colorway you picked`} src={data.colorway.previewUrl} className="max-h-[60px] max-w-full object-contain" />
+              </div>
+            </div>
+            {data.colorway.title !== null && <p className="type-body-semibold w-full shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">{data.colorway.title}</p>}
+            <div className="relative flex shrink-0 flex-wrap items-start gap-[12px]" data-name="contrast">
+              {data.colorway.pairs.map((pair) => (
+                <CheckBadge key={pair.label} label={pair.label} pass={pair.pass} />
+              ))}
+            </div>
+            <p className={caption}>{data.colorway.caption}</p>
+          </SpecSection>
+        )}
         <SpecSection title="Clear space">
-          <div className="relative flex h-[150px] w-full shrink-0 items-center justify-center overflow-clip rounded-[12px] bg-neutral-0" data-name="paper">
+          <div
+            className={`relative flex h-[150px] w-full shrink-0 items-center justify-center overflow-clip rounded-[12px] ${data.clearSpace.paper ? "" : "bg-neutral-0"}`}
+            style={data.clearSpace.paper ? { backgroundColor: data.clearSpace.paper } : undefined}
+            data-name="paper"
+          >
             <div className="relative flex shrink-0 items-center p-[18px]" style={{ border: `1px dashed ${data.clearSpace.zoneColor}` }} data-name="clear-zone">
               <img alt="" src={data.clearSpace.previewUrl} className="max-h-[40px] max-w-[240px] object-contain" />
             </div>
@@ -312,7 +336,7 @@ function KitSpec({ data, onBack, onClose }: { data: KitView; onBack: () => void;
           <p className={caption}>{data.type.caption}</p>
         </SpecSection>
         <SpecSection title="Colors">
-          <Palette ladders={data.ladders} />
+          <Palette colors={data.colors} />
         </SpecSection>
       </div>
     </Shell>

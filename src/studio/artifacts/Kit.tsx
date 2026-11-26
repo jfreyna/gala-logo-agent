@@ -6,8 +6,10 @@ import { Thinking } from "../../components/Thinking";
 import { DownloadChip, type DownloadState } from "../Feedback";
 
 /**
- * gala-kit (Figma 5551:8131): the finished lock-up kit. Six lock-ups on
- * paper, the kinds of file in the kit, the spec sheet link, and Download kit.
+ * gala-kit (Figma 5551:8131; FRI-1730 frame 5689:19465): the finished
+ * lock-up kit. Six lock-ups on paper (the colorway's lock-ups on its ground
+ * when that is a brand color), the kinds of file in the kit, the spec sheet
+ * link, and Download kit.
  */
 export function Kit({
   data,
@@ -43,7 +45,8 @@ export function Kit({
               data-name={`lockup/${lockup.label}`}
             >
               <div
-                className={`relative flex h-[110px] w-full shrink-0 items-center justify-center overflow-clip rounded-[12px] desktop:h-[140px] ${lockup.ground === "black" ? "bg-[#000000]" : "bg-neutral-0"}`}
+                className={`relative flex h-[110px] w-full shrink-0 items-center justify-center overflow-clip rounded-[12px] desktop:h-[140px] ${lockup.ground === "black" ? "bg-[#000000]" : lockup.ground === "white" ? "bg-neutral-0" : ""}`}
+                style={lockup.ground !== "black" && lockup.ground !== "white" ? { backgroundColor: lockup.ground } : undefined}
                 data-name="paper"
               >
                 <img alt={`${lockup.label} lock-up`} src={lockup.previewUrl} className="max-h-[46px] max-w-[86%] object-contain desktop:max-h-[72px]" />

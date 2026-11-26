@@ -22,6 +22,7 @@ import { ConvexError } from "convex/values";
 import type { DownloadState, NoticeAction } from "../studio/Feedback";
 import { HAND_OFF_MS, handsOff } from "../studio/handoff";
 import { afterRequest, couldNotStart, noticeOf, sendKeepingInput } from "../studio/failures";
+import { kitView, type KitSpecData } from "../studio/panel/colorway";
 
 /** The steps the History view lists, in order, with the stages each covers. */
 const PHASES: { key: string; name: string; stages: Stage[] }[] = [
@@ -477,30 +478,7 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
       };
     }
   } else if (panel?.view === "kit" && kit != null) {
-    const spec = kit.spec as {
-      clearSpace: { basis?: "markHeight" | "wordmarkHeight"; ratio: number };
-      minimumSizes: { label: string; px: number; measure: "side" | "width" }[];
-      type: { family: string; licenseName: string | null };
-      colors: { role: string; hex: string; ladder: { step: string; hex: string }[] }[];
-    };
-    // A logo of the name alone has no primary lock-up: its wordmark stands in.
-    const primary = kit.files.find((entry) => entry.label === "primary, color, SVG") ?? kit.files.find((entry) => entry.label === "wordmark, color, SVG");
-    view = {
-      view: "kit",
-      brandName: project.brandName,
-      clearSpace: {
-        previewUrl: primary?.url ?? "",
-        zoneColor: spec.colors[0]?.hex ?? "#000000",
-        caption: `Keep clear space equal to ${Math.round(spec.clearSpace.ratio * 100)}% of the ${spec.clearSpace.basis === "wordmarkHeight" ? "wordmark" : "mark"}’s height on every side.`,
-      },
-      minimumSizes: spec.minimumSizes.map((size) => ({ item: size.label, value: size.measure === "width" ? `${size.px}px wide` : `${size.px}px` })),
-      type: { family: spec.type.family, caption: `${spec.type.family} · the wordmark and headings.${spec.type.licenseName ? ` Free under the ${spec.type.licenseName}.` : ""}` },
-      ladders: spec.colors.map((color) => ({
-        role: color.role.charAt(0).toUpperCase() + color.role.slice(1),
-        base: color.hex,
-        steps: color.ladder.map((entry) => ({ step: Number(entry.step), hex: entry.hex })),
-      })),
-    };
+    view = kitView(project.brandName, kit.spec as KitSpecData, (label) => kit.files.find((entry) => entry.label === label)?.url ?? undefined);
   } else if (panel?.view === "type" && tray !== null) {
     const set = cards.find((card) => card.id === panel.messageId)?.data;
     const changing = set?.directions.find((direction: { id: string }) => direction.id === panel.cardId);

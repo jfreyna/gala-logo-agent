@@ -14,11 +14,28 @@ import badgeRaw from "./marks/discard-badge.svg?raw";
 import narrowRaw from "./marks/hearth-narrow.svg?raw";
 import heavyRaw from "./marks/hearth-heavy.svg?raw";
 import withNameRaw from "./marks/hearth-with-name.svg?raw";
+// FRI-1730: real kit output (kit/src buildKit, the spike mark, Young Serif) for three colorways, so the spec sheet and the kit card are checked against the kit's own files.
+import emberPrimary from "./marks/kit-fri1730/ember-primary-color.svg?url";
+import emberStacked from "./marks/kit-fri1730/ember-stacked-color.svg?url";
+import emberIcon from "./marks/kit-fri1730/ember-icon-color.svg?url";
+import emberWordmark from "./marks/kit-fri1730/ember-wordmark-color.svg?url";
+import emberBlack from "./marks/kit-fri1730/ember-primary-black.svg?url";
+import emberWhite from "./marks/kit-fri1730/ember-primary-white.svg?url";
+import emberSpec from "./marks/kit-fri1730/ember-spec.json";
+import limePrimary from "./marks/kit-fri1730/lime-primary-black.svg?url";
+import limeStacked from "./marks/kit-fri1730/lime-stacked-black.svg?url";
+import limeIcon from "./marks/kit-fri1730/lime-icon-black.svg?url";
+import limeWordmark from "./marks/kit-fri1730/lime-wordmark-black.svg?url";
+import limeWhite from "./marks/kit-fri1730/lime-primary-white.svg?url";
+import limeSpec from "./marks/kit-fri1730/lime-spec.json";
+import whitePrimary from "./marks/kit-fri1730/white-primary-color.svg?url";
+import whiteSpec from "./marks/kit-fri1730/white-spec.json";
+import { kitView, type KitSpecData } from "../studio/panel/colorway";
 import type { HallEntry } from "../components/HallTile";
 import type { StreamItem } from "../studio/streamTypes";
 import { echoState } from "../studio/echoState";
 import type { PanelView } from "../studio/panel/types";
-import type { Check } from "../studio/artifacts/types";
+import type { Check, KitArtifact } from "../studio/artifacts/types";
 
 const dataUrl = (svg: string) => `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 /** A placeholder mark with its black swapped for a color (the flame stays as drawn). */
@@ -122,6 +139,26 @@ const kit: StreamItem = {
     formats: ["SVG", "EPS", "PNG", "Square", "Social"],
   },
 };
+
+/** FRI-1730 (frame 5689:19465): the kit card for a colorway on a brand-color ground, from the kit's real files. */
+const kitOn = (ground: string, files: { primary: string; stacked: string; icon: string; wordmark: string; black: string; white: string }): StreamItem => ({
+  id: "kit",
+  kind: "kit",
+  data: {
+    ...(kit.data as KitArtifact),
+    lockups: [
+      { label: "Primary", previewUrl: files.primary, ground },
+      { label: "Stacked", previewUrl: files.stacked, ground },
+      { label: "Icon", previewUrl: files.icon, ground },
+      { label: "Wordmark", previewUrl: files.wordmark, ground },
+      { label: "All black", previewUrl: files.black, ground: "white" },
+      { label: "All white", previewUrl: files.white, ground: "black" },
+    ],
+  },
+});
+const kitEmber = kitOn("#E3B65C", { primary: emberPrimary, stacked: emberStacked, icon: emberIcon, wordmark: emberWordmark, black: emberBlack, white: emberWhite });
+// Quiet Stock (walk note 22): both fills primary black, so the all-black files stand in for the colorway's.
+const kitLime = kitOn("#CEF82D", { primary: limePrimary, stacked: limeStacked, icon: limeIcon, wordmark: limeWordmark, black: limePrimary, white: limeWhite });
 
 const wordmark: StreamItem = {
   id: "wordmark",
@@ -628,6 +665,8 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholderMobile: "Pick A, B or C.",
   },
   kit: { items: [kit], placeholder: "Ask for a change, or start a new project.", placeholderMobile: "Ask for a change." },
+  kitOnGround: { items: [kitEmber], placeholder: "Ask for a change, or start a new project.", placeholderMobile: "Ask for a change." },
+  kitLime: { items: [kitLime], placeholder: "Ask for a change, or start a new project.", placeholderMobile: "Ask for a change." },
   // Wordmark only (Figma 5656:16820): the colorways and the kit with the name alone.
   nameOnly: {
     items: [
@@ -685,7 +724,6 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
   },
 };
 
-const ladder = (role: string, base: string, steps: string[]) => ({ role, base, steps: steps.map((hex, index) => ({ step: index === 0 ? 50 : index * 100, hex })) });
 
 /** Each work-panel view in the frames. */
 export const panels: Record<string, PanelView> = {
@@ -763,22 +801,10 @@ export const panels: Record<string, PanelView> = {
       { family: "Work Sans", category: "Sans · Neo Grotesque", current: false },
     ],
   },
-  kit: {
-    view: "kit",
-    brandName: BRAND,
-    clearSpace: { previewUrl: lockup(tinted(heavyRaw, PRIMARY), TERTIARY, 40, 18), zoneColor: "#B83B1C", caption: "Keep clear space equal to the flame’s height on every side." },
-    minimumSizes: [
-      { item: "Icon", value: "16px" },
-      { item: "Primary lock-up", value: "120px wide" },
-      { item: "Wordmark", value: "80px wide" },
-    ],
-    type: { family: "Young Serif", caption: "Young Serif · the wordmark and headings. Free under the Open Font License." },
-    ladders: [
-      ladder("Primary", PRIMARY, ["#FBF3F1", "#F5E3DF", "#EAC4BB", "#DDA092", "#CF7964", "#C3583D", "#B83A1B", "#902D15", "#6B2210", "#4A170B"]),
-      ladder("Secondary", SECONDARY, ["#FDFBF5", "#FBF5E8", "#F7E9CE", "#F2DCB1", "#ECCD90", "#E7C174", "#E3B65C", "#B18E48", "#846A35", "#5B4925"]),
-      ladder("Tertiary", TERTIARY, ["#F2F2F2", "#E1E1E0", "#BFBEBD", "#999795", "#6F6B69", "#4B4743", "#2B2622", "#221E1B", "#191614", "#110F0E"]),
-    ],
-  },
+  // FRI-1730: the spec sheet from the kit's real spec. "kit" is a colorway on white; "kitOnGround" is frame 5689:19050; "kitLime" is walk note 22.
+  kit: kitView(BRAND, whiteSpec as KitSpecData, (label) => (label === "primary, color, SVG" ? whitePrimary : undefined)),
+  kitOnGround: kitView(BRAND, emberSpec as KitSpecData, (label) => (label === "primary, color, SVG" ? emberPrimary : undefined)),
+  kitLime: kitView(BRAND, limeSpec as KitSpecData, (label) => (label === "primary, black, SVG" ? limePrimary : undefined)),
   memory: {
     view: "memory",
     lines: [

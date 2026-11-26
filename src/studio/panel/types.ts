@@ -1,5 +1,5 @@
 import type { Check } from "../artifacts/types";
-import type { Ladder, RoleColor } from "./Colors";
+import type { RoleColor } from "./Colors";
 
 /** One step of the work, as the History view lists it. */
 export type Phase = {
@@ -52,14 +52,9 @@ export type TypeView = {
   families: TypeFamily[];
 };
 
-export type KitView = {
-  view: "kit";
-  brandName: string;
-  clearSpace: { previewUrl: string; zoneColor: string; caption: string };
-  minimumSizes: { item: string; value: string }[];
-  type: { family: string; caption: string };
-  ladders: Ladder[];
-};
+// The Kit view's shape lives with its builder, so the engine's check can import both (FRI-1730).
+export type { KitView, PairBadge } from "./colorway";
+import type { KitView } from "./colorway";
 
 export type MemoryLine = { id: string; group: string; text: string };
 

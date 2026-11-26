@@ -30,7 +30,17 @@ export type Colors = { primary: string; secondary: string; tertiary?: string };
 export type Ground = Role | "white" | "neutral";
 /** The neutral ground: a light gray, so a white mark edge still shows in a feed or an avatar. */
 export const NEUTRAL_GROUND = "#F5F5F5";
-export type Colorway = { mark: Role; wordmark: Role; ground?: Ground };
+export type Colorway = {
+  mark: Role;
+  wordmark: Role;
+  ground?: Ground;
+  /** The colorway's card letter and name ("C", "Quiet Stock"), for the spec sheet's Colorway section. Labels only. */
+  letter?: string;
+  name?: string;
+};
+
+/** What a color does in the chosen colorway (FRI-1730): fills the mark, the name, or is the ground. Empty when the colorway does not use it. */
+export type ColorUse = "mark" | "wordmark" | "ground";
 
 export type SpecColor = {
   role: Role;
@@ -40,6 +50,29 @@ export type SpecColor = {
   ladder: LadderEntry[];
   nearestStep: LadderStep;
   contrast: { onWhite: Contrast; onBlack: Contrast };
+  /** What this color does in the chosen colorway (FRI-1730). A logo of the name alone never lists "mark". */
+  uses: ColorUse[];
+};
+
+/**
+ * The chosen colorway as the spec sheet shows it (FRI-1730). `files` names,
+ * per lock-up, the variant whose files carry the colorway's fills: "color",
+ * or "black" / "white" when the colorway paints that lock-up the same as the
+ * all-black or all-white set, which then stands in for it. `onGround` is
+ * true when the kit holds every lock-up on the ground too (a brand-color
+ * ground).
+ */
+export type SpecColorway = {
+  letter: string | null;
+  name: string | null;
+  mark: Role;
+  wordmark: Role;
+  ground: Ground;
+  markHex: string;
+  wordmarkHex: string;
+  groundHex: string;
+  onGround: boolean;
+  files: Partial<Record<"primary" | "stacked" | "icon" | "wordmark", "color" | "black" | "white">>;
 };
 
 export type SpecPair = { foreground: Role | "white" | "black"; background: Role | "white" | "black" | "neutral"; contrast: Contrast };
@@ -53,6 +86,8 @@ export type SpecSheet = {
   type: FontInfo & { sample: string };
   colors: SpecColor[];
   pairs: SpecPair[];
+  /** Added by FRI-1730; kits built before it have none. */
+  colorway?: SpecColorway;
   cmykNote: string;
 };
 
@@ -72,7 +107,23 @@ export function resolve(colors: Colors, key: Role | "white" | "black" | "neutral
   return normalizeHex(hex);
 }
 
-export function buildSpec(name: string, colors: Colors, colorway: Colorway, font: FontInfo, options: { nameOnly?: boolean } = {}): SpecSheet {
+/** True when the ground is a brand color, so the kit holds every lock-up on it. */
+export function isBrandGround(ground: Ground | undefined): ground is Role {
+  return ground === "primary" || ground === "secondary" || ground === "tertiary";
+}
+
+export function buildSpec(
+  name: string,
+  colors: Colors,
+  colorway: Colorway,
+  font: FontInfo,
+  options: { nameOnly?: boolean; files?: SpecColorway["files"] } = {},
+): SpecSheet {
+  const usesOf = (role: Role): ColorUse[] => [
+    ...(!options.nameOnly && colorway.mark === role ? (["mark"] as const) : []),
+    ...(colorway.wordmark === role ? (["wordmark"] as const) : []),
+    ...(colorway.ground === role ? (["ground"] as const) : []),
+  ];
   const specColors: SpecColor[] = rolesIn(colors).map((role) => {
     const hex = resolve(colors, role);
     const steps = ladder(hex);
@@ -84,6 +135,7 @@ export function buildSpec(name: string, colors: Colors, colorway: Colorway, font
       ladder: steps,
       nearestStep: nearestStep(hex, steps),
       contrast: { onWhite: contrast(hex, WHITE), onBlack: contrast(hex, BLACK) },
+      uses: usesOf(role),
     };
   });
 
@@ -96,7 +148,7 @@ export function buildSpec(name: string, colors: Colors, colorway: Colorway, font
     seen.add(key);
     pairs.push({ foreground, background, contrast: contrast(resolve(colors, foreground), resolve(colors, background)) });
   };
-  // The color lock-ups sit on white; the square and social image sit on the ground.
+  // The transparent lock-ups are read on white; the square, the social image and (FRI-1730) the on-ground lock-ups sit on the ground.
   for (const bg of ["white", ground] as const) {
     addPair(colorway.mark, bg);
     addPair(colorway.wordmark, bg);
@@ -111,6 +163,18 @@ export function buildSpec(name: string, colors: Colors, colorway: Colorway, font
     type: { ...font, sample: TYPE_SAMPLE },
     colors: specColors,
     pairs,
+    colorway: {
+      letter: colorway.letter ?? null,
+      name: colorway.name ?? null,
+      mark: colorway.mark,
+      wordmark: colorway.wordmark,
+      ground,
+      markHex: resolve(colors, colorway.mark),
+      wordmarkHex: resolve(colors, colorway.wordmark),
+      groundHex: resolve(colors, ground),
+      onGround: isBrandGround(ground),
+      files: options.files ?? {},
+    },
     cmykNote: CMYK_NOTE,
   };
 }

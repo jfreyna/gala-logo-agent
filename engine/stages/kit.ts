@@ -30,22 +30,26 @@ const LINES: Shape = { type: "OBJECT", properties: { lines: { type: "ARRAY", ite
 /** The kit card's format chips. */
 const FORMATS = ["SVG", "EPS", "PNG", "Square", "Social"];
 
-/** For a logo of the name alone: the wordmark in color, in black and in white. */
-const NAME_ONLY_PREVIEWS = [
-  { label: "Wordmark", lockup: "wordmark", variant: "color", ground: "white" },
+type KitLockup = "primary" | "stacked" | "icon" | "wordmark";
+/** "colorway": the lock-up in the chosen colorway, shown on its ground (FRI-1730). */
+type Preview = { label: string; lockup: KitLockup; variant: "colorway" | "black" | "white"; ground: "white" | "black" | "colorway" };
+
+/** For a logo of the name alone: the wordmark in its colorway, in black and in white. */
+const NAME_ONLY_PREVIEWS: readonly Preview[] = [
+  { label: "Wordmark", lockup: "wordmark", variant: "colorway", ground: "colorway" },
   { label: "All black", lockup: "wordmark", variant: "black", ground: "white" },
   { label: "All white", lockup: "wordmark", variant: "white", ground: "black" },
-] as const;
+];
 
 /** The lock-ups the kit card previews, each from one of the kit's SVG files. */
-const PREVIEWS = [
-  { label: "Primary", lockup: "primary", variant: "color", ground: "white" },
-  { label: "Stacked", lockup: "stacked", variant: "color", ground: "white" },
-  { label: "Icon", lockup: "icon", variant: "color", ground: "white" },
-  { label: "Wordmark", lockup: "wordmark", variant: "color", ground: "white" },
+const PREVIEWS: readonly Preview[] = [
+  { label: "Primary", lockup: "primary", variant: "colorway", ground: "colorway" },
+  { label: "Stacked", lockup: "stacked", variant: "colorway", ground: "colorway" },
+  { label: "Icon", lockup: "icon", variant: "colorway", ground: "colorway" },
+  { label: "Wordmark", lockup: "wordmark", variant: "colorway", ground: "colorway" },
   { label: "All black", lockup: "primary", variant: "black", ground: "white" },
   { label: "All white", lockup: "primary", variant: "white", ground: "black" },
-] as const;
+];
 
 /** Stores files a few at a time. */
 async function storeAll(turn: Turn, files: KitFile[]): Promise<Map<string, string>> {
@@ -93,9 +97,17 @@ export async function kit(turn: Turn): Promise<Outcome> {
     ...lockupOf(turn),
     colors: { primary: colors.primary, secondary: colors.secondary, ...(colors.tertiary !== null ? { tertiary: colors.tertiary } : {}) },
     // A white ground on screen becomes the kit's neutral gray for the square and the social image.
-    colorway: { mark: colorway.assignment.mark, wordmark: colorway.assignment.wordmark, ...(colorway.assignment.ground !== "white" ? { ground: colorway.assignment.ground } : {}) },
+    colorway: {
+      mark: colorway.assignment.mark,
+      wordmark: colorway.assignment.wordmark,
+      ...(colorway.assignment.ground !== "white" ? { ground: colorway.assignment.ground } : {}),
+      // Labels for the spec sheet's Colorway section (FRI-1730).
+      ...(typeof colorway.letter === "string" ? { letter: colorway.letter } : {}),
+      ...(typeof colorway.name === "string" && colorway.name !== "" ? { name: colorway.name } : {}),
+    },
   });
 
+  const onGround = built.spec.colorway!.onGround;
   const ids = await storeAll(turn, built.files);
   const files: StoredFile[] = built.files.map((file) => ({
     label: `${file.lockup}, ${file.variant}, ${file.format.toUpperCase()}`,
@@ -131,7 +143,15 @@ export async function kit(turn: Turn): Promise<Outcome> {
             ...(nameOnly ? { logo: "the name alone, with no symbol; never mention a mark or a symbol" } : {}),
             fileFormats: ["SVG", "EPS", "PNG"],
             images: ["a square image", "a social image"],
-            specSheet: ["clear space", "minimum sizes", "the typeface and its license", "each color's hex, RGB and CMYK values and its 50 to 900 ladder"],
+            // FRI-1730: the on-ground files exist only on a brand-color ground.
+            ...(onGround ? { onGroundFiles: `every lock-up on the ${built.spec.colorway!.ground} ground, as SVG, EPS and PNG, beside the transparent files` } : {}),
+            specSheet: [
+              "the colorway: the logo as picked on its ground, with the contrast of each pairing",
+              onGround ? "clear space, shown on the ground" : "clear space",
+              "minimum sizes",
+              "the typeface and its license",
+              "each color as picked, with its role in the colorway, its hex, RGB and CMYK values, and its tints and shades from 50 to 900",
+            ],
           },
         },
         shape: SAY,
@@ -141,9 +161,14 @@ export async function kit(turn: Turn): Promise<Outcome> {
   );
 
   const fileFor = (lockup: string, variant: string) => ids.get(`svg/${slug}-${lockup}-${variant}.svg`)!;
+  // FRI-1730: the colorway's transparent file, "color" or the all-black / all-white set that stands in for it.
+  const colorwayFile = (lockup: KitLockup) => fileFor(lockup, built.spec.colorway!.files[lockup] ?? "color");
+  const previewFile = (preview: Preview) => (preview.variant === "colorway" ? colorwayFile(preview.lockup) : fileFor(preview.lockup, preview.variant));
+  // The colorway previews sit on its ground when that is a brand color; a white or neutral colorway stays on white, as before.
+  const paperFor = (preview: Preview) => (preview.ground !== "colorway" ? preview.ground : onGround ? built.spec.colorway!.groundHex : "white");
   const remembered = await memoryOperations(turn, { mark: mark?.name ?? null, family }, { brief: briefOf(turn), chosenMark: mark?.name ?? "none: the logo is the name alone", typeface: family, colorway: colorway.name });
   // The logo as one file: the icon, or the wordmark when there is no symbol.
-  const logo = nameOnly ? fileFor("wordmark", "color") : fileFor("icon", "color");
+  const logo = nameOnly ? colorwayFile("wordmark") : colorwayFile("icon");
 
   await turn.write([
     { op: "kit", files, downloads, spec: built.spec },
@@ -153,7 +178,7 @@ export async function kit(turn: Turn): Promise<Outcome> {
       // `hallsMarkFileId` is the logo the picks card will offer for the Hall of fame; `downloaded` is set by the page's first finished download.
       artifact: {
         say: words?.say ?? (nameOnly ? NAME_ONLY_KIT_LINE : KIT_LINE),
-        lockups: previews.map((preview) => ({ label: preview.label, previewFileId: fileFor(preview.lockup, preview.variant), ground: preview.ground })),
+        lockups: previews.map((preview) => ({ label: preview.label, previewFileId: previewFile(preview), ground: paperFor(preview) })),
         formats: FORMATS,
         hallsMarkFileId: logo,
         downloaded: false,

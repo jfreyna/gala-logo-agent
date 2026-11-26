@@ -1,0 +1,230 @@
+{
+  "version": 1,
+  "name": "Ember & Rye",
+  "clearSpace": {
+    "basis": "markHeight",
+    "ratio": 0.45
+  },
+  "minimumSizes": [
+    {
+      "key": "icon",
+      "label": "Icon",
+      "px": 16,
+      "measure": "side"
+    },
+    {
+      "key": "primary",
+      "label": "Primary lock-up",
+      "px": 120,
+      "measure": "width"
+    },
+    {
+      "key": "wordmark",
+      "label": "Wordmark",
+      "px": 80,
+      "measure": "width"
+    }
+  ],
+  "type": {
+    "family": "Young Serif",
+    "weight": 400,
+    "license": "OFL",
+    "licenseName": "SIL Open Font License",
+    "category": "Serif",
+    "color": false,
+    "sample": "Aa Bb Cc Dd Ee 0123456789"
+  },
+  "colors": [
+    {
+      "role": "primary",
+      "hex": "#000000",
+      "rgb": [
+        0,
+        0,
+        0
+      ],
+      "cmyk": [
+        0,
+        0,
+        0,
+        100
+      ],
+      "ladder": [
+        {
+          "step": "50",
+          "hex": "#F8F8F8"
+        },
+        {
+          "step": "100",
+          "hex": "#F0F0F0"
+        },
+        {
+          "step": "200",
+          "hex": "#DFDFDF"
+        },
+        {
+          "step": "300",
+          "hex": "#C7C7C7"
+        },
+        {
+          "step": "400",
+          "hex": "#ACACAC"
+        },
+        {
+          "step": "500",
+          "hex": "#909090"
+        },
+        {
+          "step": "600",
+          "hex": "#696969"
+        },
+        {
+          "step": "700",
+          "hex": "#505050"
+        },
+        {
+          "step": "800",
+          "hex": "#2A2A2A"
+        },
+        {
+          "step": "900",
+          "hex": "#191919"
+        }
+      ],
+      "nearestStep": "900",
+      "contrast": {
+        "onWhite": {
+          "ratio": 21,
+          "label": "21.0:1",
+          "aaText": true,
+          "aaLarge": true
+        },
+        "onBlack": {
+          "ratio": 1,
+          "label": "1.0:1",
+          "aaText": false,
+          "aaLarge": false
+        }
+      },
+      "uses": [
+        "mark",
+        "wordmark"
+      ]
+    },
+    {
+      "role": "secondary",
+      "hex": "#CEF82D",
+      "rgb": [
+        206,
+        248,
+        45
+      ],
+      "cmyk": [
+        17,
+        0,
+        82,
+        3
+      ],
+      "ladder": [
+        {
+          "step": "50",
+          "hex": "#F6FAEC"
+        },
+        {
+          "step": "100",
+          "hex": "#EBF6D5"
+        },
+        {
+          "step": "200",
+          "hex": "#D9E6BB"
+        },
+        {
+          "step": "300",
+          "hex": "#BAD477"
+        },
+        {
+          "step": "400",
+          "hex": "#9DBB3E"
+        },
+        {
+          "step": "500",
+          "hex": "#819D00"
+        },
+        {
+          "step": "600",
+          "hex": "#5E7300"
+        },
+        {
+          "step": "700",
+          "hex": "#475800"
+        },
+        {
+          "step": "800",
+          "hex": "#242E00"
+        },
+        {
+          "step": "900",
+          "hex": "#151D00"
+        }
+      ],
+      "nearestStep": "300",
+      "contrast": {
+        "onWhite": {
+          "ratio": 1.2288451895817485,
+          "label": "1.2:1",
+          "aaText": false,
+          "aaLarge": false
+        },
+        "onBlack": {
+          "ratio": 17.089215287686148,
+          "label": "17.0:1",
+          "aaText": true,
+          "aaLarge": true
+        }
+      },
+      "uses": [
+        "ground"
+      ]
+    }
+  ],
+  "pairs": [
+    {
+      "foreground": "primary",
+      "background": "white",
+      "contrast": {
+        "ratio": 21,
+        "label": "21.0:1",
+        "aaText": true,
+        "aaLarge": true
+      }
+    },
+    {
+      "foreground": "primary",
+      "background": "secondary",
+      "contrast": {
+        "ratio": 17.089215287686148,
+        "label": "17.0:1",
+        "aaText": true,
+        "aaLarge": true
+      }
+    }
+  ],
+  "colorway": {
+    "letter": "C",
+    "name": "Quiet Stock",
+    "mark": "primary",
+    "wordmark": "primary",
+    "ground": "secondary",
+    "markHex": "#000000",
+    "wordmarkHex": "#000000",
+    "groundHex": "#CEF82D",
+    "onGround": true,
+    "files": {
+      "primary": "black",
+      "stacked": "black",
+      "icon": "black",
+      "wordmark": "black"
+    }
+  },
+  "cmykNote": "CMYK values are a straight conversion, for reference. Confirm them with your printer before a print run."
+}

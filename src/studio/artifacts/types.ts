@@ -180,8 +180,8 @@ export type Lockup = {
   /** "Primary", "Stacked", "Icon", "Wordmark", "All black", "All white". */
   label: string;
   previewUrl: string;
-  /** The paper it is shown on: white, or black for the all-white variant. */
-  ground: "white" | "black";
+  /** The paper it is shown on: white, black for the all-white variant, or the colorway's ground as a hex when that is a brand color (FRI-1730). */
+  ground: "white" | "black" | (string & {});
 };
 
 export type KitArtifact = {

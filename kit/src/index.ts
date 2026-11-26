@@ -4,7 +4,10 @@
  *
  * Files: primary, stacked, icon and wordmark, each in color, all black and
  * all white, each as SVG, EPS and PNG (36), plus the square and the social
- * image (PNG). Paths group by the kit card's chips: svg/, eps/, png/,
+ * image (PNG). FRI-1730: when the colorway's ground is a brand color, each
+ * lock-up also comes on that ground ("ground", SVG, EPS and PNG); when the
+ * colorway paints a lock-up the same as the all-black or all-white set, its
+ * "color" files are left out and that set stands in (`spec.colorway.files`). Paths group by the kit card's chips: svg/, eps/, png/,
  * square/, social/. The caller (the engine) stores them; this module writes
  * nothing to disk and holds no state.
  */
@@ -14,11 +17,12 @@ import { normalizeHex } from "./color.ts";
 import { loadFont, setText, type FetchLike } from "./font.ts";
 import { iconArtwork, primaryLockup, socialArtwork, squareArtwork, stackedLockup, wordmarkArtwork, type Artwork } from "./layout.ts";
 import { PNG_LONG_EDGE, naturalSize, toEps, toPng, toSvg, type Fills } from "./render.ts";
-import { buildSpec, resolve, type Colors, type Colorway, type SpecSheet } from "./spec.ts";
+import { colorwayVariant, onGround } from "./ground.ts";
+import { buildSpec, CLEAR_SPACE_RATIO, isBrandGround, resolve, type Colors, type Colorway, type SpecColorway, type SpecSheet } from "./spec.ts";
 import { traceMark } from "./trace.ts";
 
 export type { Role } from "./color.ts";
-export type { Colors, Colorway, SpecSheet, SpecColor, SpecPair } from "./spec.ts";
+export type { Colors, Colorway, ColorUse, SpecSheet, SpecColor, SpecColorway, SpecPair } from "./spec.ts";
 export type { Contrast, LadderEntry, LadderStep } from "./color.ts";
 
 export type KitInput = {
@@ -48,7 +52,8 @@ export type KitInput = {
 };
 
 export type Lockup = "primary" | "stacked" | "icon" | "wordmark" | "square" | "social";
-export type Variant = "color" | "black" | "white";
+/** "ground": the lock-up in the colorway's fills on its brand-color ground (FRI-1730). */
+export type Variant = "color" | "black" | "white" | "ground";
 export type Format = "svg" | "eps" | "png";
 
 export type KitFile = {
@@ -78,7 +83,7 @@ const LABELS: Record<Lockup, string> = {
   square: "square",
   social: "social image",
 };
-const VARIANT_LABELS: Record<Variant, string> = { color: "color", black: "all black", white: "all white" };
+const VARIANT_LABELS: Record<Variant, string> = { color: "color", black: "all black", white: "all white", ground: "on the ground" };
 
 export function slugify(name: string): string {
   const slug = name
@@ -131,7 +136,11 @@ export async function buildKit(input: KitInput, options: KitOptions = {}): Promi
     color: { mark: markColor, wordmark: wordColor },
     black: { mark: "#000000", wordmark: "#000000" },
     white: { mark: "#FFFFFF", wordmark: "#FFFFFF" },
+    ground: { mark: markColor, wordmark: wordColor, ground: groundColor },
   };
+  // FRI-1730: on-ground files only on a brand-color ground; a white or neutral colorway keeps today's set.
+  const brandGround = isBrandGround(input.colorway.ground);
+  const colorwayFiles: SpecColorway["files"] = {};
 
   const slug = slugify(name);
   const encoder = new TextEncoder();
@@ -139,9 +148,14 @@ export async function buildKit(input: KitInput, options: KitOptions = {}): Promi
   const title = (lockup: Lockup, variant: Variant) => `${name}, ${LABELS[lockup]}, ${VARIANT_LABELS[variant]}`;
 
   for (const lockup of ["primary", "stacked", "icon", "wordmark"] as const) {
-    const a = art[lockup];
-    if (a === undefined) continue;
-    for (const variant of ["color", "black", "white"] as const) {
+    const flat = art[lockup];
+    if (flat === undefined) continue;
+    // FRI-1730: no "color" copy of the all-black (or all-white) files; the on-ground files when the ground is a brand color.
+    const holder = colorwayVariant(flat, fills);
+    colorwayFiles[lockup] = holder;
+    const variants: Variant[] = [...(holder === "color" ? (["color"] as const) : []), "black", "white", ...(brandGround ? (["ground"] as const) : [])];
+    for (const variant of variants) {
+      const a = variant === "ground" ? onGround(flat, CLEAR_SPACE_RATIO) : flat;
       const base = `${slug}-${lockup}-${variant}`;
       const svg = toSvg(a, fills[variant], title(lockup, variant));
       const svgSize = naturalSize(a);
@@ -157,10 +171,10 @@ export async function buildKit(input: KitInput, options: KitOptions = {}): Promi
   const canvases = { square: squareArtwork(art.icon ?? art.wordmark), social: socialArtwork((input.layout === "stacked" ? art.stacked : art.primary) ?? art.wordmark) };
   for (const lockup of ["square", "social"] as const) {
     const a = canvases[lockup];
-    const svg = toSvg(a, { ...fills.color, ground: groundColor }, title(lockup, "color"), { width: a.width, height: a.height });
+    const svg = toSvg(a, fills.ground, title(lockup, "color"), { width: a.width, height: a.height });
     const png = toPng(svg, a);
     files.push({ path: `${lockup}/${slug}-${lockup}.png`, mime: "image/png", bytes: png.bytes, lockup, variant: "color", format: "png", width: png.width, height: png.height });
   }
 
-  return { files, spec: buildSpec(name, input.colors, input.colorway, font.info, { nameOnly: mark === null }) };
+  return { files, spec: buildSpec(name, input.colors, input.colorway, font.info, { nameOnly: mark === null, files: colorwayFiles }) };
 }
