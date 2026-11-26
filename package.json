@@ -40,6 +40,7 @@
     "check:kit-first": "node --experimental-strip-types --no-warnings engine/checks/kit-first.check.ts",
     "check:routes": "node --experimental-strip-types --no-warnings engine/checks/routes.check.ts",
     "check:earlier-cards": "node --experimental-strip-types --no-warnings engine/checks/earlier-cards.check.ts",
+    "check:honest": "node --experimental-strip-types --no-warnings engine/checks/honest.check.ts",
     "sweep:fonts": "node --experimental-strip-types --no-warnings engine/checks/font-sweep.ts",
     "check:backdrops": "node scripts/check-backdrops.mjs",
     "measure:backdrops": "node scripts/measure-backdrops.mjs"

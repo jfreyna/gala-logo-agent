@@ -3,13 +3,14 @@
  * of the one the person picks. Both steps draw three, check each, and wait
  * for a pick; they differ in what the drawing starts from.
  */
-import { badges, draftThree, findings, type Idea } from "../drafting.ts";
+import { badges, draftThree, findings, type Draft, type Idea, type SetAside } from "../drafting.ts";
+import { compareDrawing } from "../marks.ts";
 import type { Image, Shape } from "../gemini.ts";
 import { pickedEarlierLine, WORKING } from "../lines.ts";
 import { isMarkRef, pickedRound, placeOf, roundsOf, type RoundKind } from "../rounds.ts";
 import { SYMBOL_STEPS } from "../steps.ts";
 import type { Stage, StoredMessage } from "../store.ts";
-import { asked, requestsOf, type MarkRef, type Outcome, type Request, type Turn } from "../turn.ts";
+import { asked, keptCard, requestsOf, type MarkRef, type Outcome, type Request, type Turn } from "../turn.ts";
 import { briefOf } from "./brief.ts";
 import { competitorImages, competitorsOf, directionOf } from "./research.ts";
 import { familyOf } from "./type.ts";
@@ -76,6 +77,47 @@ export function standingRequests(turn: Turn, request: Request | null): string[] 
   return [...new Set([...turn.heldFor(...SYMBOL_STEPS), ...turn.drawingRequests(), ...(asked(request) ?? [])])];
 }
 
+/** What Jev saw in each drawing: whether it shows the request, and whether it differs from its starting mark (null when not asked). */
+export type Compared = { showsRequest: boolean | null; differsFromStart: boolean | null };
+
+/** Each drawing against the request and the starting mark, side by side (marks.ts). */
+export async function compareRound(turn: Turn, drafts: Draft[], wanted: string[] | null, start: Image | null): Promise<Compared[]> {
+  return Promise.all(
+    drafts.map(async (draft) => {
+      const file = await turn.store.readFile(draft.sourceFileId);
+      return compareDrawing({ bytes: file.bytes, mime: file.contentType }, { request: wanted, start, signal: turn.signal });
+    }),
+  );
+}
+
+/**
+ * Gala's words about a round, written from what was drawn: the checks,
+ * and, per drawing, `showsRequest` and `differsFromStart`, so the line
+ * never says a drawing changed when Jev saw it come back the same. Null
+ * when no checked card could be written.
+ */
+export async function roundWords(
+  turn: Turn,
+  round: Pick<Round, "section" | "letters" | "startedFrom">,
+  drafts: Draft[],
+  setAside: SetAside[],
+  wanted: string[] | null,
+  compared: Compared[],
+): Promise<{ say: string; rationales: string[] } | null> {
+  const drawn = findings(drafts, round.letters).map((entry, index) => ({ ...(entry as Record<string, unknown>), ...compared[index] }));
+  const checked = await turn.composeCard(
+    () =>
+      turn.think<{ say: string; rationales: string[] }>({
+        section: round.section,
+        task: "The three are drawn and checked. Introduce them and give one sentence for each, true to the check results. Where showsRequest or differsFromStart is given for a drawing, describe that drawing by those results, never by what was asked: say plainly when a drawing came back the same as its start or does not show the request.",
+        facts: { drawn, setAside: setAside.map((entry) => entry.reason), whatThePersonAskedFor: wanted, startingFrom: round.startedFrom?.name ?? null, aboutLetters: LETTERING },
+        shape: WORDS_SHAPE,
+      }),
+    (value) => ({ line: value.say, card: [...value.rationales, ...drafts.map((draft) => draft.name)] }),
+  );
+  return checked === null ? null : keptCard(checked, turn.stage);
+}
+
 /** Draws three, has Gala write about them, and shows the card. */
 async function drawRound(turn: Turn, round: Round): Promise<Outcome> {
   await turn.status(round.working);
@@ -96,17 +138,9 @@ async function drawRound(turn: Turn, round: Round): Promise<Outcome> {
     shape: IDEAS_SHAPE,
   });
   const { drafts, setAside } = await draftThree(turn, concepts, { ...context, competitorImages: competitorImageList }, round.from);
+  const compared = await compareRound(turn, drafts, wanted, round.from ?? null);
 
-  const words = await turn.compose(
-    () =>
-      turn.think<{ say: string; rationales: string[] }>({
-        section: round.section,
-        task: "The three are drawn and checked. Introduce them and give one sentence for each, true to the check results.",
-        facts: { drawn: findings(drafts, round.letters), setAside: setAside.map((entry) => entry.reason), whatThePersonAskedFor: wanted, startingFrom: round.startedFrom?.name ?? null, aboutLetters: LETTERING },
-        shape: WORDS_SHAPE,
-      }),
-    (value) => ({ line: value.say, card: [...value.rationales, ...drafts.map((draft) => draft.name)] }),
-  );
+  const words = await roundWords(turn, round, drafts, setAside, wanted, compared);
   if (words === null) {
     await turn.decline();
     return "wait";
@@ -127,6 +161,8 @@ async function drawRound(turn: Turn, round: Round): Promise<Outcome> {
           markFileId: draft.markFileId,
           sourceFileId: draft.sourceFileId,
           checks: badges(draft.judgement),
+          showsRequest: compared[index]!.showsRequest,
+          differsFromStart: compared[index]!.differsFromStart,
         })),
         ...(round.kind === "conceptSet" ? { discarded: setAside } : { setAside }),
         chosenId: null,

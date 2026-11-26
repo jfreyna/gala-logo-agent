@@ -11,7 +11,7 @@
  */
 import type { Shape } from "../gemini.ts";
 import { SYMBOL_STEPS } from "../steps.ts";
-import { asked, requestsOf, type Outcome, type Request, type Turn } from "../turn.ts";
+import { asked, keptCard, requestsOf, type Outcome, type Request, type Turn } from "../turn.ts";
 import { briefOf } from "./brief.ts";
 import { openColors } from "./color.ts";
 import { directionOf } from "./research.ts";
@@ -28,7 +28,7 @@ const OPENER: Shape = {
 /** Gala opens the step. */
 async function open(turn: Turn): Promise<Outcome> {
   const kept = turn.heldFor(...SYMBOL_STEPS);
-  const words = await turn.compose(
+  const wordsChecked = await turn.composeCard(
     () =>
       turn.think<{ say: string; ideas: string[] }>({
         section: "conversation",
@@ -38,10 +38,11 @@ async function open(turn: Turn): Promise<Outcome> {
       }),
     (value) => ({ line: value.say, card: value.ideas }),
   );
-  if (words === null) {
+  if (wordsChecked === null) {
     await turn.decline();
     return "wait";
   }
+  const words = keptCard(wordsChecked, turn.stage);
   await turn.write([{ op: "artifact", kind: "symbolOpener", artifact: { say: words.say, ideas: words.ideas.slice(0, 3), answered: null } }]);
   return "wait";
 }

@@ -170,3 +170,39 @@ export async function stressTest(mark: Mark, signal?: AbortSignal): Promise<{ si
   });
   return { sixteen: answers.sixteen.noul >= YES, circle: answers.circle.noul >= YES, inverted: answers.inverted.noul >= YES, poster: answers.poster.noul >= YES };
 }
+
+/** A drawing as the judge sees it: the image model's output on white, at 512px. */
+export function judgeView(source: Image): Image {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512"><rect width="512" height="512" fill="#FFFFFF"/><image width="512" height="512" xlink:href="data:${source.mime};base64,${Buffer.from(source.bytes).toString("base64")}"/></svg>`;
+  return png(rasterize(svg, 512));
+}
+
+/**
+ * Each new drawing against what the person asked for and against the mark
+ * it started from: does it show the request, and is it a different mark
+ * from its start? Gala's line about a round is written from these answers,
+ * so it describes the drawings, never only the request. A question is
+ * asked only when there is something to compare with: no request, no
+ * `showsRequest`; no starting mark, no `differsFromStart`.
+ *
+ * What this does not prove: each answer is one model's reading of two
+ * pictures. A small change (a bar moved a few pixels) can read as "the
+ * same", and a different mark that ignores the request can still read as
+ * different, which is why both are asked.
+ */
+export async function compareDrawing(drawing: Image, options: { request: string[] | null; start: Image | null; signal?: AbortSignal }): Promise<{ showsRequest: boolean | null; differsFromStart: boolean | null }> {
+  if (options.request === null && options.start === null) return { showsRequest: null, differsFromStart: null };
+  const answers = (await ask({
+    state: { ...(options.request !== null ? { request: options.request } : {}) },
+    images: { drawing: judgeView(drawing), ...(options.start !== null ? { start: judgeView(options.start) } : {}) },
+    questions: {
+      ...(options.request !== null ? { showsRequest: { type: "noul", instructions: "`request` is what the person asked to see or change in the mark. Does `drawing` show it?" } as const } : {}),
+      ...(options.start !== null ? { differsFromStart: { type: "noul", instructions: "`drawing` was drawn starting from `start`. Is it visibly a different mark from `start`, beyond small differences in the edges? Answer no if the shapes are the same." } as const } : {}),
+    },
+    signal: options.signal,
+  })) as Record<string, { noul: number } | undefined>;
+  return {
+    showsRequest: answers.showsRequest === undefined ? null : answers.showsRequest.noul >= YES,
+    differsFromStart: answers.differsFromStart === undefined ? null : answers.differsFromStart.noul >= YES,
+  };
+}

@@ -8,8 +8,8 @@
  * other way for a stage to put words in front of a person.
  */
 import { fill, type Image, type Shape, type Spoken } from "./gemini.ts";
-import { checkReply, describeVerdict, type Shown } from "./guard.ts";
-import { DECLINE_LINE } from "./lines.ts";
+import { checkReply, claimsWork, describeVerdict, type Shown } from "./guard.ts";
+import { declineLine, NEXT_MOVE } from "./lines.ts";
 import { recall } from "./memory.ts";
 import { instructionsFor, type Prompt } from "./prompt.ts";
 import { STEPS, stepIndex, stepIndexOfKind } from "./steps.ts";
@@ -63,7 +63,13 @@ export type Steering =
   /** The person asked for something that belongs to a later step. It is kept for that step, and the work stays where it is. */
   | { act: "held"; step: Stage; idea: string }
   /** At the symbol opener, the person clearly asked for a logo with no symbol. */
-  | { act: "noSymbol" };
+  | { act: "noSymbol" }
+  /**
+   * Steering was unsure whether the person asked for a change, but the
+   * details hold one: Gala offers to do exactly that and asks. The offer is
+   * already stored on the step's card (steer.ts), so a yes runs it as is.
+   */
+  | { act: "offer"; moveToOffer: string };
 
 export class Turn {
   state!: Project;
@@ -281,30 +287,72 @@ export class Turn {
     await this.read();
   }
 
+  /**
+   * Like `compose`, for a step that shows a card. When the words fail the
+   * prompt check only on Gala's line, and the card's own text passes on
+   * its own, the card is kept: `lineHeld` is true and the step writes the
+   * card with `declineLine` in place of Gala's line. Null when the card
+   * itself can't be shown.
+   */
+  async composeCard<T>(make: () => Promise<T>, shownIn: (value: T) => Shown, alsoRequire?: (value: T) => Promise<boolean> | boolean): Promise<{ value: T; lineHeld: boolean } | null> {
+    let lineOnly: T | null = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const value = await make();
+      const shown = shownIn(value);
+      const verdict = await checkReply(this.prompt.guard, shown, this.signal);
+      if (verdict.held) console.warn(describeVerdict(verdict));
+      const required = alsoRequire === undefined || (await alsoRequire(value));
+      if (!verdict.held && required) return { value, lineHeld: false };
+      if (verdict.held && verdict.part === "Gala's line" && required) lineOnly = value;
+    }
+    if (lineOnly === null) return null;
+    const card = shownIn(lineOnly).card ?? [];
+    // The card's text was not judged once the line failed: it is judged now, on its own.
+    if (card.length > 0 && (await checkReply(this.prompt.guard, { line: "", card }, this.signal)).held) return null;
+    return { value: lineOnly, lineHeld: true };
+  }
+
   /** Gala says a line. A line that fails the checks is replaced by the decline. */
   async say(text: string): Promise<void> {
-    await this.write([{ op: "say", text: (await this.mayShow({ line: text })) ? text : DECLINE_LINE }]);
+    await this.write([{ op: "say", text: (await this.mayShow({ line: text })) ? text : declineLine(this.stage) }]);
   }
 
-  /** The decline, when nothing checked could be produced. */
+  /** The decline, when nothing checked could be produced, with what the step is waiting for. */
   async decline(): Promise<void> {
-    await this.write([{ op: "say", text: DECLINE_LINE }]);
+    await this.write([{ op: "say", text: declineLine(this.stage) }]);
   }
 
-  /** A short spoken reply that leaves the work where it is. */
-  async converse(waitingFor: string, options: { task?: string; facts?: Record<string, unknown> } = {}): Promise<void> {
+  /**
+   * A short spoken reply that leaves the work where it is. Before it shows,
+   * it passes the prompt checks and the claimed-work check: it may not say
+   * Gala did anything `whatHappened` doesn't list. A reply that fails the
+   * prompt checks becomes the decline; one that keeps claiming work becomes
+   * the step's fixed next move, which claims nothing.
+   */
+  async converse(waitingFor: string, options: { task?: string; facts?: Record<string, unknown>; whatHappened?: string[] } = {}): Promise<void> {
+    const whatHappened = options.whatHappened ?? ["Nothing was drawn, changed or stored this turn."];
+    let claimed = false;
     const reply = await this.compose(
       () =>
         this.think<{ say: string }>({
           section: "conversation",
           task: options.task ?? "Reply to the person's last message.",
-          facts: { step: this.stage, waitingFor, ...options.facts },
+          facts: { step: this.stage, waitingFor, whatHappened, ...options.facts },
           shape: { type: "OBJECT", properties: { say: { type: "STRING" } }, required: ["say"] },
         }),
       (value) => ({ line: value.say }),
+      async (value) => {
+        const verdict = await claimsWork(value.say, whatHappened, this.signal);
+        if (verdict.claims) {
+          claimed = true;
+          console.warn(`A reply was held back: claimed work, score ${verdict.score.toFixed(2)}.`);
+        }
+        return !verdict.claims;
+      },
     );
-    if (reply === null) await this.decline();
-    else await this.write([{ op: "say", text: reply.say }]);
+    if (reply !== null) await this.write([{ op: "say", text: reply.say }]);
+    else if (claimed) await this.write([{ op: "say", text: NEXT_MOVE[this.stage] }]);
+    else await this.decline();
   }
 
   /**
@@ -315,9 +363,17 @@ export class Turn {
   async answer(next: Steering, waitingFor: string): Promise<void> {
     if (next.act === "held") {
       const at = stepIndex(this.stage);
+      const keptFor = STEPS[stepIndex(next.step)]!.name;
       await this.converse(waitingFor, {
         task: "The person asked for something that belongs to a later step. Say you have kept it for that step, without doing it now. Then say which step the project is on and which step comes next, and ask for what this step is waiting for.",
-        facts: { keptForStep: STEPS[stepIndex(next.step)]!.name, whatWasKept: next.idea, currentStep: STEPS[at]!.name, nextStep: STEPS[at + 1]?.name ?? null },
+        facts: { keptForStep: keptFor, whatWasKept: next.idea, currentStep: STEPS[at]!.name, nextStep: STEPS[at + 1]?.name ?? null },
+        whatHappened: [`Kept the person's request for ${keptFor}, to be read when that step opens. Nothing was drawn or changed.`],
+      });
+    } else if (next.act === "offer") {
+      await this.converse(waitingFor, {
+        task: "You were not sure the person asked for a change, but you can do moveToOffer. Offer to do exactly that, in one short question, and do nothing yet.",
+        facts: { moveToOffer: next.moveToOffer },
+        whatHappened: [`Offered to ${next.moveToOffer}, and stored the offer. Nothing was drawn or changed yet.`],
       });
     } else if (next.act === "ask") {
       await this.converse(waitingFor, {
@@ -325,9 +381,15 @@ export class Turn {
         facts: next.facts,
       });
     } else {
+      // A talk, or anything else a step did not act on: never silence.
       await this.converse(waitingFor, { facts: next.act === "talk" ? next.facts : undefined });
     }
   }
+}
+
+/** A card step's words as checked by `composeCard`: Gala's line replaced by the decline and the next move when only the line was held back. */
+export function keptCard<T extends { say: string }>(checked: { value: T; lineHeld: boolean }, stage: Stage): T {
+  return checked.lineHeld ? { ...checked.value, say: declineLine(stage) } : checked.value;
 }
 
 /** What the person asked for, as a step's facts carry it. Null when nothing. */

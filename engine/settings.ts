@@ -86,6 +86,8 @@ export type Read<K extends string> = {
   value: K;
   /** True when Jev could not tell whether the message asks about this setting, or what for. */
   unsure: boolean;
+  /** True when Jev is sure the message asks for one of the setting's values (the one set now included). */
+  asked: boolean;
   /** How sure Jev was of its answer, for the log. */
   confidence: number;
 };
@@ -118,7 +120,7 @@ export async function readSettings<S extends Record<string, { setting: Setting<s
     const picked = answers[name]!;
     const sure = picked.confidence >= SURE;
     const key = Object.entries(field.setting.values).find(([, value]) => value.label === picked.choice)?.[0];
-    result[name] = { value: sure && key !== undefined ? key : field.current, unsure: !sure, confidence: picked.confidence };
+    result[name] = { value: sure && key !== undefined ? key : field.current, unsure: !sure, asked: sure && key !== undefined, confidence: picked.confidence };
   }
   return result as { [F in keyof S]: Read<S[F]["current"]> };
 }

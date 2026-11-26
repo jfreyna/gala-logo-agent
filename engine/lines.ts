@@ -3,8 +3,37 @@
  * can be relied on exactly when a model's answer can't be.
  */
 
-/** Said in place of a reply that failed a prompt-protection check. */
+import type { Stage } from "./store.ts";
+
+/** Said in place of a reply that failed a prompt-protection check. `declineLine` adds the step's next move. */
 export const DECLINE_LINE = "I keep my working notes to myself. Your logo, though, I’ll talk about all day.";
+
+/**
+ * What each step is waiting for, in one fixed line. It ends the decline,
+ * and stands in for a words-only reply that could not be checked, so a
+ * fixed line still gives the person a next move and claims no work.
+ */
+export const NEXT_MOVE: Record<Stage, string> = {
+  brief: "Tell me more about the brand and I’ll keep building the brief.",
+  research: "Approve the direction, or tell me what to change.",
+  type: "Choose one of the three typefaces, or change one in the tray.",
+  wordmark: "Use this wordmark, or tell me what to change.",
+  symbolOpener: "Describe what the symbol should show, or say go ahead.",
+  directions: "Pick A, B or C, or tell me what to change.",
+  variations: "Pick 1, 2 or 3, or tell me what to change.",
+  stressTest: "Approve the mark, or tell me what to change.",
+  lockup: "Use this lockup, or tell me what to change.",
+  pickColors: "Pick your colors on the card and save them.",
+  colorways: "Pick a colorway, or edit your colors.",
+  kit: "Your files are on the kit card.",
+  picks: "Submit your picks, or choose not to.",
+  done: "You can go back to any step to change it, or start a new project.",
+};
+
+/** The decline, with what the step is waiting for. */
+export function declineLine(stage: Stage): string {
+  return `${DECLINE_LINE} ${NEXT_MOVE[stage]}`;
+}
 
 /** Said when a model or a check could not be reached after retries. */
 export const TROUBLE_LINE = "Something went wrong on my side. Send that again and I’ll pick it up.";

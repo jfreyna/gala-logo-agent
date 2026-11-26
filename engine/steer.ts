@@ -44,7 +44,7 @@ import type { Shape } from "./gemini.ts";
 import { ask } from "./jev.ts";
 import { broughtBackFixedLine } from "./lines.ts";
 import { markOf, optionLabel, pickedRound, roundOptions, roundsOf, type RoundKind, type RoundOption } from "./rounds.ts";
-import { inCase } from "./settings.ts";
+import { CASE, inCase, LAYOUT, readSettings, SPACE_BETWEEN, SPACING } from "./settings.ts";
 import { earlierSteps, laterSteps, STEPS, stepIndex, SYMBOL_STEPS, type Step } from "./steps.ts";
 import type { Stage, StoredMessage } from "./store.ts";
 import type { MarkRef, Request, Steering, Turn } from "./turn.ts";
@@ -134,7 +134,10 @@ function optionsOf(turn: Turn): { card: StoredMessage; options: Option[]; rounds
   }
 }
 
-export type Reading = { pick: number | null; back: number; change: number; later: number | null; noSymbol: number | null; bringBack: number | null };
+export type Reading = { pick: number | null; back: number; change: number; later: number | null; noSymbol: number | null; bringBack: number | null; acceptsOffer: number | null };
+
+/** The steps where a message describing the drawing counts as a change, and an unsure one gets an offer. */
+const DRAWING_STEPS: Stage[] = ["directions", "variations", "lockup"];
 
 /**
  * Jev's answers. `pick` is null when the step has no options, `later` when
@@ -158,36 +161,44 @@ const ASKS = {
   back: "Does `message` ask to go back to one of the steps in `earlierSteps`, or to start over?",
   change: "Does `message` ask for something specific in the work to be changed or tried: the drawing, the typeface, how the name is written, or the direction?",
   idea: "Does `message` describe what the symbol should show or look like?",
+  /**
+   * At the drawing steps, asked in place of `change`: a person often
+   * describes the drawing they want ("three bars, the top one cut to a
+   * triangle") rather than asking for it, and that is a request too.
+   */
+  describe: "Does `message` ask for something specific in the work to be changed or tried, or describe what the drawing should show or look like, even without asking for it in so many words? A compliment, or a question about the drawings on screen, alone is not this.",
+  acceptsOffer: "Gala offered to do `offer`. Does `message` say yes to it?",
   later: "Does `message` ask for something that belongs to the work of one of the steps in `laterSteps`, and not to `currentStep`?",
   noSymbol: "Does `message` explicitly ask for a logo with no symbol at all, only the name?",
   /** Asked at a step drawn in rounds, once there is an earlier round: the person wants one back, as it was. */
   bringBack: "Does `message` ask to see again, or bring back up, one of the options in `optionsOnScreen` that is on an earlier round, as it was?",
 } as const;
 
-export async function read(turn: Turn, message: string, options: Option[], signOff = false): Promise<Reading> {
+export async function read(turn: Turn, message: string, options: Option[], signOff = false, offer: string | null = null): Promise<Reading> {
   const step = STEPS[stepIndex(turn.stage)]!;
   const earlier = earlierSteps(turn.stage).map((entry) => entry.name);
   const later = laterSteps(turn.stage).map((entry) => entry.name);
   const roundKind = turn.stage === "directions" || turn.stage === "variations" ? ROUND_KINDS[turn.stage] : undefined;
   const hasEarlierRound = roundKind !== undefined && roundsOf(turn, roundKind).length > 1;
   const answers = (await ask({
-    state: { message, currentStep: step.name, optionsOnScreen: options.map((option) => option.label), earlierSteps: earlier, laterSteps: later },
+    state: { message, currentStep: step.name, optionsOnScreen: options.map((option) => option.label), earlierSteps: earlier, laterSteps: later, ...(offer !== null ? { offer } : {}) },
     questions: {
       ...(options.length > 0 ? { pick: { type: "noul", instructions: signOff ? ASKS.signOff : ASKS.pick } as const } : {}),
       back: { type: "noul", instructions: ASKS.back },
-      change: { type: "noul", instructions: turn.stage === "symbolOpener" ? ASKS.idea : ASKS.change },
+      change: { type: "noul", instructions: turn.stage === "symbolOpener" ? ASKS.idea : DRAWING_STEPS.includes(turn.stage) ? ASKS.describe : ASKS.change },
+      ...(offer !== null ? { acceptsOffer: { type: "noul", instructions: ASKS.acceptsOffer } as const } : {}),
       ...(later.length > 0 ? { later: { type: "noul", instructions: ASKS.later } as const } : {}),
       ...(turn.stage === "symbolOpener" ? { noSymbol: { type: "noul", instructions: ASKS.noSymbol } as const } : {}),
       ...(hasEarlierRound ? { bringBack: { type: "noul", instructions: ASKS.bringBack } as const } : {}),
     },
     signal: turn.signal,
   })) as Record<string, { noul: number } | undefined>;
-  return { pick: answers.pick?.noul ?? null, back: answers.back!.noul, change: answers.change!.noul, later: answers.later?.noul ?? null, noSymbol: answers.noSymbol?.noul ?? null, bringBack: answers.bringBack?.noul ?? null };
+  return { pick: answers.pick?.noul ?? null, back: answers.back!.noul, change: answers.change!.noul, later: answers.later?.noul ?? null, noSymbol: answers.noSymbol?.noul ?? null, bringBack: answers.bringBack?.noul ?? null, acceptsOffer: answers.acceptsOffer?.noul ?? null };
 }
 
 export function describeReading(stage: Stage, reading: Reading): string {
   const score = (value: number | null) => (value === null ? "none" : value.toFixed(2));
-  const extra = (reading.noSymbol === null ? "" : `, no symbol ${score(reading.noSymbol)}`) + (reading.bringBack === null ? "" : `, bring back ${score(reading.bringBack)}`);
+  const extra = (reading.noSymbol === null ? "" : `, no symbol ${score(reading.noSymbol)}`) + (reading.bringBack === null ? "" : `, bring back ${score(reading.bringBack)}`) + (reading.acceptsOffer === null ? "" : `, accepts offer ${score(reading.acceptsOffer)}`);
   return `Steering at ${stage}: pick ${score(reading.pick)}, back ${score(reading.back)}, change ${score(reading.change)}, later ${score(reading.later)}${extra}`;
 }
 
@@ -196,7 +207,7 @@ type Details = { option: string; backTo: string; laterStep?: string; laterIdea?:
 /** The marks on this step's rounds a person can name to work from, by key, as the details call is told them. */
 type Named = { key: string; label: string };
 
-function detailsShape(options: Option[], earlier: Step[], later: Step[], marks: Named[]): Shape {
+function detailsShape(options: Option[], earlier: Step[], later: Step[], marks: Named[], describes: boolean): Shape {
   const nullable = (description: string): Shape => ({ type: "STRING", nullable: true, description });
   return {
     type: "OBJECT",
@@ -230,7 +241,11 @@ function detailsShape(options: Option[], earlier: Step[], later: Step[], marks: 
         : {}),
       typeface: nullable("The typeface family the person names for the brand name, as they wrote it, or null"),
       nameAs: nullable("How the person wants the brand name written, spelled out exactly as it should appear (for example in all capitals), or null"),
-      drawing: nullable("What the person asks to change or try in the drawing of the mark, in their own words, or null"),
+      drawing: nullable(
+        describes
+          ? "What the person asks to change or try in the drawing of the mark, or the drawing they describe wanting (what it should show or look like), in their own words, or null"
+          : "What the person asks to change or try in the drawing of the mark, in their own words, or null",
+      ),
       note: nullable("Any other change the person asks for, in their own words, or null"),
     },
     required: ["option", "backTo", ...(later.length > 0 ? ["laterStep", "laterIdea"] : []), ...(marks.length > 0 ? ["startFrom"] : []), "typeface", "nameAs", "drawing", "note"],
@@ -250,7 +265,8 @@ async function details(turn: Turn, options: Option[], earlier: Step[], later: St
       ...(later.length > 0 ? { laterSteps: later.map((step) => ({ key: step.stage, name: step.name })) } : {}),
       ...(marks.length > 0 ? { marksShownInThisStep: marks } : {}),
     },
-    shape: detailsShape(options, earlier, later, marks),
+    // At the drawing steps a described drawing is a request too, so the drawing field takes it.
+    shape: detailsShape(options, earlier, later, marks, DRAWING_STEPS.includes(turn.stage)),
   });
 }
 
@@ -292,6 +308,50 @@ async function checked(turn: Turn, found: Details, rounds: RoundOption[]): Promi
   return { request, problem: null };
 }
 
+/** An offer Gala made: the exact request a yes runs, its words, and where the conversation stood when it was made. */
+export type Offer = { request: Request; moveToOffer: string; afterMessages: number };
+
+/** The card an offer at this step is stored on: the newest round, or the lockup card. */
+function offerCard(turn: Turn): StoredMessage | null {
+  const roundKind = ROUND_KINDS[turn.stage];
+  if (roundKind !== undefined) return roundsOf(turn, roundKind).at(-1) ?? null;
+  return turn.stage === "lockup" ? turn.current("lockup") : null;
+}
+
+/**
+ * The offer still standing: stored on the step's card, and nothing Gala
+ * wrote after the reply that made it. Only the person's next message can
+ * answer it.
+ */
+export function pendingOffer(turn: Turn): { card: StoredMessage; offer: Offer } | null {
+  const card = offerCard(turn);
+  const offer = card?.artifact?.offer as Offer | null | undefined;
+  if (card === null || offer === null || offer === undefined) return null;
+  const galaSince = turn.state.messages.slice(offer.afterMessages + 1).some((message) => message.author === "gala");
+  return galaSince ? null : { card, offer };
+}
+
+/** The offer in plain words, from the request itself: what would be drawn, from which mark. */
+function offerWords(stage: Stage, request: Request): string {
+  const what = [request.drawing, request.note].filter((entry): entry is string => entry !== null).join("; ");
+  const from = request.startFrom ? `, starting from ${request.startFrom.name}` : "";
+  if (stage === "directions") return `redraw the three directions with this: ${what}${from}`;
+  if (stage === "variations") return `redraw the three variations with this: ${what}${from}`;
+  return request.drawing !== null ? `draw new variations of the symbol with this: ${what}` : `change the lockup with this: ${what}`;
+}
+
+/**
+ * True when a request said for the wordmark or the lockup names one of
+ * that step's settings, the only way those steps read a held request.
+ */
+async function settingsCanRead(turn: Turn, step: Stage, idea: string): Promise<boolean> {
+  if (step !== "wordmark" && step !== "lockup") return true;
+  const read = step === "wordmark"
+    ? await readSettings(idea, { case: { setting: CASE, current: "asTyped" }, spacing: { setting: SPACING, current: "asDrawn" } }, turn.signal)
+    : await readSettings(idea, { layout: { setting: LAYOUT, current: "sideBySide" }, spaceBetween: { setting: SPACE_BETWEEN, current: "asSet" } }, turn.signal);
+  return Object.values(read).some((entry) => entry.asked);
+}
+
 /**
  * Reads the person's message and moves the work. Runs once per turn,
  * before the step. `back` is a "Back to this step" press in the Work
@@ -305,12 +365,25 @@ export async function steer(turn: Turn, options: { back?: Stage } = {}): Promise
   if (turn.stage === "brief") return;
   const message = turn.unansweredText();
   turn.said = message;
-  if (message === "") return;
+  if (message === "") {
+    // A file with no words still gets an answer, never silence. A button press has no file and is answered by its step.
+    const files = turn.unanswered().flatMap((entry) => (entry.upload !== null ? [entry.upload.fileName] : []));
+    if (files.length > 0) turn.steer({ act: "talk", facts: { sentAFileWithNoWords: files } });
+    return;
+  }
+
+  // An offer is answered by the next message only: it is cleared whatever that message says, and a yes runs it exactly.
+  const standing = pendingOffer(turn);
+  if (standing !== null) await turn.write([{ op: "patchArtifact", messageId: standing.card.id, artifact: { ...standing.card.artifact!, offer: null } }]);
 
   const onScreen = optionsOnScreen(turn);
   const choices = onScreen?.options ?? [];
-  const reading = await read(turn, message, choices, onScreen?.signOff ?? false);
+  const reading = await read(turn, message, choices, onScreen?.signOff ?? false, standing?.offer.moveToOffer ?? null);
   console.log(describeReading(turn.stage, reading));
+  if (standing !== null && verdictOf(reading.acceptsOffer ?? 0) === "yes" && verdictOf(reading.back) !== "yes") {
+    await keep(turn, { ...standing.offer.request, drawing: null }, null);
+    return turn.steer({ act: "redo", request: standing.offer.request });
+  }
 
   const verdict = (score: number | null): Verdict => (score === null ? "no" : verdictOf(score));
   const back = verdict(reading.back);
@@ -327,6 +400,10 @@ export async function steer(turn: Turn, options: { back?: Stage } = {}): Promise
 
   // A yes acts, in the order go back, pick, change. Unsure asks only when nothing is a yes.
   const decides = back === "yes" ? { move: "back" } : pick === "yes" ? { move: "pick" } : backUp === "yes" ? { move: "bringBack" } : change === "yes" ? { move: "change" } : null;
+  // At a drawing step, a change Jev is unsure of gets an offer to do exactly what the message says, stored so a yes runs it.
+  if (decides === null && later !== "yes" && change === "unsure" && back !== "unsure" && pick !== "unsure" && backUp !== "unsure" && DRAWING_STEPS.includes(turn.stage)) {
+    return offer(turn, onScreen);
+  }
   if (decides === null && later !== "yes") {
     return turn.steer([back, pick, backUp, change, later].includes("unsure") ? { act: "ask" } : { act: "talk" });
   }
@@ -350,6 +427,10 @@ export async function steer(turn: Turn, options: { back?: Stage } = {}): Promise
     const idea = found.laterIdea?.trim() ?? "";
     if (step === undefined || idea === "") {
       if (decides === null) return turn.steer({ act: "ask" });
+    } else if (!(await settingsCanRead(turn, step.stage, idea))) {
+      // The wordmark and the lockup read a held request only as one of their settings: anything else is not promised.
+      console.log(`Steering at ${turn.stage}: a request for ${step.stage} names none of its settings, so it is not kept`);
+      if (decides === null) return turn.steer({ act: "talk", facts: { notKept: { step: step.name, whatWasAsked: idea.slice(0, MAX_HELD_LENGTH), thatStepCanSet: step.stage === "wordmark" ? [CASE.about, SPACING.about] : [LAYOUT.about, SPACE_BETWEEN.about] } } });
     } else {
       // A typeface kept for the type step is kept by its name on Google's list, so the step can set it.
       const family = step.stage === "type" && found.typeface ? await googleFamily(found.typeface) : null;
@@ -463,6 +544,25 @@ async function bringBack(turn: Turn, mark: MarkRef, marks: RoundOption[]): Promi
 
 /** The longest request kept for a later step. */
 const MAX_HELD_LENGTH = 500;
+
+/**
+ * The offer: the details are read as for a change, checked the same way,
+ * and stored on the step's card with their words. Nothing is drawn. When
+ * the details hold no drawing and no change, Gala asks one question
+ * instead.
+ */
+async function offer(turn: Turn, onScreen: ReturnType<typeof optionsOnScreen>): Promise<void> {
+  const marks = turn.stage === "directions" || turn.stage === "variations" ? (onScreen?.rounds ?? []) : [];
+  const found = await details(turn, onScreen?.options ?? [], earlierSteps(turn.stage), [], marks.map((option) => ({ key: option.key, label: optionLabel(option, ROUND_NOUN[ROUND_KINDS[turn.stage]!]) })));
+  const { request, problem } = await checked(turn, found, marks);
+  const card = offerCard(turn);
+  if (problem !== null || card === null || (request.drawing === null && request.note === null)) return turn.steer({ act: "ask" });
+  const moveToOffer = offerWords(turn.stage, request);
+  const stored: Offer = { request, moveToOffer, afterMessages: turn.state.messages.length };
+  await turn.write([{ op: "patchArtifact", messageId: card.id, artifact: { ...card.artifact!, offer: stored } }]);
+  console.log(`Steering at ${turn.stage}: unsure of a change, so Gala offers it`);
+  turn.steer({ act: "offer", moveToOffer });
+}
 
 /** The same change the Choose or Approve button makes. */
 async function choose(turn: Turn, card: StoredMessage, key: string): Promise<void> {

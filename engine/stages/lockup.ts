@@ -11,7 +11,7 @@ import type { Shape } from "../gemini.ts";
 import { WORKING } from "../lines.ts";
 import { describeSettings, GAP_SCALE, isValue, LAYOUT, readSettings, SPACE_BETWEEN, type Layout, type SpaceBetween } from "../settings.ts";
 import type { StoredMessage } from "../store.ts";
-import type { Outcome, Turn } from "../turn.ts";
+import { keptCard, type Outcome, type Turn } from "../turn.ts";
 import { openColors } from "./color.ts";
 import { chosenConcept } from "./directions.ts";
 import { familyOf } from "./type.ts";
@@ -39,7 +39,7 @@ async function show(turn: Turn, previous: StoredMessage | null): Promise<Outcome
     unsureAbout = [...(read.layout.unsure ? ["the layout"] : []), ...(read.spaceBetween.unsure ? ["the space between the symbol and the name"] : [])];
   }
 
-  const words = await turn.compose(
+  const wordsChecked = await turn.composeCard(
     () =>
       turn.think<{ say: string }>({
         section: "conversation",
@@ -58,10 +58,11 @@ async function show(turn: Turn, previous: StoredMessage | null): Promise<Outcome
       }),
     (value) => ({ line: value.say, card: [mark.name] }),
   );
-  if (words === null) {
+  if (wordsChecked === null) {
     await turn.decline();
     return "wait";
   }
+  const words = keptCard(wordsChecked, turn.stage);
 
   await turn.write([
     {

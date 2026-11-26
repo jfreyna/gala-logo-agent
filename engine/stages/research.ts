@@ -5,7 +5,7 @@
  */
 import type { Image, Shape } from "../gemini.ts";
 import { forJudging, siteIcon } from "../siteIcon.ts";
-import { WORKING } from "../lines.ts";
+import { declineLine, WORKING } from "../lines.ts";
 import { asked, requestsOf, type Outcome, type Turn } from "../turn.ts";
 import { briefOf } from "./brief.ts";
 
@@ -55,7 +55,7 @@ export async function research(turn: Turn): Promise<Outcome> {
   // First visit, or the brief changed: research, then the direction.
   if (card === null) {
     await turn.status(WORKING.research);
-    const found = await turn.compose(
+    const foundChecked = await turn.composeCard(
       () =>
         turn.think<Research>({
           section: "research",
@@ -69,10 +69,11 @@ export async function research(turn: Turn): Promise<Outcome> {
         card: [...[...value.competitors, ...value.neighbors].flatMap((entry) => [entry.name, entry.note]), ...directionCard(value.direction)],
       }),
     );
-    if (found === null) {
+    if (foundChecked === null) {
       await turn.decline();
       return "wait";
     }
+    const found = foundChecked.lineHeld ? { ...foundChecked.value, say: declineLine(turn.stage), direction: { ...foundChecked.value.direction, say: "" } } : foundChecked.value;
     // Each brand's own site icon, fetched and stored here; the card's default image where a site gives none.
     const cards = (list: Reference[]) =>
       Promise.all(
@@ -94,7 +95,7 @@ export async function research(turn: Turn): Promise<Outcome> {
   // The person asked for a change to the direction.
   if (next?.act === "redo") {
     await turn.status(WORKING.research);
-    const revised = await turn.compose(
+    const revisedChecked = await turn.composeCard(
       () =>
         turn.think<Direction>({
           section: "research",
@@ -104,6 +105,7 @@ export async function research(turn: Turn): Promise<Outcome> {
         }),
       (value) => ({ line: value.say, card: directionCard(value) }),
     );
+    const revised = revisedChecked === null ? null : revisedChecked.lineHeld ? { ...revisedChecked.value, say: declineLine(turn.stage) } : revisedChecked.value;
     if (revised === null) await turn.decline();
     else await turn.write([{ op: "artifact", kind: "direction", artifact: { ...revised, approved: false, ...requestsOf(next.request) } }]);
     return "wait";

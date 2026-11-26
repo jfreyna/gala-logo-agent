@@ -20,23 +20,25 @@ export type Step = {
   kinds: string[];
   /** True when a person can go back to this step. */
   canReturn: boolean;
+  /** True when the step reads requests held for it when it opens, so a request may be said to be kept for it. */
+  readsHeld: boolean;
 };
 
 export const STEPS: Step[] = [
-  { stage: "brief", name: "the brief", kinds: ["brief"], canReturn: true },
-  { stage: "research", name: "the research and the direction", kinds: ["research", "direction"], canReturn: true },
-  { stage: "type", name: "the typeface for the name", kinds: ["typeSet"], canReturn: true },
-  { stage: "wordmark", name: "the wordmark, the name set in the chosen typeface, its case and letter spacing", kinds: ["wordmark"], canReturn: true },
-  { stage: "symbolOpener", name: "what the symbol should show", kinds: ["symbolOpener"], canReturn: true },
-  { stage: "directions", name: "three directions for the symbol, the mark", kinds: ["conceptSet"], canReturn: true },
-  { stage: "variations", name: "three variations of the chosen mark", kinds: ["variationSet"], canReturn: true },
-  { stage: "stressTest", name: "the stress test of the mark", kinds: ["stressTest"], canReturn: true },
-  { stage: "lockup", name: "the lockup, the symbol and the wordmark together, its layout and the space between them", kinds: ["lockup"], canReturn: true },
-  { stage: "pickColors", name: "picking the colors", kinds: ["colorPicker"], canReturn: true },
-  { stage: "colorways", name: "the three colorways", kinds: ["colorwaySet"], canReturn: true },
-  { stage: "kit", name: "the kit", kinds: ["kit"], canReturn: true },
-  { stage: "picks", name: "the picks for the halls", kinds: ["picks"], canReturn: false },
-  { stage: "done", name: "the finished project", kinds: [], canReturn: false },
+  { stage: "brief", name: "the brief", kinds: ["brief"], canReturn: true, readsHeld: false },
+  { stage: "research", name: "the research and the direction", kinds: ["research", "direction"], canReturn: true, readsHeld: false },
+  { stage: "type", name: "the typeface for the name", kinds: ["typeSet"], canReturn: true, readsHeld: true },
+  { stage: "wordmark", name: "the wordmark, the name set in the chosen typeface, its case and letter spacing", kinds: ["wordmark"], canReturn: true, readsHeld: true },
+  { stage: "symbolOpener", name: "what the symbol should show", kinds: ["symbolOpener"], canReturn: true, readsHeld: true },
+  { stage: "directions", name: "three directions for the symbol, the mark", kinds: ["conceptSet"], canReturn: true, readsHeld: true },
+  { stage: "variations", name: "three variations of the chosen mark", kinds: ["variationSet"], canReturn: true, readsHeld: true },
+  { stage: "stressTest", name: "the stress test of the mark", kinds: ["stressTest"], canReturn: true, readsHeld: false },
+  { stage: "lockup", name: "the lockup, the symbol and the wordmark together, its layout and the space between them", kinds: ["lockup"], canReturn: true, readsHeld: true },
+  { stage: "pickColors", name: "picking the colors", kinds: ["colorPicker"], canReturn: true, readsHeld: true },
+  { stage: "colorways", name: "the three colorways", kinds: ["colorwaySet"], canReturn: true, readsHeld: true },
+  { stage: "kit", name: "the kit", kinds: ["kit"], canReturn: true, readsHeld: false },
+  { stage: "picks", name: "the picks for the halls", kinds: ["picks"], canReturn: false, readsHeld: false },
+  { stage: "done", name: "the finished project", kinds: [], canReturn: false, readsHeld: false },
 ];
 
 /** The step's place in the order, or -1. */
@@ -66,7 +68,8 @@ export const SYMBOL_STEPS: Stage[] = ["symbolOpener", "directions", "variations"
  * the other symbol steps are not "later".
  */
 export function laterSteps(stage: Stage): Step[] {
-  const later = STEPS.slice(stepIndex(stage) + 1, stepIndex(LAST_HELD) + 1);
+  // Only a step that reads held requests is offered: nothing is promised for one that would never read it (the stress test).
+  const later = STEPS.slice(stepIndex(stage) + 1, stepIndex(LAST_HELD) + 1).filter((step) => step.readsHeld);
   return SYMBOL_STEPS.includes(stage) ? later.filter((step) => !SYMBOL_STEPS.includes(step.stage)) : later;
 }
 

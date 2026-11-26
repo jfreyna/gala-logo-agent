@@ -15,7 +15,7 @@ import { ask, YES } from "../jev.ts";
 import { WORKING } from "../lines.ts";
 import { CASE, describeSettings, inCase, isValue, LETTER_SPACING_EM, readSettings, SPACING, type Case, type Spacing } from "../settings.ts";
 import type { StoredMessage } from "../store.ts";
-import { type Outcome, type Turn } from "../turn.ts";
+import { keptCard, type Outcome, type Turn } from "../turn.ts";
 import { fontFor } from "../typeset.ts";
 import { familyOf } from "./type.ts";
 
@@ -71,7 +71,7 @@ async function show(turn: Turn, previous: StoredMessage | null): Promise<Outcome
   const letterSpacing = LETTER_SPACING_EM[current.spacing];
   const reads = await readsAt16(family, name, letterSpacing, turn.signal);
 
-  const words = await turn.compose(
+  const wordsChecked = await turn.composeCard(
     () =>
       turn.think<{ say: string }>({
         section: "conversation",
@@ -90,10 +90,11 @@ async function show(turn: Turn, previous: StoredMessage | null): Promise<Outcome
       }),
     (value) => ({ line: value.say }),
   );
-  if (words === null) {
+  if (wordsChecked === null) {
     await turn.decline();
     return "wait";
   }
+  const words = keptCard(wordsChecked, turn.stage);
 
   // The weight the name is drawn in: a family with no Regular is set in the weight a browser picks for it (Buda is Light), and the card says so.
   const weight = (await fontFor(family)).info.weight;

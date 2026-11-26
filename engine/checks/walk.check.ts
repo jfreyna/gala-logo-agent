@@ -57,7 +57,9 @@ for (let run = 1; run <= 3; run++) {
     await turn.read();
     await brief(turn);
     const last = store.messages[store.messages.length - 1]!;
-    assert(last.text !== DECLINE_LINE, "Gala declined");
+    // The decline now keeps the card and replaces only Gala's line (FRI-1719), so a decline is looked for in both places.
+    assert(!(last.text ?? "").startsWith(DECLINE_LINE), "Gala declined");
+    assert(!String(last.artifact?.say ?? "").startsWith(DECLINE_LINE), "Gala's line on the brief card is the decline");
     assertEqual(last.kind, "brief", "the last thing Gala wrote");
     assertEqual(last.artifact!.never.length, 3, "anti-words on the card");
     assert(/partner/i.test(last.artifact!.tagline ?? ""), `tagline is ${last.artifact!.tagline}`);

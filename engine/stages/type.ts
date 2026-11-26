@@ -12,7 +12,7 @@ import { ask, SURE, type Choice, type Score } from "../jev.ts";
 import { cannotDrawLine, NO_TYPEFACE_LINE, WORKING } from "../lines.ts";
 import { NOTICE_KIND, noticeFor } from "../notice.ts";
 import { googleFamily } from "../steer.ts";
-import { optionId, requestsOf, type Outcome, type Request, type Turn } from "../turn.ts";
+import { keptCard, optionId, requestsOf, type Outcome, type Request, type Turn } from "../turn.ts";
 import { CannotSet } from "../../kit/src/font.ts";
 import { namesToSet, settablePicks, whyNot } from "../typeset.ts";
 import { briefOf } from "./brief.ts";
@@ -83,7 +83,7 @@ async function propose(turn: Turn, request: Request | null): Promise<Outcome> {
   // "My pick" only when Jev is sure of its first class and the person named none; otherwise the cards themselves are the question.
   const galaIsSure = named === undefined && classes.typeClass.confidence >= SURE;
 
-  const words = await turn.compose(
+  const wordsChecked = await turn.composeCard(
     () =>
       turn.think<{ say: string; reasons: string[] }>({
         section: "type",
@@ -101,10 +101,11 @@ async function propose(turn: Turn, request: Request | null): Promise<Outcome> {
       }),
     (value) => ({ line: value.say, card: value.reasons }),
   );
-  if (words === null) {
+  if (wordsChecked === null) {
     await turn.decline();
     return "wait";
   }
+  const words = keptCard(wordsChecked, turn.stage);
 
   await turn.write([
     {

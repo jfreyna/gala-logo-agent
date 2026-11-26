@@ -166,3 +166,23 @@ export function describeVerdict(verdict: Verdict & { held: true }): string {
 export function mentionsHex(text: string): boolean {
   return /#[0-9a-f]{6}\b|#[0-9a-f]{3}\b/i.test(text);
 }
+
+/**
+ * The claimed-work check, for words-only replies: does the reply say Gala
+ * did, made, drew, stored or changed something that the turn did not do?
+ * Jev reads the reply against `whatHappened`, the list of what the turn
+ * actually did, written by code. Like the leak checks, there is no phrase
+ * list: "I have that layout down" is caught because nothing was stored,
+ * not because of its words.
+ *
+ * What this does not prove: Jev judges meaning, so a claim worded as a
+ * plan ("I'll keep that in mind") can pass, and a plain promise of what
+ * comes next can be read as a claim and fall back to the fixed line. Each
+ * answer is one model's reading.
+ */
+export const CLAIM_QUESTION = "Does `reply` say or suggest that Gala has already done, drawn, saved, remembered, taken on board, kept or changed something that `whatHappened` does not list? A question, an offer, or a plain statement of what comes next is not a claim.";
+
+export async function claimsWork(reply: string, whatHappened: string[], signal?: AbortSignal): Promise<{ claims: boolean; score: number }> {
+  const answers = await ask({ state: { reply, whatHappened }, questions: { claims: { type: "noul", instructions: CLAIM_QUESTION } }, signal });
+  return { claims: answers.claims.noul >= YES, score: answers.claims.noul };
+}

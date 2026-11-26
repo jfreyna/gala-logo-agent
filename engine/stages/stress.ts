@@ -8,7 +8,7 @@
 import type { Shape } from "../gemini.ts";
 import { WORKING } from "../lines.ts";
 import { markFrom, stressTest as runTests } from "../marks.ts";
-import type { Outcome, Turn } from "../turn.ts";
+import { keptCard, type Outcome, type Turn } from "../turn.ts";
 import { chosenConcept } from "./directions.ts";
 
 const SAY: Shape = { type: "OBJECT", properties: { say: { type: "STRING" } }, required: ["say"] };
@@ -22,7 +22,7 @@ export async function stressTest(turn: Turn): Promise<Outcome> {
     await turn.status(WORKING.stressTest);
     const source = await turn.store.readFile(chosen.sourceFileId);
     const checks = await runTests(await markFrom({ bytes: source.bytes, mime: source.contentType }), turn.signal);
-    const words = await turn.compose(
+    const wordsChecked = await turn.composeCard(
       () =>
         turn.think<{ say: string }>({
           section: "stressTest",
@@ -32,10 +32,11 @@ export async function stressTest(turn: Turn): Promise<Outcome> {
         }),
       (value) => ({ line: value.say }),
     );
-    if (words === null) {
+    if (wordsChecked === null) {
       await turn.decline();
       return "wait";
     }
+    const words = keptCard(wordsChecked, turn.stage);
     await turn.write([{ op: "artifact", kind: "stressTest", artifact: { say: words.say, brandName: turn.nameAsSet, markFileId: chosen.markFileId, sourceFileId: chosen.sourceFileId, checks } }]);
     return "wait";
   }

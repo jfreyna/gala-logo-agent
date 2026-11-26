@@ -4,7 +4,7 @@
  */
 import type { Shape } from "../gemini.ts";
 import { WORKING } from "../lines.ts";
-import type { Outcome, Turn } from "../turn.ts";
+import { keptCard, type Outcome, type Turn } from "../turn.ts";
 
 const FIELDS = ["brand", "tagline", "whatYouDo", "audience", "whereUsed"] as const;
 
@@ -42,7 +42,7 @@ export async function brief(turn: Turn): Promise<Outcome> {
   if (turn.unanswered().length === 0) return "wait";
   await turn.status(WORKING.brief);
   const images = await turn.attachedImages();
-  const move = await turn.compose(
+  const moveChecked = await turn.composeCard(
     () =>
       turn.think<BriefMove>({
         section: "brief",
@@ -54,10 +54,11 @@ export async function brief(turn: Turn): Promise<Outcome> {
     // The card's fields are the person's own words, so they are judged apart from Gala's line.
     (value) => ({ line: value.say, card: [value.brand ?? "", value.tagline ?? "", value.whatYouDo ?? "", value.audience ?? "", ...value.whereUsed, ...value.never] }),
   );
-  if (move === null) {
+  if (moveChecked === null) {
     await turn.decline();
     return "wait";
   }
+  const move = keptCard(moveChecked, turn.stage);
 
   // The brief can't be complete without a name and what the brand does, whatever the model says.
   const complete = move.complete && move.brand !== null && move.whatYouDo !== null;
