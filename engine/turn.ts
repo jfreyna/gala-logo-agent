@@ -200,10 +200,29 @@ export class Turn {
     return this.state.messages.indexOf(a) > this.state.messages.indexOf(b);
   }
 
-  /** What the person has said since Gala last spoke. */
+  /** True when this turn is a Try again press on a notice (runTurn's `retry`, FRI-1729). */
+  retrying = false;
+
+  /**
+   * What the person has said since Gala last answered. On a Try again turn
+   * (FRI-1729), a notice that offers Try again is not an answer: while nothing
+   * from the person came after it, what the turn failed on is still owed, so
+   * Try again replays it, attached images included. A newer message or press
+   * from the person supersedes it, and is read alone, as before. On any other
+   * turn (a Back press to the brief right after a failure, say) the notice is
+   * an answer, as before, so the failed request is never read by another
+   * step. Every other Gala message is always an answer: a card, a line,
+   * Stopped with something kept, Repeated, and a typeface that can't draw
+   * the name.
+   */
   unanswered(): StoredMessage[] {
-    const lastGala = this.state.messages.findLastIndex((message) => message.author === "gala");
-    return this.state.messages.slice(lastGala + 1).filter((message) => message.author === "visitor");
+    const messages = this.state.messages;
+    let lastAnswer = messages.findLastIndex((message) => message.author === "gala");
+    while (this.retrying && lastAnswer >= 0 && offersRetry(messages[lastAnswer]!) && !messages.slice(lastAnswer + 1).some((message) => message.author === "visitor")) {
+      const notice = lastAnswer;
+      lastAnswer = messages.findLastIndex((message, index) => index < notice && message.author === "gala");
+    }
+    return messages.slice(lastAnswer + 1).filter((message) => message.author === "visitor");
   }
 
   unansweredText(): string {
@@ -213,7 +232,7 @@ export class Turn {
       .join("\n");
   }
 
-  /** Reference images the person attached since Gala last spoke. */
+  /** Reference images the person attached since Gala last answered (`unanswered`). */
   async attachedImages(): Promise<Image[]> {
     const images: Image[] = [];
     for (const message of this.unanswered()) {
@@ -470,6 +489,13 @@ export function asked(request: Request | null): string[] | null {
 /** The drawing request, written onto the card made in answer to it. */
 export function requestsOf(request: Request | null): { requests?: string[] } {
   return request?.drawing ? { requests: [request.drawing] } : {};
+}
+
+/** True for Gala's notice when it offers Try again: a failure that passes, which is not an answer (FRI-1729). */
+export function offersRetry(message: StoredMessage): boolean {
+  if (message.author !== "gala" || message.kind !== "notice") return false;
+  const actions = message.artifact?.actions;
+  return Array.isArray(actions) && actions.some((action: { do?: unknown }) => action?.do === "retry");
 }
 
 /** A short random id for an option on a card. */

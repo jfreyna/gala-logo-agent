@@ -17,7 +17,8 @@
  * Usage:
  *   node scripts/visual-gate.mjs <folder of frame PNGs> <output folder> [name filter]
  * The frame PNGs are named <screen>-<size>-<mode>.png and exported from Figma
- * at the frame's own size. The dev server must be running on port 3000.
+ * at the frame's own size. A screen with `element` is a component variant,
+ * compared as that element alone. The dev server must be running on port 3000.
  */
 import { mkdir, readFile, writeFile, access } from "node:fs/promises";
 import { join } from "node:path";
@@ -85,6 +86,10 @@ const screens = [
   // Button states and small feedback (FRI-1715), drawn in desktop light.
   { name: "fb-handedoff-desktop-light", path: "/preview/handedOff?top=1&handedOff=1", w: 1440, h: 900, scheme: "light" },
   { name: "fb-stopped-desktop-light", path: "/preview/stopped?top=1", w: 1440, h: 900, scheme: "light" },
+  // Stopped with retry (FRI-1729), drawn as gala-notice variants: the notice alone, 768 wide on desktop and 348 on a phone.
+  ...["desktop", "mobile"].flatMap((size) =>
+    ["light", "dark"].map((scheme) => ({ name: `stoppedretry-${size}-${scheme}`, path: "/preview/stoppedRetry?top=1", ...(size === "desktop" ? DESKTOP : MOBILE), scheme, element: '[data-name="gala-notice"]' })),
+  ),
   { name: "fb-downloads-desktop-light", path: "/preview/kit?top=1&downloads=SVG:saved,EPS:saving,PNG:couldnt", w: 1440, h: 900, scheme: "light" },
   { name: "fb-backwhileworking-desktop-light", path: "/preview/backWhileWorking?top=1&panel=historyWorking", w: 1440, h: 900, scheme: "light" },
   { name: "fb-couldntdraw-desktop-light", path: "/preview/couldntDraw?top=1", w: 1440, h: 900, scheme: "light" },
@@ -146,7 +151,9 @@ for (const screen of screens) {
   if (screen.scrollTo) await page.evaluate((y) => window.scrollTo(0, y), screen.scrollTo);
   await new Promise((resolve) => setTimeout(resolve, 600));
   const builtPath = join(outDir, "built", `${screen.name}.png`);
-  await page.screenshot({ path: builtPath, fullPage: Boolean(screen.full) });
+  // A component variant is compared as the element alone, at its own size in the page.
+  if (screen.element) await (await page.$(screen.element)).screenshot({ path: builtPath });
+  else await page.screenshot({ path: builtPath, fullPage: Boolean(screen.full) });
   await page.close();
 
   // Compose the pair and count differing pixels, in a page of our own.
@@ -159,9 +166,34 @@ for (const screen of screens) {
       <figure style="margin:0"><figcaption style="padding:0 0 8px">Figma frame: ${screen.name}</figcaption><img id="a" src="data:image/png;base64,${frame}"></figure>
       <figure style="margin:0"><figcaption style="padding:0 0 8px">Built screen</figcaption><img id="b" src="data:image/png;base64,${built}"></figure>
     </div></body></html>`);
-  const result = await sheet.evaluate(async () => {
+  const result = await sheet.evaluate(async (element) => {
     const [a, b] = [document.getElementById("a"), document.getElementById("b")];
     await Promise.all([a.decode(), b.decode()]);
+    if (element) {
+      // A dark component variant is exported on its component set's light canvas (#f5f5f5): that canvas color is
+      // replaced by the page's own background, read from the built element's top-right pixel. Antialiased edges
+      // blended with the canvas stay as they are, so they show as a thin fringe in the count.
+      const probe = document.createElement("canvas");
+      probe.width = b.naturalWidth;
+      probe.height = b.naturalHeight;
+      const probeContext = probe.getContext("2d");
+      probeContext.drawImage(b, 0, 0);
+      const [r, g, bl] = probeContext.getImageData(b.naturalWidth - 1, 0, 1, 1).data;
+      const flat = document.createElement("canvas");
+      flat.width = a.naturalWidth;
+      flat.height = a.naturalHeight;
+      const flatContext = flat.getContext("2d");
+      flatContext.fillStyle = `rgb(${r}, ${g}, ${bl})`;
+      flatContext.fillRect(0, 0, flat.width, flat.height);
+      flatContext.drawImage(a, 0, 0);
+      const image = flatContext.getImageData(0, 0, flat.width, flat.height);
+      for (let i = 0; i < image.data.length; i += 4) {
+        if (image.data[i] === 245 && image.data[i + 1] === 245 && image.data[i + 2] === 245) [image.data[i], image.data[i + 1], image.data[i + 2]] = [r, g, bl];
+      }
+      flatContext.putImageData(image, 0, 0);
+      a.src = flat.toDataURL("image/png");
+      await a.decode();
+    }
     const width = Math.min(a.naturalWidth, b.naturalWidth);
     const height = Math.min(a.naturalHeight, b.naturalHeight);
     const pixels = (image) => {
@@ -178,7 +210,7 @@ for (const screen of screens) {
       if (Math.abs(pa[i] - pb[i]) + Math.abs(pa[i + 1] - pb[i + 1]) + Math.abs(pa[i + 2] - pb[i + 2]) > 48) differing++;
     }
     return { frame: [a.naturalWidth, a.naturalHeight], built: [b.naturalWidth, b.naturalHeight], percent: (differing / (width * height)) * 100 };
-  });
+  }, Boolean(screen.element));
   const body = await sheet.$("body > div");
   await writeFile(join(outDir, `${screen.name}.webp`), await body.screenshot({ type: "webp", quality: 80 }));
   if (process.env.GALA_GATE_REVIEW) {

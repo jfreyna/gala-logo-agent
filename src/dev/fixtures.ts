@@ -366,7 +366,17 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
   stopped: {
     items: [
       { id: "ask", kind: "visitor", text: "Make the brush thicker in all three" },
-      { id: "stopped", kind: "notice", notice: { kind: "Stopped", title: "Stopped", say: "Stopped. Nothing from that turn was kept. Tell me what to do next.", actions: [] } },
+      // Something from the turn was kept, so Stopped is the words alone (FRI-1729: nothing kept offers Try again, below).
+      { id: "stopped", kind: "notice", notice: { kind: "Stopped", title: "Stopped", say: "Stopped. Tell me what to do next.", actions: [] } },
+    ],
+    placeholder: "Tell me what to do next.",
+    placeholderMobile: "Tell me what to do next.",
+  },
+  // Stopped with nothing kept offers Try again (gala-notice Kind=Stopped with retry, 5690:19007, FRI-1729).
+  stoppedRetry: {
+    items: [
+      { id: "ask", kind: "visitor", text: "Make the brush thicker in all three" },
+      { id: "stopped", kind: "notice", notice: { kind: "Stopped", title: "Stopped", say: "Stopped. Nothing from that turn was kept. Try again, or tell me what to do next.", actions: [{ label: "Try again", do: "retry" }] } },
     ],
     placeholder: "Tell me what to do next.",
     placeholderMobile: "Tell me what to do next.",

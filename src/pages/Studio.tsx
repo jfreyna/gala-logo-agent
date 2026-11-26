@@ -373,7 +373,7 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
       .finally(() => setPending((list) => list.filter((entry) => entry.key !== key)));
   }
 
-  /** Try again, on a notice: asks for the turn once more. A turn still owed starts its requests over. */
+  /** Try again, on a notice: asks for the turn once more, marked as a retry so it replays what failed (FRI-1729). A turn still owed starts its requests over. */
   function retry() {
     if (startFailed !== null) {
       setStartFailed(null);
@@ -382,7 +382,7 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
     }
     if (working !== null || asking.current) return;
     asking.current = true;
-    void requestTurn(projectId).finally(() => {
+    void requestTurn(projectId, undefined, { retry: true }).finally(() => {
       asking.current = false;
     });
   }

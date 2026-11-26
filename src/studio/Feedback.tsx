@@ -77,45 +77,55 @@ export function ActionEcho({ label, state }: { label: string; state: "Sending" |
  * Couldn't (a known cause), Couldn't start (the turn never began; the
  * choice is saved), Repeated (the same failure twice at a step: a step
  * back, not a retry) and Stopped. A warning-400 rule on the left, a small
- * title, plain words and a way forward; Stopped is the words alone.
+ * title, plain words and a way forward. Stopped is the words alone, with no
+ * rule or title; when nothing from the turn was kept it offers Try again, one
+ * secondary button (Kind=Stopped with retry, 5690:19007, FRI-1729).
  */
 export function Notice({ notice, onAction }: { notice: NoticeData; onAction: (action: NoticeAction) => void }) {
   const stopped = notice.kind === "Stopped";
+  // Stopped draws its one button as secondary; the others lead with a primary.
+  const button = (action: NoticeAction, index: number) =>
+    index === 0 && !stopped ? (
+      <button
+        key={action.label}
+        type="button"
+        onClick={() => onAction(action)}
+        className={`relative flex h-[40px] w-full shrink-0 items-center justify-center overflow-clip rounded-[12px] px-[20px] desktop:w-auto ${PRIMARY}`}
+        data-name="button-primary"
+      >
+        <span className="type-caption-semibold shrink-0 whitespace-nowrap text-button-light-text">{action.label}</span>
+      </button>
+    ) : (
+      <button
+        key={action.label}
+        type="button"
+        onClick={() => onAction(action)}
+        className={`relative flex h-[40px] w-full shrink-0 items-center justify-center overflow-clip rounded-[12px] px-[16px] desktop:w-auto ${SECONDARY}`}
+        data-name="button-secondary"
+      >
+        <span className="type-caption-semibold shrink-0 whitespace-nowrap text-text-neutral-1-light dark:text-text-neutral-1-dark">{action.label}</span>
+      </button>
+    );
+  const actions =
+    notice.actions.length > 0 ? (
+      <div className={`relative flex w-full shrink-0 flex-col items-start overflow-clip desktop:w-auto desktop:flex-row ${notice.actions.length > 1 ? "gap-[8px]" : ""}`} data-name="actions">
+        {notice.actions.map(button)}
+      </div>
+    ) : null;
   return (
     <div className="relative flex w-full shrink-0 flex-col items-start gap-[6px]" data-name="gala-notice" data-kind={notice.kind}>
       <p className="type-caption-semibold shrink-0 whitespace-nowrap text-headline-1-light dark:text-headline-1-dark">Gala</p>
-      <div className={`relative flex w-full shrink-0 flex-col items-start overflow-clip ${stopped ? "" : "gap-[12px] border-l-2 border-solid border-warning-400 pl-[14px]"}`} data-name="notice">
+      <div className={`relative flex w-full shrink-0 flex-col items-start overflow-clip ${stopped ? (actions !== null ? "gap-[12px]" : "") : "gap-[12px] border-l-2 border-solid border-warning-400 pl-[14px]"}`} data-name="notice">
         {stopped ? (
-          <p className="type-body-regular w-full shrink-0 text-text-neutral-1-light [word-break:break-word] dark:text-text-neutral-1-dark">{notice.say}</p>
+          <>
+            <p className="type-body-regular w-full shrink-0 text-text-neutral-1-light [word-break:break-word] dark:text-text-neutral-1-dark">{notice.say}</p>
+            {actions}
+          </>
         ) : (
           <>
             <p className="type-caption-semibold shrink-0 whitespace-nowrap text-text-neutral-2-light dark:text-text-neutral-2-dark">{notice.title}</p>
             <p className="type-body-regular w-full shrink-0 text-text-neutral-1-light [word-break:break-word] dark:text-text-neutral-1-dark">{notice.say}</p>
-            <div className={`relative flex w-full shrink-0 flex-col items-start overflow-clip desktop:w-auto desktop:flex-row ${notice.actions.length > 1 ? "gap-[8px]" : ""}`} data-name="actions">
-              {notice.actions.map((action, index) =>
-                index === 0 ? (
-                  <button
-                    key={action.label}
-                    type="button"
-                    onClick={() => onAction(action)}
-                    className={`relative flex h-[40px] w-full shrink-0 items-center justify-center overflow-clip rounded-[12px] px-[20px] desktop:w-auto ${PRIMARY}`}
-                    data-name="button-primary"
-                  >
-                    <span className="type-caption-semibold shrink-0 whitespace-nowrap text-button-light-text">{action.label}</span>
-                  </button>
-                ) : (
-                  <button
-                    key={action.label}
-                    type="button"
-                    onClick={() => onAction(action)}
-                    className={`relative flex h-[40px] w-full shrink-0 items-center justify-center overflow-clip rounded-[12px] px-[16px] desktop:w-auto ${SECONDARY}`}
-                    data-name="button-secondary"
-                  >
-                    <span className="type-caption-semibold shrink-0 whitespace-nowrap text-text-neutral-1-light dark:text-text-neutral-1-dark">{action.label}</span>
-                  </button>
-                ),
-              )}
-            </div>
+            {actions}
           </>
         )}
       </div>

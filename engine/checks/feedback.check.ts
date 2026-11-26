@@ -35,18 +35,18 @@ for (const [name, action, expected] of HANDS_OFF) {
 
 h.check("Handed off lasts 6 seconds when the person doesn't type", () => assertEqual(HAND_OFF_MS, 6000, "the time"));
 
-h.check("a turn stopped mid-step writes the Stopped line, words only, and says nothing was kept", async () => {
+h.check("a turn stopped mid-step writes the Stopped line, says nothing was kept, and offers Try again (FRI-1729)", async () => {
   const store = projectAt("wordmark", { withCard: false });
   const controller = new AbortController();
   controller.abort();
   assertEqual(await runTurn(store, {} as never, controller.signal), "stopped", "the turn's result");
   const notice = store.latest(NOTICE_KIND).artifact as Notice;
-  assertEqual([notice.kind, notice.say, notice.actions.length], ["stopped", "Stopped. Nothing from that turn was kept. Tell me what to do next.", 0], "the notice");
+  assertEqual([notice.kind, notice.say, notice.actions], ["stopped", "Stopped. Nothing from that turn was kept. Try again, or tell me what to do next.", [{ label: "Try again", do: "retry" }]], "the notice");
   assert(!store.messages.some((message) => message.kind === "wordmark"), "a wordmark was written");
 });
 
 h.check("when the turn had written something before the stop, the line doesn't say nothing was kept", () => {
-  assertEqual(stoppedNotice("directions", true).say, "Stopped. Tell me what to do next.", "the line");
+  assertEqual([stoppedNotice("directions", true).say, stoppedNotice("directions", true).actions.length], ["Stopped. Tell me what to do next.", 0], "the line and its buttons");
 });
 
 h.check("the studio draws a stored Stopped notice as Stopped, and a stopped request asks for nothing more", () => {

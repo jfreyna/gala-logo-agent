@@ -192,3 +192,22 @@ Run on 2026-11-25, port 3004, on `feature/FRI-1715-button-states`, with the four
 The 80 earlier screens against `main`: unchanged, except the six with Selected chips, which moved by 0.15 to 0.3% (`type-desktop-light`, `wordmark-desktop-*`, `lockup-desktop-*`, `held-desktop-light`). Selected chips now carry a background-3 border, so every chip is 27px tall, as gala-filter-chip now draws them.
 
 `fri1715/` holds the same four screens in the other modes. `states-desktop-*` is every button kind and chip at rest, in the component sets' order. A screenshot can't show hover, pressed or focus, so `npm run check:states` forces each of those states in the browser and compares the drawn colors with the component sets' values, light and dark (45 checks).
+
+## Stopped with retry (FRI-1729)
+
+`fri1729/` pairs the built Stopped-with-retry notice with its four `gala-notice` variants (Kind=Stopped with retry: `5690:19007` light desktop, `5690:19014` dark desktop, `5690:19021` light mobile, `5690:19028` dark mobile). Each is compared as the notice alone (the gate's `element` option), 768 wide on desktop and 348 on a phone, from `/preview/stoppedRetry`.
+
+**Command:** `GALA_PREVIEW_URL=http://localhost:3029 node scripts/visual-gate.mjs <frames> docs/visual-gate/fri1729 stoppedretry`. Frames exported 2026-11-26 at 1x.
+
+```
+stoppedretry-desktop-light     frame 768x102    built 768x102    differing 2.42%
+stoppedretry-desktop-dark      frame 768x102    built 768x102    differing 3.83%
+stoppedretry-mobile-light      frame 348x127    built 348x127    differing 3.61%
+stoppedretry-mobile-dark       frame 348x127    built 348x127    differing 6.82%
+
+4/4 screens compared
+```
+
+The dark variants export on their component set's light canvas (`#f5f5f5`), so the gate replaces that exact color with the page's own background before comparing. Text and button edges antialiased against the light canvas keep a light fringe, which is most of the dark percentages (the phone's more, with more text per pixel). Layout, type, copy and the button line up.
+
+The `stopped` preview now shows Stopped with something kept ("Stopped. Tell me what to do next.", words only), so `fb-stopped-desktop-light` against the FRI-1715 frame (`5663:18217`) differs in its copy: that frame's words ("Nothing from that turn was kept. Tell me what to do next.") are now the retry variant's, which has its own frames above.

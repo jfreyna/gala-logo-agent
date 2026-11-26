@@ -14,7 +14,7 @@
  */
 import { CannotSet } from "../kit/src/font.ts";
 import { ModelError } from "./gemini.ts";
-import { cannotDrawLine } from "./lines.ts";
+import { cannotDrawLine, NEXT_MOVE } from "./lines.ts";
 import { STEPS, stepIndex } from "./steps.ts";
 import { StorageError } from "./store-convex.ts";
 import type { Stage, StoredMessage } from "./store.ts";
@@ -59,19 +59,32 @@ const STEP_NAMES: Partial<Record<Stage, string>> = {
 };
 
 /**
- * Gala's line after Stop (gala-notice Kind=Stopped, FRI-1715): the words
- * alone, no button. `kept` is true when the turn had already written
- * something before it was stopped, so the line doesn't claim nothing was.
+ * Gala's line after Stop (gala-notice Kind=Stopped, FRI-1715). `kept` is
+ * true when the turn had already written something before it was stopped:
+ * the words alone, no button, since replaying would redo work already in.
+ * When nothing was kept it offers Try again, which replays the stopped
+ * request once (Kind=Stopped with retry, FRI-1729, the founder's yes); a
+ * stop is not a failure, so stopping again never escalates to Repeated.
  */
 export function stoppedNotice(stage: Stage, kept: boolean): Notice {
+  if (kept) return { kind: "stopped", step: stage, cause: "stopped", title: "Stopped", say: "Stopped. Tell me what to do next.", actions: [] };
   return {
     kind: "stopped",
     step: stage,
     cause: "stopped",
     title: "Stopped",
-    say: kept ? "Stopped. Tell me what to do next." : "Stopped. Nothing from that turn was kept. Tell me what to do next.",
-    actions: [],
+    say: "Stopped. Nothing from that turn was kept. Try again, or tell me what to do next.",
+    actions: [{ label: "Try again", do: "retry" }],
   };
+}
+
+/**
+ * Gala's line when Try again finds nothing owed (FRI-1729): what it failed
+ * on was answered since, or the turn was stopped on purpose. A fixed line,
+ * never silence, with the step's next move.
+ */
+export function nothingOwedLine(stage: Stage): string {
+  return `Nothing from before is waiting on me, so there’s nothing to try again. ${NEXT_MOVE[stage]}`;
 }
 
 /** The cause of an error, in the terms the notice speaks. */

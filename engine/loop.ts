@@ -12,7 +12,7 @@
  * one opens: a stage returns "continue" only after its own sign-off.
  */
 import { CannotSet } from "../kit/src/font.ts";
-import { NOTICE_KIND, noticeFor, stoppedNotice } from "./notice.ts";
+import { NOTICE_KIND, nothingOwedLine, noticeFor, stoppedNotice } from "./notice.ts";
 import type { Prompt } from "./prompt.ts";
 import { brief } from "./stages/brief.ts";
 import { colorways, pickColors } from "./stages/color.ts";
@@ -52,10 +52,13 @@ export type TurnResult = "done" | "busy" | "stopped" | "trouble";
 
 /**
  * `back` is a "Back to this step" press in the Work panel: the turn goes
- * back to that step, the same move as a spoken "go back".
+ * back to that step, the same move as a spoken "go back". `retry` is a Try
+ * again press on a notice: the turn replays what it failed on (Turn.unanswered),
+ * and when nothing was owed it says so instead of ending without a word.
  */
-export async function runTurn(store: Store, prompt: Prompt, signal: AbortSignal, options: { back?: Stage } = {}): Promise<TurnResult> {
+export async function runTurn(store: Store, prompt: Prompt, signal: AbortSignal, options: { back?: Stage; retry?: boolean } = {}): Promise<TurnResult> {
   const turn = new Turn(store, prompt, signal);
+  turn.retrying = options.retry === true;
   if (!(await turn.read())) return "busy";
   // How much of the conversation was there before the turn, so a stop can say whether anything from it was kept.
   const before = turn.state.messages.length;
@@ -63,7 +66,9 @@ export async function runTurn(store: Store, prompt: Prompt, signal: AbortSignal,
     // The person's message is read once, before the step runs; code moves the stage (steer.ts).
     await steer(turn, options);
     for (let step = 0; step < MAX_STAGES_PER_TURN; step++) {
-      if ((await STAGES[turn.stage](turn)) === "wait") return "done";
+      if ((await STAGES[turn.stage](turn)) !== "wait") continue;
+      if (options.retry === true) await sayWhenNothingOwed(turn, before);
+      return "done";
     }
     throw new Error(`The turn did not settle at stage ${turn.stage}.`);
   } catch (error) {
@@ -83,4 +88,12 @@ export async function runTurn(store: Store, prompt: Prompt, signal: AbortSignal,
   } finally {
     await store.end().catch(() => undefined);
   }
+}
+
+/** After a Try again: when the turn wrote nothing from Gala, the one line that says nothing was owed (FRI-1729). */
+async function sayWhenNothingOwed(turn: Turn, before: number): Promise<void> {
+  await turn.read();
+  if (turn.state.messages.slice(before).some((message) => message.author === "gala")) return;
+  console.log(`Try again at ${turn.stage}: nothing owed`);
+  await turn.write([{ op: "say", text: nothingOwedLine(turn.stage) }]);
 }

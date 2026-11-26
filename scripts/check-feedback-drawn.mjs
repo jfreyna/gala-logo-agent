@@ -67,7 +67,7 @@ check("Handed off with motion reduced: the placeholder is there at once", async 
   await page.close();
 });
 
-check("Stopped: Gala's line alone, with no rule and no button", async () => {
+check("Stopped with something kept: Gala's line alone, with no rule and no button", async () => {
   const page = await open("/preview/stopped?top=1");
   const notice = await page.$eval('[data-name="gala-notice"]', (element) => ({
     kind: element.dataset.kind,
@@ -75,7 +75,22 @@ check("Stopped: Gala's line alone, with no rule and no button", async () => {
     buttons: element.querySelectorAll("button").length,
     rule: getComputedStyle(element.querySelector('[data-name="notice"]')).borderLeftWidth,
   }));
-  expect(notice.kind === "Stopped" && notice.text.includes("Stopped. Nothing from that turn was kept. Tell me what to do next.") && notice.buttons === 0 && notice.rule === "0px", `the notice: ${JSON.stringify(notice)}`);
+  expect(notice.kind === "Stopped" && notice.text.includes("Stopped. Tell me what to do next.") && notice.buttons === 0 && notice.rule === "0px", `the notice: ${JSON.stringify(notice)}`);
+  await page.close();
+});
+
+check("Stopped with nothing kept (FRI-1729): the line, no rule, and one secondary Try again", async () => {
+  const page = await open("/preview/stoppedRetry?top=1");
+  const notice = await page.$eval('[data-name="gala-notice"]', (element) => ({
+    kind: element.dataset.kind,
+    text: element.querySelector("p.type-body-regular")?.textContent ?? null,
+    buttons: [...element.querySelectorAll("button")].map((button) => [button.dataset.name, button.textContent]),
+    rule: getComputedStyle(element.querySelector('[data-name="notice"]')).borderLeftWidth,
+  }));
+  expect(
+    notice.kind === "Stopped" && notice.text === "Stopped. Nothing from that turn was kept. Try again, or tell me what to do next." && JSON.stringify(notice.buttons) === JSON.stringify([["button-secondary", "Try again"]]) && notice.rule === "0px",
+    `the notice: ${JSON.stringify(notice)}`,
+  );
   await page.close();
 });
 
