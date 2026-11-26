@@ -41,8 +41,9 @@
  */
 import { fontData } from "./fonts.ts";
 import type { Shape } from "./gemini.ts";
-import { ask } from "./jev.ts";
+import { ask, SURE } from "./jev.ts";
 import { broughtBackFixedLine } from "./lines.ts";
+import { KIT_LINE, STEP_FACTS } from "./stepFacts.ts";
 import { markOf, optionLabel, pickedRound, roundOptions, roundsOf, type RoundKind, type RoundOption } from "./rounds.ts";
 import { CASE, inCase, LAYOUT, readSettings, SPACE_BETWEEN, SPACING } from "./settings.ts";
 import { earlierSteps, laterSteps, STEPS, stepIndex, SYMBOL_STEPS, type Step } from "./steps.ts";
@@ -134,7 +135,10 @@ function optionsOf(turn: Turn): { card: StoredMessage; options: Option[]; rounds
   }
 }
 
-export type Reading = { pick: number | null; back: number; change: number; later: number | null; noSymbol: number | null; bringBack: number | null; acceptsOffer: number | null };
+export type Reading = { pick: number | null; back: number; change: number; later: number | null; noSymbol: number | null; bringBack: number | null; acceptsOffer: number | null; cannotDo: number | null; cannotDoWhat: string | null };
+
+/** The answer that means a message asks for none of the step's can't-do items. */
+const NONE_OF_THESE = "None of these";
 
 /** The steps where a message describing the drawing counts as a change, and an unsure one gets an offer. */
 const DRAWING_STEPS: Stage[] = ["directions", "variations", "lockup"];
@@ -168,6 +172,8 @@ const ASKS = {
    */
   describe: "Does `message` ask for something specific in the work to be changed or tried, or describe what the drawing should show or look like, even without asking for it in so many words? A compliment, or a question about the drawings on screen, alone is not this.",
   acceptsOffer: "Gala offered to do `offer`. Does `message` say yes to it?",
+  /** Asked where the step's row in stepFacts.ts lists things Gala can't do there: one pick among them, or none. */
+  cannotDo: "Which of these does `message` ask Gala for, in whatever words? `sentAFile` says whether the person attached a file to the message.",
   later: "Does `message` ask for something that belongs to the work of one of the steps in `laterSteps`, and not to `currentStep`?",
   noSymbol: "Does `message` explicitly ask for a logo with no symbol at all, only the name?",
   /** Asked at a step drawn in rounds, once there is an earlier round: the person wants one back, as it was. */
@@ -180,25 +186,46 @@ export async function read(turn: Turn, message: string, options: Option[], signO
   const later = laterSteps(turn.stage).map((entry) => entry.name);
   const roundKind = turn.stage === "directions" || turn.stage === "variations" ? ROUND_KINDS[turn.stage] : undefined;
   const hasEarlierRound = roundKind !== undefined && roundsOf(turn, roundKind).length > 1;
+  const cantDo = STEP_FACTS[turn.stage].cantDo.map((entry) => entry.what);
   const answers = (await ask({
-    state: { message, currentStep: step.name, optionsOnScreen: options.map((option) => option.label), earlierSteps: earlier, laterSteps: later, ...(offer !== null ? { offer } : {}) },
+    state: {
+      message,
+      currentStep: step.name,
+      optionsOnScreen: options.map((option) => option.label),
+      earlierSteps: earlier,
+      laterSteps: later,
+      ...(offer !== null ? { offer } : {}),
+      ...(cantDo.length > 0 ? { cantDo, sentAFile: turn.unanswered().some((entry) => entry.upload !== null) } : {}),
+    },
     questions: {
       ...(options.length > 0 ? { pick: { type: "noul", instructions: signOff ? ASKS.signOff : ASKS.pick } as const } : {}),
       back: { type: "noul", instructions: ASKS.back },
       change: { type: "noul", instructions: turn.stage === "symbolOpener" ? ASKS.idea : DRAWING_STEPS.includes(turn.stage) ? ASKS.describe : ASKS.change },
       ...(offer !== null ? { acceptsOffer: { type: "noul", instructions: ASKS.acceptsOffer } as const } : {}),
+      ...(cantDo.length > 0
+        ? {
+            cannotDo: {
+              type: "choice",
+              instructions: ASKS.cannotDo,
+              criteria: { ...Object.fromEntries(STEP_FACTS[turn.stage].cantDo.map((entry) => [entry.what, entry.reason])), [NONE_OF_THESE]: "The message asks for none of the things above" },
+            } as const,
+          }
+        : {}),
       ...(later.length > 0 ? { later: { type: "noul", instructions: ASKS.later } as const } : {}),
       ...(turn.stage === "symbolOpener" ? { noSymbol: { type: "noul", instructions: ASKS.noSymbol } as const } : {}),
       ...(hasEarlierRound ? { bringBack: { type: "noul", instructions: ASKS.bringBack } as const } : {}),
     },
     signal: turn.signal,
-  })) as Record<string, { noul: number } | undefined>;
-  return { pick: answers.pick?.noul ?? null, back: answers.back!.noul, change: answers.change!.noul, later: answers.later?.noul ?? null, noSymbol: answers.noSymbol?.noul ?? null, bringBack: answers.bringBack?.noul ?? null, acceptsOffer: answers.acceptsOffer?.noul ?? null };
+  })) as unknown as Record<string, { noul: number; choice?: string; confidence?: number } | undefined>;
+  // A can't-do item counts only when Jev picks one of them, not "none", and is sure of it.
+  const which = answers.cannotDo;
+  const named = which !== undefined && which.choice !== NONE_OF_THESE ? (which.choice ?? null) : null;
+  return { pick: answers.pick?.noul ?? null, back: answers.back!.noul, change: answers.change!.noul, later: answers.later?.noul ?? null, noSymbol: answers.noSymbol?.noul ?? null, bringBack: answers.bringBack?.noul ?? null, acceptsOffer: answers.acceptsOffer?.noul ?? null, cannotDo: which === undefined ? null : named !== null ? (which.confidence ?? 0) : 0, cannotDoWhat: named };
 }
 
 export function describeReading(stage: Stage, reading: Reading): string {
   const score = (value: number | null) => (value === null ? "none" : value.toFixed(2));
-  const extra = (reading.noSymbol === null ? "" : `, no symbol ${score(reading.noSymbol)}`) + (reading.bringBack === null ? "" : `, bring back ${score(reading.bringBack)}`) + (reading.acceptsOffer === null ? "" : `, accepts offer ${score(reading.acceptsOffer)}`);
+  const extra = (reading.noSymbol === null ? "" : `, no symbol ${score(reading.noSymbol)}`) + (reading.bringBack === null ? "" : `, bring back ${score(reading.bringBack)}`) + (reading.acceptsOffer === null ? "" : `, accepts offer ${score(reading.acceptsOffer)}`) + (reading.cannotDo === null ? "" : `, cannot do ${score(reading.cannotDo)}`);
   return `Steering at ${stage}: pick ${score(reading.pick)}, back ${score(reading.back)}, change ${score(reading.change)}, later ${score(reading.later)}${extra}`;
 }
 
@@ -393,6 +420,9 @@ export async function steer(turn: Turn, options: { back?: Stage } = {}): Promise
   const change = verdict(reading.change);
   const backUp = verdict(reading.bringBack);
 
+  // Something the step can't do, asked for with no go back or pick: Gala says so, with the closest move (stepFacts.ts).
+  if (reading.cannotDoWhat !== null && (reading.cannotDo ?? 0) >= SURE && back !== "yes" && pick !== "yes") return cannotDoReply(turn, message, reading.cannotDoWhat);
+
   // A logo with no symbol: only on a clear yes. An unsure answer gets one question.
   if (back !== "yes" && noSymbol !== "no") {
     return turn.steer(noSymbol === "yes" ? { act: "noSymbol" } : { act: "ask", facts: { askWhether: "the person wants a logo with no symbol at all, only the name" } });
@@ -451,7 +481,9 @@ export async function steer(turn: Turn, options: { back?: Stage } = {}): Promise
   }
   const keptOnly: Steering | null = held === null ? null : { act: "held", step: held.step, idea: held.idea };
 
-  if (decides?.move === "back") {
+  // At the colorways and after, a "go back" that names no step but asks for a change is that change, sent to its step below.
+  const backToNoStep = decides?.move === "back" && earlier.every((step) => step.stage !== found.backTo);
+  if (decides?.move === "back" && !(backToNoStep && change === "yes" && AFTER_COLOR.includes(turn.stage) && !request.startFrom)) {
     const to = earlier.find((step) => step.stage === found.backTo);
     // Going back to a mark on one of this step's rounds with no change: that round comes back, unpicked, and nothing is drawn.
     if (to === undefined && request.startFrom && !asksForChange(request)) return bringBack(turn, request.startFrom, marks);
@@ -503,6 +535,16 @@ export async function steer(turn: Turn, options: { back?: Stage } = {}): Promise
   if (request.nameAs !== null && stepIndex(turn.stage) > stepIndex("wordmark")) return goBack(turn, "wordmark", request);
   // A mark from this step's rounds named with nothing to change in it: that round comes back, as with "go back to it".
   if (request.startFrom && !asksForChange(request)) return bringBack(turn, request.startFrom, marks);
+  // At colorways and after, a change goes to the step whose work it is, the colors kept, instead of reopening the color card.
+  if (AFTER_COLOR.includes(turn.stage)) {
+    const part = await partOf(turn, message);
+    const said = [request.drawing, request.note].filter((entry): entry is string => entry !== null).join("; ");
+    if (part === "symbol") return goBack(turn, "variations", { ...request, drawing: said || null, note: null });
+    if (part === "lockup") return goBack(turn, "lockup", request);
+    if (part === "colors" && turn.stage !== "colorways") return goBack(turn, "pickColors", { ...request, drawing: null, note: said || null });
+    // The name's case or typeface would have been named above; anything else about the name, or an unclear part, gets one question.
+    if (part === null || part === "name") return turn.steer({ act: "ask" });
+  }
   await keep(turn, { ...request, drawing: null }, null);
   return turn.steer({ act: "redo", request });
 }
@@ -544,6 +586,55 @@ async function bringBack(turn: Turn, mark: MarkRef, marks: RoundOption[]): Promi
 
 /** The longest request kept for a later step. */
 const MAX_HELD_LENGTH = 500;
+
+/** The steps from the colorways on, where a change can be about any part of the logo. */
+const AFTER_COLOR: Stage[] = ["colorways", "kit", "picks", "done"];
+
+/** The parts of the logo a change can be about, as Jev is told them. */
+const PARTS = {
+  symbol: { label: "The symbol", means: "The drawn mark itself: its shape or its details" },
+  lockup: { label: "The lockup", means: "How the symbol and the name sit together: the layout or the space between them" },
+  colors: { label: "The colors", means: "Which colors are used, or where" },
+  name: { label: "The name", means: "How the name is written, or its typeface" },
+} as const;
+
+/** Which part of the logo a change is about, by one Jev choice; null when Jev isn't sure. */
+async function partOf(turn: Turn, message: string): Promise<keyof typeof PARTS | null> {
+  const answers = await ask({
+    state: { message },
+    questions: { part: { type: "choice", instructions: "Which part of the logo does `message` ask to change?", criteria: Object.fromEntries(Object.values(PARTS).map((part) => [part.label, part.means])) } },
+    signal: turn.signal,
+  });
+  if (answers.part.confidence < SURE) return null;
+  return (Object.keys(PARTS) as (keyof typeof PARTS)[]).find((key) => PARTS[key].label === answers.part.choice) ?? null;
+}
+
+/**
+ * The can't-do reply. Jev picks which of the step's can't-do items the
+ * message asks for, the closest move among what the step can do, and
+ * whether the person rejects the mark as it is. The kit line goes only to
+ * a finishing touch on a mark the person keeps; a rejected mark gets the
+ * closest move back instead.
+ */
+async function cannotDoReply(turn: Turn, message: string, what: string): Promise<void> {
+  const row = STEP_FACTS[turn.stage];
+  const answers = await ask({
+    state: { message },
+    questions: {
+      closest: { type: "choice", instructions: "Which of these is the closest thing to what `message` asks for?", criteria: Object.fromEntries(row.canDo.map((entry) => [entry, null])) },
+      rejects: { type: "noul", instructions: "Does `message` reject the mark itself, saying the symbol or the name is wrong and should be replaced or drawn again, rather than asking for a finishing touch to a mark the person keeps?" },
+    },
+    signal: turn.signal,
+  });
+  const item = row.cantDo.find((entry) => entry.what === what)!;
+  const rejects = answers.rejects.noul >= 0.5;
+  const kitCanFinish = item.kitCanFinish && !rejects;
+  console.log(`Steering at ${turn.stage}: can't do it (kit can finish: ${kitCanFinish})`);
+  turn.steer({
+    act: "talk",
+    facts: { cannotDo: item.what, reason: item.reason, closestMove: answers.closest.choice, kitCanFinish, ...(kitCanFinish ? { kitLine: KIT_LINE } : {}) },
+  });
+}
 
 /**
  * The offer: the details are read as for a change, checked the same way,

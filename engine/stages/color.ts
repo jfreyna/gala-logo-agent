@@ -39,10 +39,14 @@ const DESCRIBED_SHAPE: Shape = {
  * time fill the card in; they still save it.
  */
 export async function openColors(turn: Turn, before: Operation[]): Promise<Outcome> {
-  // Colors already picked on an earlier pass come back filled in, still to be saved.
-  const earlier = turn.latest("colorPicker")?.artifact?.colors ?? null;
-  await turn.write([...before, { op: "artifact", kind: "colorPicker", artifact: { say: PICK_COLORS_LINE, colors: earlier, saved: false } }, { op: "project", stage: "pickColors" }]);
+  // Colors already picked on an earlier pass come back filled in. Colors already saved stay saved, so a change to the
+  // symbol or the lockup made at the colorways comes back to the colorways with the person's colors (Edit colors still opens them).
+  const previous = turn.latest("colorPicker")?.artifact ?? null;
+  const earlier = previous?.colors ?? null;
   const kept = turn.heldFor("pickColors", "colorways");
+  const keepSaved = previous?.saved === true && earlier !== null && kept.length === 0;
+  await turn.write([...before, { op: "artifact", kind: "colorPicker", artifact: { say: PICK_COLORS_LINE, colors: earlier, saved: keepSaved } }, { op: "project", stage: "pickColors" }]);
+  if (keepSaved) return "continue";
   if (kept.length === 0) return "wait";
   turn.steer({ act: "redo", request: { typeface: null, nameAs: null, drawing: null, note: kept.join("\n") } });
   return "continue";

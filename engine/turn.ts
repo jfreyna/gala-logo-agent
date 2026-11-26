@@ -12,6 +12,7 @@ import { checkReply, claimsWork, describeVerdict, type Shown } from "./guard.ts"
 import { declineLine, NEXT_MOVE } from "./lines.ts";
 import { recall } from "./memory.ts";
 import { instructionsFor, type Prompt } from "./prompt.ts";
+import { factsFor, STEP_FACTS } from "./stepFacts.ts";
 import { STEPS, stepIndex, stepIndexOfKind } from "./steps.ts";
 import type { Operation, Project, Stage, Store, StoredMessage } from "./store.ts";
 
@@ -337,7 +338,7 @@ export class Turn {
         this.think<{ say: string }>({
           section: "conversation",
           task: options.task ?? "Reply to the person's last message.",
-          facts: { step: this.stage, waitingFor, whatHappened, ...options.facts },
+          facts: { step: this.stage, waitingFor, whatHappened, ...factsFor(this.stage), ...this.secondTimeFacts(), ...options.facts },
           shape: { type: "OBJECT", properties: { say: { type: "STRING" } }, required: ["say"] },
         }),
       (value) => ({ line: value.say }),
@@ -353,6 +354,22 @@ export class Turn {
     if (reply !== null) await this.write([{ op: "say", text: reply.say }]);
     else if (claimed) await this.write([{ op: "say", text: NEXT_MOVE[this.stage] }]);
     else await this.decline();
+  }
+
+  /**
+   * True when Gala's last message was a words-only reply said at this step:
+   * this reply is the second in a row here, so it is given the step's exact
+   * way out (stepFacts.ts) instead of the same answer again.
+   */
+  get secondTime(): boolean {
+    const lastGala = this.state.messages.findLast((message) => message.author === "gala");
+    if (lastGala === undefined || lastGala.kind !== "text") return false;
+    const newestCard = this.state.messages.findLast((message) => message.author === "gala" && message.artifact !== null && stepIndexOfKind(message.kind) >= 0);
+    return newestCard !== undefined && STEPS[stepIndex(this.stage)]!.kinds.includes(newestCard.kind);
+  }
+
+  private secondTimeFacts(): Record<string, unknown> {
+    return this.secondTime ? { secondTime: true, wayOut: STEP_FACTS[this.stage].wayOut } : {};
   }
 
   /**
