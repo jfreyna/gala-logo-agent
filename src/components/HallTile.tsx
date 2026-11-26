@@ -9,8 +9,8 @@ export type HallEntry = {
   markUrl: string | null;
   /** The person's words, when they wrote some and they passed the check. */
   quote: string | null;
-  /** Shows the tile open, as if hovered. Used by the dev preview only. */
-  pinnedOpen?: boolean;
+  /** Shows the tile as if hovered: the mark in its real colors. Used by the dev preview only. */
+  pinnedHover?: boolean;
 };
 
 /**
@@ -34,14 +34,14 @@ export function HallTintFilters() {
 }
 
 /**
- * gala-hall-tile (Figma 5555:9385). At rest: the mark tinted, and the brand
- * under it. Hovered or focused: a card with the mark in its real colors on
- * white paper, the brand, the verdict, and the first line of the quote.
- * Pressing it opens the full view.
+ * gala-hall-tile (Figma 5555:9385). The mark tinted, and the brand under it.
+ * Hovered or focused, the tile keeps its size and place and only the mark
+ * shows its real colors, so the row never moves. Pressing it opens the full
+ * view.
  */
 export function HallTile({ entry, kind, onOpen }: { entry: HallEntry; kind: HallKind; onOpen: () => void }) {
   const [hovered, setActive] = useState(false);
-  const active = hovered || entry.pinnedOpen === true;
+  const active = hovered || entry.pinnedHover === true;
   const verdict = kind === "fame" ? "Picked as best" : "Picked as worst";
 
   return (
@@ -53,47 +53,21 @@ export function HallTile({ entry, kind, onOpen }: { entry: HallEntry; kind: Hall
       onFocus={() => setActive(true)}
       onBlur={() => setActive(false)}
       aria-label={`${entry.brandName}. ${verdict}.`}
-      className={
-        active
-          ? "relative flex w-[264px] shrink-0 flex-col items-start gap-[8px] rounded-[16px] border border-solid border-stroke-1-light bg-background-1-light p-[12px] text-left drop-shadow-[0px_8px_12px_rgba(0,0,0,0.12)] dark:border-stroke-1-dark dark:bg-background-2-dark"
-          : "relative flex w-[152px] shrink-0 flex-col items-center gap-[8px]"
-      }
+      className="relative flex w-[152px] shrink-0 flex-col items-center gap-[8px]"
       data-name="gala-hall-tile"
+      data-state={active ? "hover" : "default"}
     >
-      <span
-        className={`relative flex shrink-0 items-center justify-center overflow-clip rounded-[12px] ${active ? "h-[140px] w-full bg-neutral-0" : "size-[120px]"}`}
-        data-name="art"
-      >
-        {entry.markUrl !== null &&
-          (active ? (
-            <img alt="" src={entry.markUrl} className="size-[96px] shrink-0 object-contain" />
-          ) : (
-            <img
-              alt=""
-              src={entry.markUrl}
-              className="size-[88px] shrink-0 object-contain [filter:url(#hall-tint-light)] dark:[filter:url(#hall-tint-dark)]"
-            />
-          ))}
+      <span className="relative flex size-[120px] shrink-0 items-center justify-center overflow-clip rounded-[12px]" data-name="art">
+        {entry.markUrl !== null && (
+          <img
+            alt=""
+            src={entry.markUrl}
+            className={`size-[88px] shrink-0 object-contain ${active ? "" : "[filter:url(#hall-tint-light)] dark:[filter:url(#hall-tint-dark)]"}`}
+            data-name="mark"
+          />
+        )}
       </span>
-      {active ? (
-        <>
-          <span className="relative flex w-full shrink-0 items-center justify-between overflow-clip whitespace-nowrap" data-name="meta">
-            <span className="type-caption-semibold shrink-0 text-text-blue-1-light dark:text-text-blue-1-dark">{entry.brandName}</span>
-            <span
-              className={`type-mini-semibold shrink-0 ${kind === "shame" ? "text-error-text-light dark:text-error-text-dark" : "text-text-green-1-light dark:text-text-green-1-dark"}`}
-            >
-              {verdict}
-            </span>
-          </span>
-          {entry.quote !== null && (
-            <span className="type-caption-medium relative block w-full shrink-0 overflow-hidden text-ellipsis whitespace-nowrap indent-[-6.3px] text-text-neutral-1-light dark:text-text-neutral-1-dark">
-              {entry.quote}
-            </span>
-          )}
-        </>
-      ) : (
-        <span className="type-mini-medium shrink-0 whitespace-nowrap text-text-blue-1-light dark:text-text-blue-1-dark">{entry.brandName}</span>
-      )}
+      <span className="type-mini-medium shrink-0 whitespace-nowrap text-text-blue-1-light dark:text-text-blue-1-dark">{entry.brandName}</span>
     </button>
   );
 }

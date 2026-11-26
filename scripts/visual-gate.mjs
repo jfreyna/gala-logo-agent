@@ -68,6 +68,13 @@ const screens = [
   { name: "hallmodal-desktop-light", path: "/preview/home?pin=1&modal=fame", ...DESKTOP, scheme: "light", scrollTo: 760 },
   { name: "hallmodal-desktop-dark", path: "/preview/home?pin=1&modal=fame", ...DESKTOP, scheme: "dark", scrollTo: 760 },
   { name: "hallmodal-mobile-light", path: "/preview/home?modal=fame", ...MOBILE, scheme: "light", scrollTo: 380 },
+  // A hall tile at rest and hovered (the same box; only the mark's colors change), and the row with one tile hovered.
+  ...["light", "dark"].flatMap((scheme) => [
+    { name: `halltile-default-${scheme}`, path: "/preview/home", ...DESKTOP, scheme, element: '[data-name="gala-hall-tile"][aria-label^="Ember & Rye"]' },
+    { name: `halltile-hover-${scheme}`, path: "/preview/home?pin=1", ...DESKTOP, scheme, element: '[data-name="gala-hall-tile"][data-state="hover"]' },
+  ]),
+  { name: "hallrow-hover-desktop-light", path: "/preview/home?pin=1", ...DESKTOP, scheme: "light", element: '[data-name="gala-hall-carousel"]' },
+  { name: "hallrow-hover-mobile-light", path: "/preview/home?pin=1", ...MOBILE, scheme: "light", element: '[data-name="gala-hall-carousel"]' },
   { name: "accountmenu-desktop-light", path: "/preview/studio?menu=1", ...DESKTOP, scheme: "light" },
   { name: "accountmenu-mobile-light", path: "/preview/studio?menu=1", ...MOBILE, scheme: "light" },
   { name: "hints-desktop-light", path: "/preview/studio?hints=1", ...DESKTOP, scheme: "light" },

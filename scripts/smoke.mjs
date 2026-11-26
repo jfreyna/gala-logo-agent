@@ -173,18 +173,57 @@ check("join card: 'Forgot password?' points at Frilly's reset page", async () =>
   return /^https:\/\/[a-z.]*frillyconcierge\.com\/app\/auth\/forgot-password$/.test(address);
 });
 
-check("halls: hovering a tile opens it; pressing it opens the full view; Escape closes it", async () => {
-  const page = await open("/preview/home", { reducedMotion: true });
-  const tile = await page.evaluateHandle(() => [...document.querySelectorAll('[data-name="gala-hall-tile"]')].find((element) => element.getAttribute("aria-label").startsWith("Ember & Rye")));
-  await tile.hover();
-  await wait(150);
-  const hovered = (await text(page)).includes("Picked as best");
-  await tile.click();
-  await wait(150);
-  const opened = (await page.$('[role="dialog"]')) !== null && (await text(page)).includes("none felt like us");
-  await page.keyboard.press("Escape");
-  await wait(150);
-  return hovered && opened && (await page.$('[role="dialog"]')) === null;
+// Reaches: the tile's and the row's boxes, and the mark's filter, before and
+// after hover and keyboard focus, at the desktop and phone widths; Enter
+// opening the full view; Escape closing it with focus back on the tile. Does
+// not reach: how the colors look (the visual gate compares those with the
+// frames), or touch input.
+check("halls: hover and focus change only the mark's colors; Enter opens the full view; Escape closes it and focus returns", async () => {
+  // The first lap's tile; the second lap repeats it, hidden from assistive technology.
+  const TILE = '[data-name="gala-hall-tile"][aria-label^="Ember & Rye"]';
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  let ok = true;
+  for (const width of [1440, 380]) {
+    const page = await open("/preview/home", { reducedMotion: true, width });
+    const read = () =>
+      page.evaluate((selector) => {
+        const tile = document.querySelector(selector);
+        const box = (element) => {
+          const { x, y, width, height } = element.getBoundingClientRect();
+          return [x, y, width, height].map((value) => Math.round(value * 100) / 100);
+        };
+        return { tile: box(tile), row: box(tile.closest(".hall-strip")), filter: getComputedStyle(tile.querySelector('[data-name="mark"]')).filter };
+      }, TILE);
+    const tile = await page.$(TILE);
+    // Bring it into view first, so the hover below does not scroll the page between readings.
+    await tile.evaluate((element) => element.scrollIntoView({ block: "center" }));
+    await wait(150);
+    const rest = await read();
+    await tile.hover();
+    await wait(150);
+    const hovered = await read();
+    await page.mouse.move(0, 0);
+    await wait(150);
+    await tile.focus();
+    await wait(150);
+    const focused = await read();
+    await page.keyboard.press("Enter");
+    await wait(150);
+    const opened = (await page.$('[role="dialog"]')) !== null && (await text(page)).includes("none felt like us");
+    await page.keyboard.press("Escape");
+    await wait(150);
+    const closed = (await page.$('[role="dialog"]')) === null;
+    const refocused = await page.evaluate((selector) => document.activeElement === document.querySelector(selector), TILE);
+    console.log(`    ${width}px  tile [x, y, w, h] rest ${JSON.stringify(rest.tile)} hover ${JSON.stringify(hovered.tile)} focus ${JSON.stringify(focused.tile)}`);
+    console.log(`    ${width}px  row  [x, y, w, h] rest ${JSON.stringify(rest.row)} hover ${JSON.stringify(hovered.row)} focus ${JSON.stringify(focused.row)}`);
+    console.log(`    ${width}px  mark filter: rest ${rest.filter} | hover ${hovered.filter} | focus ${focused.filter}; Enter opened ${opened}, Escape closed ${closed}, focus back ${refocused}`);
+    ok &&=
+      same(rest.tile, hovered.tile) && same(rest.tile, focused.tile) &&
+      same(rest.row, hovered.row) && same(rest.row, focused.row) &&
+      rest.filter.startsWith("url(") && hovered.filter === "none" && focused.filter === "none" &&
+      opened && closed && refocused;
+  }
+  return ok;
 });
 
 check("halls: the rows roll, and stand still when the system asks for reduced motion", async () => {

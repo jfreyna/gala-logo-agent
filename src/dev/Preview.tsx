@@ -44,9 +44,9 @@ export function Preview({ pathname, search }: { pathname: string; search: string
   const [panelName, setPanelName] = useState<string | null>(params.get("panel"));
 
   if (name === "home") {
-    // ?pin=1 shows the two tiles the frame draws open; ?modal=fame opens the full view.
+    // ?pin=1 shows two tiles as if hovered (the mark in its real colors); ?modal=fame opens the full view.
     const pin = params.get("pin") === "1";
-    const open = (entries: typeof halls.fame, id: string) => entries.map((entry) => ({ ...entry, pinnedOpen: pin && entry.id === id }));
+    const open = (entries: typeof halls.fame, id: string) => entries.map((entry) => ({ ...entry, pinnedHover: pin && entry.id === id }));
     const modal = params.get("modal");
     return <Home sample={{ fame: open(halls.fame, "f3"), shame: open(halls.shame, "s5") }} sampleOpen={modal === "fame" || modal === "shame" ? modal : undefined} />;
   }
