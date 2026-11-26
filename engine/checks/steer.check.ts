@@ -1,6 +1,6 @@
 /**
- * Steering, replayed on the founder's Gala-on-Gala conversation (FRI-1709
- * findings 5 to 7), line by line, against the real Jev and model.
+ * Steering, replayed on a test conversation about Gala's own
+ * logo, line by line, against the real Jev and model.
  *
  *   node --env-file-if-exists=/home/sprite/gala.env engine/checks/steer.check.ts
  *
@@ -9,7 +9,7 @@
  * directions: pick 0.91, back 0.04, change 0.38"), and never the message.
  *
  * What this proves: on these lines, the reading moves the work the way the
- * founder asked, and ordinary feedback moves nothing. What it does not:
+ * person asked, and ordinary feedback moves nothing. What it does not:
  * other wordings. Each answer is one model's reading, so a pass is
  * evidence, not a guarantee.
  */
@@ -23,7 +23,7 @@ import { Turn, type Steering } from "../turn.ts";
 const prompt = await loadPrompt();
 assertComplete(prompt);
 
-/** The project as it stood when the directions were offered on the founder's walk. */
+/** The project as it stood when the directions were offered on the test walk. */
 function atDirections(): MemoryStore {
   const store = new MemoryStore();
   store.project = { id: "project", brandName: "Gala", stage: "directions" };
@@ -118,7 +118,7 @@ async function steered(store: MemoryStore): Promise<{ turn: Turn; left: Steering
 
 const chosenMark = (store: MemoryStore, kind: string) => store.latest(kind).artifact!.chosenId;
 
-const h = createHarness(`Steering, the founder's walk replayed (prompt: ${prompt.source})`);
+const h = createHarness(`Steering, the test walk replayed (prompt: ${prompt.source})`);
 
 h.check(`"I like B as well… all capitals… the L replaced by the tilt" picks B and keeps the request`, async () => {
   const store = atDirections();

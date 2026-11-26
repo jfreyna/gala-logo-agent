@@ -17,8 +17,8 @@ import { STEPS, stepIndex, stepIndexOfKind } from "./steps.ts";
 import type { Operation, Project, Stage, Store, StoredMessage } from "./store.ts";
 
 /**
- * The exits shown after a second dead end, stored on the step's card
- * (FRI-1722): where the line that gets them stands, and whether "Finish in
+ * The exits shown after a second dead end, stored on the step's card:
+ * where the line that gets them stands, and whether "Finish in
  * the kit" shows. `pressed` is set by the "Back to directions" button
  * (convex/studio.ts `takeWayOut`); `answered` once steering has acted on it.
  */
@@ -200,12 +200,12 @@ export class Turn {
     return this.state.messages.indexOf(a) > this.state.messages.indexOf(b);
   }
 
-  /** True when this turn is a Try again press on a notice (runTurn's `retry`, FRI-1729). */
+  /** True when this turn is a Try again press on a notice (runTurn's `retry`). */
   retrying = false;
 
   /**
-   * What the person has said since Gala last answered. On a Try again turn
-   * (FRI-1729), a notice that offers Try again is not an answer: while nothing
+   * What the person has said since Gala last answered. On a Try again turn,
+   * a notice that offers Try again is not an answer: while nothing
    * from the person came after it, what the turn failed on is still owed, so
    * Try again replays it, attached images included. A newer message or press
    * from the person supersedes it, and is read alone, as before. On any other
@@ -387,7 +387,7 @@ export class Turn {
         return !verdict.claims;
       },
     );
-    // The second dead end's exits are stored on the step's card before the line, so the buttons sit under it (FRI-1722).
+    // The second dead end's exits are stored on the step's card before the line, so the buttons sit under it.
     const exits = this.exitsFor(options.facts?.kitCanFinish === true);
     if (exits !== null) await this.write([{ op: "patchArtifact", messageId: exits.card.id, artifact: { ...exits.card.artifact!, exits: [...((exits.card.artifact!.exits as Exits[] | undefined) ?? []), exits.stored] } }]);
     if (reply !== null) await this.write([{ op: "say", text: reply.say }]);
@@ -396,7 +396,7 @@ export class Turn {
   }
 
   /**
-   * The exits after a second dead end (FRI-1722, the Gala seat's ruling):
+   * The exits after a second dead end :
    * "Back to directions" at every step after the directions, and "Finish in
    * the kit" only when a kit exists (kit, picks, done) and the kit can
    * finish what was asked. Null when this reply gets none. They are stored
@@ -425,7 +425,7 @@ export class Turn {
 
   /**
    * On a second dead end, the step's way out. Where the exits show as
-   * buttons (FRI-1722), the way out Gala says is those same moves, so the
+   * buttons, the way out Gala says is those same moves, so the
    * words and the buttons agree.
    */
   private secondTimeFacts(kitCanFinish = false): Record<string, unknown> {
@@ -450,7 +450,7 @@ export class Turn {
         whatHappened: [`Kept the person's request for ${keptFor}, to be read when that step opens. Nothing was drawn or changed.`],
       });
     } else if (next.act === "offer" && next.symbolName !== undefined) {
-      // FRI-1724: a change to the name or the typeface after the symbol was approved. Gala asks whether to keep the symbol.
+      // A change to the name or the typeface after the symbol was approved. Gala asks whether to keep the symbol.
       await this.converse(waitingFor, {
         task: "The person asked to change how the name is set (its case or its typeface) after the symbol, symbolName, was approved. Say you will make that change, and ask in one short question whether to keep symbolName: moveToOffer, or draw new symbols. Do nothing yet.",
         facts: { moveToOffer: next.moveToOffer, symbolName: next.symbolName },
@@ -491,7 +491,7 @@ export function requestsOf(request: Request | null): { requests?: string[] } {
   return request?.drawing ? { requests: [request.drawing] } : {};
 }
 
-/** True for Gala's notice when it offers Try again: a failure that passes, which is not an answer (FRI-1729). */
+/** True for Gala's notice when it offers Try again: a failure that passes, which is not an answer. */
 export function offersRetry(message: StoredMessage): boolean {
   if (message.author !== "gala" || message.kind !== "notice") return false;
   const actions = message.artifact?.actions;

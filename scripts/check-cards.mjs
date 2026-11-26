@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Cards and history (FRI-1713), as the page draws them: past cards are
+ * Cards and history, as the page draws them: past cards are
  * read-only, and a card action's line shows on the person's side.
  *
  *   node scripts/check-cards.mjs

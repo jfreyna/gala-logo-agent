@@ -57,7 +57,7 @@ export type StreamItem = (
   error?: string;
   /** On the kit card: where each download stands (gala-download-chip). */
   downloads?: Record<string, "idle" | "saving" | "saved" | "couldnt">;
-  /** Reply buttons under a Gala line or the symbol opener (gala-reply-buttons, FRI-1722), and what each button does. */
+  /** Reply buttons under a Gala line or the symbol opener (gala-reply-buttons), and what each button does. */
   reply?: { view: Reply; primary: ArtifactAction; secondary?: ArtifactAction };
 };
 
@@ -108,14 +108,14 @@ export type ArtifactAction =
   | { type: "openSpec" }
   | { type: "submitPicks"; hated: { draftId: string; quote: string } | null; loved: { quote: string } | null }
   | { type: "declinePicks" }
-  /** "Approve" and "Change something" on the stress test card (FRI-1722). */
+  /** "Approve" and "Change something" on the stress test card. */
   | { type: "approveMark" }
   | { type: "changeMark" }
-  /** "Go ahead" under the symbol opener (FRI-1722). */
+  /** "Go ahead" under the symbol opener. */
   | { type: "goAhead" }
-  /** "Yes, redraw" or "No" under a line that offered a move; the offer is stored on the card `cardId` names (FRI-1722). */
+  /** "Yes, redraw" or "No" under a line that offered a move; the offer is stored on the card `cardId` names. */
   | { type: "answerOffer"; answer: "yes" | "no"; cardId: string }
-  /** The second dead end's exits (FRI-1722): "Back to directions" goes back with the person's description; "Finish in the kit" shows the kit card. */
+  /** The second dead end's exits: "Back to directions" goes back with the person's description; "Finish in the kit" shows the kit card. */
   | { type: "takeWayOut"; cardId: string }
   | { type: "finishInKit" }
   /** "Back to this step" on a read-only card's footer. */

@@ -4,7 +4,7 @@
  * The kit pipeline (kit/) does the work: the chosen mark, the typeface and
  * the colors go in, and the lock-ups, the square, the social image and the
  * spec sheet come out. This step stores them, zips each format for
- * download, and shows the kit card alone (FRI-1723). The picks card, for
+ * download, and shows the kit card alone. The picks card, for
  * the halls, waits for the first finished download, or for the person's
  * next message, so it never pushes the kit off the screen as it arrives.
  */
@@ -31,7 +31,7 @@ const LINES: Shape = { type: "OBJECT", properties: { lines: { type: "ARRAY", ite
 const FORMATS = ["SVG", "EPS", "PNG", "Square", "Social"];
 
 type KitLockup = "primary" | "stacked" | "icon" | "wordmark";
-/** "colorway": the lock-up in the chosen colorway, shown on its ground (FRI-1730). */
+/** "colorway": the lock-up in the chosen colorway, shown on its ground. */
 type Preview = { label: string; lockup: KitLockup; variant: "colorway" | "black" | "white"; ground: "white" | "black" | "colorway" };
 
 /** For a logo of the name alone: the wordmark in its colorway, in black and in white. */
@@ -102,7 +102,7 @@ export async function kit(turn: Turn): Promise<Outcome> {
       mark: colorway.assignment.mark,
       wordmark: colorway.assignment.wordmark,
       ...(colorway.assignment.ground !== "white" ? { ground: colorway.assignment.ground } : {}),
-      // Labels for the spec sheet's Colorway section (FRI-1730).
+      // Labels for the spec sheet's Colorway section.
       ...(typeof colorway.letter === "string" ? { letter: colorway.letter } : {}),
       ...(typeof colorway.name === "string" && colorway.name !== "" ? { name: colorway.name } : {}),
     },
@@ -144,7 +144,7 @@ export async function kit(turn: Turn): Promise<Outcome> {
             ...(nameOnly ? { logo: "the name alone, with no symbol; never mention a mark or a symbol" } : {}),
             fileFormats: ["SVG", "EPS", "PNG"],
             images: ["a square image", "a social image"],
-            // FRI-1730: the on-ground files exist only on a brand-color ground.
+            // The on-ground files exist only on a brand-color ground.
             ...(onGround ? { onGroundFiles: `every lock-up on the ${built.spec.colorway!.ground} ground, as SVG, EPS and PNG, beside the transparent files` } : {}),
             specSheet: [
               "the colorway: the logo as picked on its ground, with the contrast of each pairing",
@@ -162,7 +162,7 @@ export async function kit(turn: Turn): Promise<Outcome> {
   );
 
   const fileFor = (lockup: string, variant: string) => ids.get(`svg/${slug}-${lockup}-${variant}.svg`)!;
-  // FRI-1730: the colorway's transparent file, "color" or the all-black / all-white set that stands in for it.
+  // The colorway's transparent file, "color" or the all-black / all-white set that stands in for it.
   const colorwayFile = (lockup: KitLockup) => fileFor(lockup, built.spec.colorway!.files[lockup] ?? "color");
   const previewFile = (preview: Preview) => (preview.variant === "colorway" ? colorwayFile(preview.lockup) : fileFor(preview.lockup, preview.variant));
   // The colorway previews sit on its ground when that is a brand color; a white or neutral colorway stays on white, as before.

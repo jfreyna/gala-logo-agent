@@ -27,7 +27,7 @@ export function StreamEntry({ item, onAction }: { item: StreamItem; onAction: (a
   );
 }
 
-/** A Gala line, with its reply buttons under it when it offered a move (gala-reply-buttons, FRI-1722). */
+/** A Gala line, with its reply buttons under it when it offered a move (gala-reply-buttons). */
 function GalaLine({ text, reply, onAction }: { text: string; reply: StreamItem["reply"]; onAction: (action: ArtifactAction) => void }) {
   if (reply === undefined) return <GalaMessage>{text}</GalaMessage>;
   return (
@@ -85,7 +85,7 @@ function Entry({ item, onAction }: { item: StreamItem; onAction: (action: Artifa
         />
       );
     case "symbolOpener":
-      // The opener is Gala speaking: no card, only the line, and Go ahead under it (FRI-1722).
+      // The opener is Gala speaking: no card, only the line, and Go ahead under it.
       return <GalaLine text={item.data.say} reply={item.reply} onAction={onAction} />;
     case "conceptSet":
       return <ConceptSet data={item.data} onChoose={(id) => onAction({ type: "chooseConcept", id })} {...history} />;

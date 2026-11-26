@@ -60,7 +60,7 @@ async function proceed(turn: Turn, cardId: string, answered: "idea" | "goAhead",
 }
 
 /**
- * FRI-1724: the person kept the approved symbol through a change to the
+ * The person kept the approved symbol through a change to the
  * name or the typeface. With the new wordmark approved, the symbol steps are
  * skipped: the lockup is drawn again with the same mark (it reads the newest
  * variation round), saved colors stay saved, and the kit is rebuilt.

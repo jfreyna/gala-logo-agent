@@ -3,11 +3,11 @@
  * computed outside this module.
  *
  * Where the expected values come from:
- * - Ladders: Frilly's palette method (FRI-1603), computed once on 2026-11-24
+ * - Ladders: Frilly's palette method, computed once on 2026-11-24
  *   and pasted here. Matching it byte for byte proves this implementation
  *   follows the same method.
  * - Contrast: worked by hand from the WCAG 2.x formula (the working sits
- *   beside each check), cross-checked against the same FRI-1603 run.
+ *   beside each check), cross-checked against the same palette run.
  * - CMYK: the values in the `gala-palette` frame (Figma), which agree with
  *   the straight formula worked by hand.
  *
@@ -23,7 +23,7 @@ import { assert, assertClose, assertEqual, createHarness } from "./harness.ts";
 
 const h = createHarness("verify-color");
 
-// Frilly's palette method (FRI-1603), steps 50..900, computed 2026-11-24.
+// Frilly's palette method, steps 50..900, computed 2026-11-24.
 const METHOD_LADDERS: Record<string, string[]> = {
   "#B83A1B": ["#fff6f3", "#ffece7", "#fdd5cb", "#ffb19e", "#ee8f78", "#d66d54", "#b53717", "#912000", "#500d00", "#340600"],
   "#2B2622": ["#f8f8f7", "#f1f0ef", "#e1dfdd", "#cac6c3", "#b0aba8", "#948f8b", "#6e6863", "#544f4a", "#2d2925", "#1b1916"],
@@ -32,7 +32,7 @@ const METHOD_LADDERS: Record<string, string[]> = {
 };
 
 for (const [anchor, expected] of Object.entries(METHOD_LADDERS)) {
-  h.check(`ladder ${anchor} matches the FRI-1603 method`, () => {
+  h.check(`ladder ${anchor} matches Frilly's palette method`, () => {
     assertEqual(ladder(anchor).map((e) => e.hex), expected.map((x) => x.toUpperCase()), `ladder ${anchor}`);
   });
 }

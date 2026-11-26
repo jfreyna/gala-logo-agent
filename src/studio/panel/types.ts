@@ -52,7 +52,7 @@ export type TypeView = {
   families: TypeFamily[];
 };
 
-// The Kit view's shape lives with its builder, so the engine's check can import both (FRI-1730).
+// The Kit view's shape lives with its builder, so the engine's check can import both.
 export type { KitView, PairBadge } from "./colorway";
 import type { KitView } from "./colorway";
 

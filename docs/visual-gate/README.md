@@ -2,7 +2,7 @@
 
 Each image here shows the Figma frame on the left and the built screen on the right, at the frame's own size and color mode. They are made by `scripts/visual-gate.mjs`.
 
-**Command:** `node scripts/visual-gate.mjs <folder of frame PNGs> docs/visual-gate` (dev server running on port 3000; frames exported from the design file at 1x). Last run for FRI-1710, on port 3004, on `feature/FRI-1710-strict-steps`. The eight new frames (wordmark, held request, symbol opener, lockup) and the twelve the seat changed on 2026-11-25 (directions, panel, memory, picks: the letter-free placeholder and the Wordmark and Lockup rows) were exported that day; the other sixty are the 2026-11-24 exports.
+**Command:** `node scripts/visual-gate.mjs <folder of frame PNGs> docs/visual-gate` (dev server running on port 3000; frames exported from the design file at 1x). Last full run with the strict steps. The eight new frames (wordmark, held request, symbol opener, lockup) and the twelve changed in design review on 2026-11-25 (directions, panel, memory, picks: the letter-free placeholder and the Wordmark and Lockup rows) were exported that day; the other sixty are the 2026-11-24 exports.
 
 **Result:** `80/80 screens compared`
 
@@ -26,20 +26,20 @@ Each image here shows the Figma frame on the left and the built screen on the ri
 | `picks-mobile-light` | The frame clips the card's title at the right edge. The build wraps it to a second line so it can be read. |
 | `signin-*`, `signingin-*`, `signinerror-*` | The join card's sign-in states are component variants in the design file, so they are compared as the card alone, 340 wide for desktop and 348 for a phone. |
 | `intro-mobile-*` | The halls' backdrop is drawn from separate layers, and each layer is placed on whole device pixels. At the phone frame's size and one device pixel to one, the edges of the ribbon and the spheres land up to half a pixel from the frame. A phone screen has two or three device pixels to one, so the same rounding is finer there. The desktop frames place every layer on a whole pixel. |
-| `directions-desktop-*` | Scrolled to the newest item, the build shows the 64px of space under the conversation's last item (FRI-1709 finding 1), so everything sits 28px higher than in the frame. The frame lays its conversation out from the top and clips what overflows, so its bottom padding never shows. The cards and the set-aside strip match. |
+| `directions-desktop-*` | Scrolled to the newest item, the build shows the 64px of space under the conversation's last item , so everything sits 28px higher than in the frame. The frame lays its conversation out from the top and clips what overflows, so its bottom padding never shows. The cards and the set-aside strip match. |
 | `picks-*` | The frame shows the card filled in (a draft selected, both reasons written); the build's preview shows it empty. In the frame, the second draft (the letter-free placeholder that replaced the monogram) is drawn oversized and cut by its tile; the build shows it at the tile's size. |
 | `wordmark-mobile-light`, `lockup-mobile-light` | The frame cuts the placeholder with an ellipsis one word earlier than the browser does. |
 | `kit-*`, `color-*`, `type-*` | The sample lock-ups and wordmarks are drawn with the frames' placeholder marks; sizes inside the paper differ slightly. |
 
-## The new steps (FRI-1710)
+## The new steps
 
-`fri1710/` holds the built screens alone, desktop and phone, light and dark: the wordmark, a held request, the symbol opener, the lockup, and the Work panel's History view with its Wordmark and Lockup rows. Three have no frame of their own, so nothing here compares them:
+`strict-steps/` holds the built screens alone, desktop and phone, light and dark: the wordmark, a held request, the symbol opener, the lockup, and the Work panel's History view with its Wordmark and Lockup rows. Three have no frame of their own, so nothing here compares them:
 
 | Image | What it shows |
 |---|---|
-| `fri1710/lockup-stacked-*` | The lockup card with Stacked selected. The file draws only Side by side; the stacked hero's sizes are the Gala seat's, given on FRI-1710 (mark 80 and name 44 on desktop, 48 and 26 on a phone, the gap 0.15 of the mark). |
-| `fri1710/name-only-*` | The colorways and the kit card for a logo of the name alone, after "Wordmark-only examples (FRI-1710)" (`5656:16820`), which is an example sheet and not a screen. |
-| `fri1710/held-*`, `fri1710/opener-*` in dark and on a phone | The file draws these two screens in desktop light only. |
+| `strict-steps/lockup-stacked-*` | The lockup card with Stacked selected. The file draws only Side by side; the stacked hero's sizes come from design review (mark 80 and name 44 on desktop, 48 and 26 on a phone, the gap 0.15 of the mark). |
+| `strict-steps/name-only-*` | The colorways and the kit card for a logo of the name alone, after "Wordmark-only examples" (`5656:16820`), which is an example sheet and not a screen. |
+| `strict-steps/held-*`, `strict-steps/opener-*` in dark and on a phone | The file draws these two screens in desktop light only. |
 
 ## The working line on a phone
 
@@ -136,68 +136,68 @@ memory-desktop-dark            frame 1440x900   built 1440x900   differing 2.13%
 memory-mobile-light            frame 380x812    built 380x812    differing 2.39%
 ```
 
-## FRI-1709 screenshots
+## Fixes from a test walk
 
-In `fri1709/`, from the dev previews at 2x, light and dark. They use the previews' sample content, except where noted.
+In `walk-fixes/`, from the dev previews at 2x, light and dark. They use the previews' sample content, except where noted.
 
 | Images | What they show |
 |---|---|
 | `f1-end-*` | Finding 1. Scrolled to the newest item of a long conversation: a hard edge, no fades, and the last item 92px (52px on a phone) above the prompt bar. |
 | `f1-mid-*` | Finding 1. The same conversation halfway: it clips with a hard edge at the top and the bottom. |
-| `f2-research-*` | Finding 2. The research cards with each brand's own site icon, from a run of the founder's Gala brief on the Sprite (names, notes and icons as that run stored them). |
-| `f3-cards-*` | Finding 3. The directions named as on the founder's walk (Tilted Brush, Ink Pivot, Press Chase) with five or six lines of rationale each: the cards grow, the rationale never meets the checks, and the checks and Choose line up across the row. |
+| `f2-research-*` | Finding 2. The research cards with each brand's own site icon, from a run of a test brief for Gala's own logo on the Sprite (names, notes and icons as that run stored them). |
+| `f3-cards-*` | Finding 3. The directions named as on the test walk (Tilted Brush, Ink Pivot, Press Chase) with five or six lines of rationale each: the cards grow, the rationale never meets the checks, and the checks and Choose line up across the row. |
 | `f8-history-*` | Finding 8. The History view, with "Back to this step" under each Done row. |
 | `f9-tray-*` | Finding 9. The type tray scrolled partway: each specimen above its name, with a line under each row. |
 
-## Any Google font (FRI-1711)
+## Any Google font
 
-`fri1711/` holds what the HarfBuzz setter and the browser draw in typefaces that could not be set before. Nothing here is compared with a frame.
+`any-google-font/` holds what the HarfBuzz setter and the browser draw in typefaces that could not be set before. Nothing here is compared with a frame.
 
 | Image | What it shows |
 |---|---|
-| `fri1711/wordmark-alata-desktop-light.png` | The wordmark card in Alata, from the preview (`/preview/wordmark?family=Alata&name=Gala Office`). The browser draws this card; Gala's line above it is the preview's sample line. |
-| `fri1711/wordmark-pacifico-desktop-light.png` | The same card in Pacifico, a connected script. |
-| `fri1711/wordmark-buda-desktop-light.png` | The same card in Buda, which has no Regular: the browser draws its Light, as the kit does. The heading still says Regular. |
-| `fri1711/kit-alata-primary-and-stacked.png` | The primary and stacked lock-ups from a kit built in Alata by `buildKit`, with the fixture mark. The "ffi" in Office is the font's ligature. |
+| `any-google-font/wordmark-alata-desktop-light.png` | The wordmark card in Alata, from the preview (`/preview/wordmark?family=Alata&name=Gala Office`). The browser draws this card; Gala's line above it is the preview's sample line. |
+| `any-google-font/wordmark-pacifico-desktop-light.png` | The same card in Pacifico, a connected script. |
+| `any-google-font/wordmark-buda-desktop-light.png` | The same card in Buda, which has no Regular: the browser draws its Light, as the kit does. The heading still says Regular. |
+| `any-google-font/kit-alata-primary-and-stacked.png` | The primary and stacked lock-ups from a kit built in Alata by `buildKit`, with the fixture mark. The "ffi" in Office is the font's ligature. |
 
-## Cards and history (FRI-1713)
+## Cards and history
 
-Run on 2026-11-25, port 3004, on `feature/FRI-1713-cards-history`. The three Feedback loops frames this issue builds were exported that day from the band "Feedback loops (FRI-1712)": `fb-heard-*` (Heard 5663:17342), `fb-heardworking-*` (Heard, then working 5663:17510) and `fb-history-*` (History cards 5663:17685). They are drawn in desktop light only.
+Run on 2026-11-25. The three Feedback loops frames this change builds were exported that day from the band "Feedback loops": `fb-heard-*` (Heard 5663:17342), `fb-heardworking-*` (Heard, then working 5663:17510) and `fb-history-*` (History cards 5663:17685). They are drawn in desktop light only.
 
 | Image | Note |
 |---|---|
-| `fb-heard-desktop-light` | The frame's prompt bar shows Stop while the action is on its way; the build shows Send, because no turn has started yet. The bar's states are FRI-1715's. |
+| `fb-heard-desktop-light` | The frame's prompt bar shows Stop while the action is on its way; the build shows Send, because no turn has started yet. The bar's states come with the button states, below. |
 | `fb-history-desktop-light` | Every card measures the frame's size (direction 269, signed-off type card 118, echo 33, wordmark 585); the conversation rests a few pixels lower, from the scroll-to-bottom timing the other studio screens share. |
 
 The other 80 screens were not compared with their frames this run (the exports are not on this machine). Instead each was compared with the same screen built from `main` at `1399a18`: all 80 are unchanged (no screen over 0.05% of pixels).
 
-`fri1713/` holds the built screens with no frame: the same three in desktop dark and on a phone, light and dark, drawn from the components' Dark and Mobile modes.
+`cards-and-history/` holds the built screens with no frame: the same three in desktop dark and on a phone, light and dark, drawn from the components' Dark and Mobile modes.
 
-## Failures answered (FRI-1714)
+## Failures answered
 
-Run on 2026-11-25, port 3004, on `feature/FRI-1714-failures`, with the six frames this issue builds exported that day: `fb-couldntdraw-*` (Couldn't draw 5663:16958, Dark 5663:18899, Mobile 5663:19036), `fb-repeated-*` (Same problem twice 5663:17106), `fb-couldntstart-*` (Couldn't start 5663:17225) and `fb-sendfailed-*` (Send failed 5663:18092). All six are within 0.4 to 2.8%. The signed-off type card's specimen is 20px on a phone, as Couldn't draw Mobile draws it.
+Run on 2026-11-25, with the six frames this change builds exported that day: `fb-couldntdraw-*` (Couldn't draw 5663:16958, Dark 5663:18899, Mobile 5663:19036), `fb-repeated-*` (Same problem twice 5663:17106), `fb-couldntstart-*` (Couldn't start 5663:17225) and `fb-sendfailed-*` (Send failed 5663:18092). All six are within 0.4 to 2.8%. The signed-off type card's specimen is 20px on a phone, as Couldn't draw Mobile draws it.
 
 The other 80 screens were again compared with `main` at `1399a18`: all unchanged.
 
-`fri1714/` holds the built screens with no frame: the same four in the modes the file leaves to the components, and two with no frame of their own: `carderror-*` (a refused card action, its words under the card) and `memoryerrors-*` (refused memory actions, under the line and under Add), both built from `gala-inline-error`.
+`failures-answered/` holds the built screens with no frame: the same four in the modes the file leaves to the components, and two with no frame of their own: `carderror-*` (a refused card action, its words under the card) and `memoryerrors-*` (refused memory actions, under the line and under Add), both built from `gala-inline-error`.
 
-## Button states and small feedback (FRI-1715)
+## Button states and small feedback
 
-Run on 2026-11-25, port 3004, on `feature/FRI-1715-button-states`, with the four frames this issue builds exported that day:
+Run on 2026-11-25, with the four frames this change builds exported that day:
 - `fb-handedoff-*` (Handed off 5663:17947): 0.62%.
 - `fb-stopped-*` (Stopped 5663:18217): 0.43%.
 - `fb-downloads-*` (Downloads 5663:18327): 1.92%. The sample lock-ups differ, as on `kit-*`.
-- `fb-backwhileworking-*` (Back while working 5663:18583): 7.00%. The frame repeats one "Directions" row four times as its done rows, where the build shows the project's own steps; the frame also starts the conversation at the cards, without Gala's line above them. The frame's prompt bar shows Stop beside the placeholder while Gala works; the bar's Working state shows the working line there instead. That's the bar as it was before FRI-1712, and it's flagged, not changed.
+- `fb-backwhileworking-*` (Back while working 5663:18583): 7.00%. The frame repeats one "Directions" row four times as its done rows, where the build shows the project's own steps; the frame also starts the conversation at the cards, without Gala's line above them. The frame's prompt bar shows Stop beside the placeholder while Gala works; the bar's Working state shows the working line there instead. That's the bar as it was before the feedback loops, and it's flagged, not changed.
 
 The 80 earlier screens against `main`: unchanged, except the six with Selected chips, which moved by 0.15 to 0.3% (`type-desktop-light`, `wordmark-desktop-*`, `lockup-desktop-*`, `held-desktop-light`). Selected chips now carry a background-3 border, so every chip is 27px tall, as gala-filter-chip now draws them.
 
-`fri1715/` holds the same four screens in the other modes. `states-desktop-*` is every button kind and chip at rest, in the component sets' order. A screenshot can't show hover, pressed or focus, so `npm run check:states` forces each of those states in the browser and compares the drawn colors with the component sets' values, light and dark (45 checks).
+`button-states/` holds the same four screens in the other modes. `states-desktop-*` is every button kind and chip at rest, in the component sets' order. A screenshot can't show hover, pressed or focus, so `npm run check:states` forces each of those states in the browser and compares the drawn colors with the component sets' values, light and dark (45 checks).
 
-## Stopped with retry (FRI-1729)
+## Stopped with retry
 
-`fri1729/` pairs the built Stopped-with-retry notice with its four `gala-notice` variants (Kind=Stopped with retry: `5690:19007` light desktop, `5690:19014` dark desktop, `5690:19021` light mobile, `5690:19028` dark mobile). Each is compared as the notice alone (the gate's `element` option), 768 wide on desktop and 348 on a phone, from `/preview/stoppedRetry`.
+`stopped-retry/` pairs the built Stopped-with-retry notice with its four `gala-notice` variants (Kind=Stopped with retry: `5690:19007` light desktop, `5690:19014` dark desktop, `5690:19021` light mobile, `5690:19028` dark mobile). Each is compared as the notice alone (the gate's `element` option), 768 wide on desktop and 348 on a phone, from `/preview/stoppedRetry`.
 
-**Command:** `GALA_PREVIEW_URL=http://localhost:3029 node scripts/visual-gate.mjs <frames> docs/visual-gate/fri1729 stoppedretry`. Frames exported 2026-11-26 at 1x.
+**Command:** `GALA_PREVIEW_URL=http://localhost:3000 node scripts/visual-gate.mjs <frames> docs/visual-gate/stopped-retry stoppedretry`. Frames exported 2026-11-26 at 1x.
 
 ```
 stoppedretry-desktop-light     frame 768x102    built 768x102    differing 2.42%
@@ -210,4 +210,4 @@ stoppedretry-mobile-dark       frame 348x127    built 348x127    differing 6.82%
 
 The dark variants export on their component set's light canvas (`#f5f5f5`), so the gate replaces that exact color with the page's own background before comparing. Text and button edges antialiased against the light canvas keep a light fringe, which is most of the dark percentages (the phone's more, with more text per pixel). Layout, type, copy and the button line up.
 
-The `stopped` preview now shows Stopped with something kept ("Stopped. Tell me what to do next.", words only), so `fb-stopped-desktop-light` against the FRI-1715 frame (`5663:18217`) differs in its copy: that frame's words ("Nothing from that turn was kept. Tell me what to do next.") are now the retry variant's, which has its own frames above.
+The `stopped` preview now shows Stopped with something kept ("Stopped. Tell me what to do next.", words only), so `fb-stopped-desktop-light` against the Stopped frame (`5663:18217`) differs in its copy: that frame's words ("Nothing from that turn was kept. Tell me what to do next.") are now the retry variant's, which has its own frames above.

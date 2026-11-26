@@ -1,5 +1,5 @@
 /**
- * Next-move buttons (FRI-1722): each button does what the typed path does,
+ * Next-move buttons: each button does what the typed path does,
  * and a row shows Done once its move is answered, the same after a reload.
  *
  *   node --experimental-strip-types --no-warnings engine/checks/buttons.check.ts
@@ -16,7 +16,7 @@
  *   2. "No" runs nothing, steers to a reply in words, clears the offer, and
  *      records the answer;
  *   3. "Approve" on the stress test opens the lockup, as a typed approval does;
- *   4. "Change something" hands the next move to the message box (FRI-1715);
+ *   4. "Change something" hands the next move to the message box;
  *   5. "Go ahead" starts the drawing: the opener is answered and the project
  *      moves to the directions;
  *   6. a second dead end stores its exits only after the directions, with

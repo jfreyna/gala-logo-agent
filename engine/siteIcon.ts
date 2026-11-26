@@ -1,5 +1,5 @@
 /**
- * A brand's own site icon, for the research cards (FRI-1709 finding 2).
+ * A brand's own site icon, for the research cards.
  *
  * Given the brand's website, this tries, in order: the site's
  * apple-touch-icon or its largest `<link rel="icon">`, then its og:image,

@@ -23,7 +23,7 @@ function Test({ label, pass, preview, previewClass }: { label: string; pass: boo
  * is made on the enlarged render), in a circle, inverted, and on a poster.
  *
  * Under the tests, "Change something" and "Approve", right-aligned
- * (gala-stress-test / actions, Figma 5676:17658, FRI-1722): Approve is the
+ * (gala-stress-test / actions, Figma 5676:17658): Approve is the
  * same approval as a typed one; Change something hands the next move to the
  * message box. Once the step is behind the project, the footer replaces them.
  */

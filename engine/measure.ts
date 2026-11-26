@@ -1,8 +1,8 @@
 /**
  * Measuring a drawing against a request about where a part sits or how big
- * it is (FRI-1725).
+ * it is.
  *
- * FRI-1719 asks Jev two yes/no questions per drawing: does it show the
+ * The yes/no check asks Jev two questions per drawing: does it show the
  * request, and does it differ from its start. For "shift the bottom bar
  * left by half a unit" a yes/no is one model's impression of two pictures,
  * and the Half Step walk showed it can miss a bar that never moved. Here
@@ -19,7 +19,7 @@
  *      grew or shrank.
  *
  * Any failure (Jev errors or is refused, a box is unsure, the part is not
- * there) gives back null for that drawing, and the caller keeps FRI-1719's
+ * there) gives back null for that drawing, and the caller keeps the yes/no check's
  * yes/no answers. Nothing here can fail a turn.
  *
  * What this does not prove: each box is one model's reading of one
@@ -128,7 +128,7 @@ const median = (values: number[]) => [...values].sort((x, y) => x - y)[Math.floo
  * edge, and it is usable only when the part is there (median presence at
  * `YES`) and a majority of the samples agree with the median within the
  * tolerance. A picture Jev can't box the same way twice falls back to
- * FRI-1719's yes/no answers, rather than being measured wrongly.
+ * the yes/no answers, rather than being measured wrongly.
  *
  * Box confidence is logged, not gated: on clean bars it ran 0.1 to 0.5
  * with no link to how close the box was, and TypeSafe gives no threshold.
@@ -197,7 +197,7 @@ export function compareBoxes(before: Edges, after: Edges, want: Want): Measured 
  * The whole measurement for one round: null for the round when the
  * request is not about a part's position or size, or when Jev fails; null
  * for a drawing whose box (or the start's) can't be used. The caller keeps
- * FRI-1719's yes/no answers wherever this gives null.
+ * the yes/no answers wherever this gives null.
  */
 export async function measureRound(options: { request: string | null; start: Image | null; drawings: Image[]; signal?: AbortSignal }): Promise<{ want: Want; measured: (Measured | null)[] } | null> {
   if (options.request === null || options.start === null || options.drawings.length === 0) return null;

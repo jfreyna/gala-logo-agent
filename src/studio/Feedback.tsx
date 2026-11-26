@@ -79,7 +79,7 @@ export function ActionEcho({ label, state }: { label: string; state: "Sending" |
  * back, not a retry) and Stopped. A warning-400 rule on the left, a small
  * title, plain words and a way forward. Stopped is the words alone, with no
  * rule or title; when nothing from the turn was kept it offers Try again, one
- * secondary button (Kind=Stopped with retry, 5690:19007, FRI-1729).
+ * secondary button (Kind=Stopped with retry, 5690:19007).
  */
 export function Notice({ notice, onAction }: { notice: NoticeData; onAction: (action: NoticeAction) => void }) {
   const stopped = notice.kind === "Stopped";

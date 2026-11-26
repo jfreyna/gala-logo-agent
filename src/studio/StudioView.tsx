@@ -46,7 +46,7 @@ export function StudioView({
     attachment: Attachment | null;
     onAttach: (file: File) => void;
     onRemoveAttachment: () => void;
-    /** The attach button, shown only at the brief (FRI-1721). */
+    /** The attach button, shown only at the brief. */
     canAttach?: boolean;
     hints: string[];
     hintsOpen?: boolean;
@@ -77,9 +77,9 @@ export function StudioView({
         >
           {/*
             The scroll area runs from the header's bottom edge to the prompt bar's top edge, so content passes right up
-            to both, with no fade (FRI-1709; the viewport fix folded into FRI-1721). The spacing lives inside the
+            to both, with no fade (the viewport fix). The spacing lives inside the
             scrolling content: at rest the first item starts 48px (24px on a phone) below the header, and the last rests
-            92px (52px) above the prompt bar, FRI-1709's numbers.
+            92px (52px) above the prompt bar.
           */}
           <div className="relative flex min-h-px w-full max-w-[768px] flex-[1_0_0] flex-col items-start" data-name="conversation-area">
             <div ref={conversation} className="conversation relative flex min-h-px w-full flex-[1_0_0] flex-col items-start overflow-y-auto" data-name="conversation">

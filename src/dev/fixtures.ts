@@ -14,22 +14,22 @@ import badgeRaw from "./marks/discard-badge.svg?raw";
 import narrowRaw from "./marks/hearth-narrow.svg?raw";
 import heavyRaw from "./marks/hearth-heavy.svg?raw";
 import withNameRaw from "./marks/hearth-with-name.svg?raw";
-// FRI-1730: real kit output (kit/src buildKit, the spike mark, Young Serif) for three colorways, so the spec sheet and the kit card are checked against the kit's own files.
-import emberPrimary from "./marks/kit-fri1730/ember-primary-color.svg?url";
-import emberStacked from "./marks/kit-fri1730/ember-stacked-color.svg?url";
-import emberIcon from "./marks/kit-fri1730/ember-icon-color.svg?url";
-import emberWordmark from "./marks/kit-fri1730/ember-wordmark-color.svg?url";
-import emberBlack from "./marks/kit-fri1730/ember-primary-black.svg?url";
-import emberWhite from "./marks/kit-fri1730/ember-primary-white.svg?url";
-import emberSpec from "./marks/kit-fri1730/ember-spec.json";
-import limePrimary from "./marks/kit-fri1730/lime-primary-black.svg?url";
-import limeStacked from "./marks/kit-fri1730/lime-stacked-black.svg?url";
-import limeIcon from "./marks/kit-fri1730/lime-icon-black.svg?url";
-import limeWordmark from "./marks/kit-fri1730/lime-wordmark-black.svg?url";
-import limeWhite from "./marks/kit-fri1730/lime-primary-white.svg?url";
-import limeSpec from "./marks/kit-fri1730/lime-spec.json";
-import whitePrimary from "./marks/kit-fri1730/white-primary-color.svg?url";
-import whiteSpec from "./marks/kit-fri1730/white-spec.json";
+// Real kit output (kit/src buildKit, the spike mark, Young Serif) for three colorways, so the spec sheet and the kit card are checked against the kit's own files.
+import emberPrimary from "./marks/kit-colorways/ember-primary-color.svg?url";
+import emberStacked from "./marks/kit-colorways/ember-stacked-color.svg?url";
+import emberIcon from "./marks/kit-colorways/ember-icon-color.svg?url";
+import emberWordmark from "./marks/kit-colorways/ember-wordmark-color.svg?url";
+import emberBlack from "./marks/kit-colorways/ember-primary-black.svg?url";
+import emberWhite from "./marks/kit-colorways/ember-primary-white.svg?url";
+import emberSpec from "./marks/kit-colorways/ember-spec.json";
+import limePrimary from "./marks/kit-colorways/lime-primary-black.svg?url";
+import limeStacked from "./marks/kit-colorways/lime-stacked-black.svg?url";
+import limeIcon from "./marks/kit-colorways/lime-icon-black.svg?url";
+import limeWordmark from "./marks/kit-colorways/lime-wordmark-black.svg?url";
+import limeWhite from "./marks/kit-colorways/lime-primary-white.svg?url";
+import limeSpec from "./marks/kit-colorways/lime-spec.json";
+import whitePrimary from "./marks/kit-colorways/white-primary-color.svg?url";
+import whiteSpec from "./marks/kit-colorways/white-spec.json";
 import { kitView, type KitSpecData } from "../studio/panel/colorway";
 import type { HallEntry } from "../components/HallTile";
 import type { StreamItem } from "../studio/streamTypes";
@@ -140,7 +140,7 @@ const kit: StreamItem = {
   },
 };
 
-/** FRI-1730 (frame 5689:19465): the kit card for a colorway on a brand-color ground, from the kit's real files. */
+/** Frame 5689:19465: the kit card for a colorway on a brand-color ground, from the kit's real files. */
 const kitOn = (ground: string, files: { primary: string; stacked: string; icon: string; wordmark: string; black: string; white: string }): StreamItem => ({
   id: "kit",
   kind: "kit",
@@ -157,7 +157,7 @@ const kitOn = (ground: string, files: { primary: string; stacked: string; icon: 
   },
 });
 const kitEmber = kitOn("#E3B65C", { primary: emberPrimary, stacked: emberStacked, icon: emberIcon, wordmark: emberWordmark, black: emberBlack, white: emberWhite });
-// Quiet Stock (walk note 22): both fills primary black, so the all-black files stand in for the colorway's.
+// Quiet Stock (from a test walk): both fills primary black, so the all-black files stand in for the colorway's.
 const kitLime = kitOn("#CEF82D", { primary: limePrimary, stacked: limeStacked, icon: limeIcon, wordmark: limeWordmark, black: limePrimary, white: limeWhite });
 
 const wordmark: StreamItem = {
@@ -192,7 +192,7 @@ const lockupCard = (layout: "sideBySide" | "stacked"): StreamItem => ({
 });
 
 /** Each studio screen in the frames: its conversation and its prompt placeholders. */
-/** The direction and type cards as the Feedback loops frames draw them signed off (FRI-1712, History cards 5663:17685). */
+/** The direction and type cards as the Feedback loops frames draw them signed off (History cards 5663:17685). */
 const directionSignedOff: StreamItem = {
   id: "direction-signed-off",
   kind: "direction",
@@ -224,7 +224,7 @@ const typeSignedOff: StreamItem = {
   past: { signedOff: true, backTo: "type" },
 };
 
-/** Screens at the brief show the attach button; every other screen shows the bar without it, and its words (FRI-1721). */
+/** Screens at the brief show the attach button; every other screen shows the bar without it, and its words. */
 export const screens: Record<string, { items: StreamItem[]; placeholder: string; placeholderMobile: string; working?: [string, string]; atBrief?: true }> = {
   studio: {
     atBrief: true,
@@ -345,7 +345,7 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholderMobile: "Pick A, B or C.",
   },
   wordmark: { items: [{ id: "pick", kind: "visitor", text: "A, Young Serif." }, wordmark], placeholder: "Approve the wordmark, or ask for a change.", placeholderMobile: "Approve, or ask for a change." },
-  // Button states and small feedback (FRI-1715).
+  // Button states and small feedback.
   handedOff: {
     items: [
       {
@@ -366,13 +366,13 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
   stopped: {
     items: [
       { id: "ask", kind: "visitor", text: "Make the brush thicker in all three" },
-      // Something from the turn was kept, so Stopped is the words alone (FRI-1729: nothing kept offers Try again, below).
+      // Something from the turn was kept, so Stopped is the words alone (nothing kept offers Try again, below).
       { id: "stopped", kind: "notice", notice: { kind: "Stopped", title: "Stopped", say: "Stopped. Tell me what to do next.", actions: [] } },
     ],
     placeholder: "Tell me what to do next.",
     placeholderMobile: "Tell me what to do next.",
   },
-  // Stopped with nothing kept offers Try again (gala-notice Kind=Stopped with retry, 5690:19007, FRI-1729).
+  // Stopped with nothing kept offers Try again (gala-notice Kind=Stopped with retry, 5690:19007).
   stoppedRetry: {
     items: [
       { id: "ask", kind: "visitor", text: "Make the brush thicker in all three" },
@@ -386,7 +386,7 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholder: AFTER_BRIEF,
     placeholderMobile: AFTER_BRIEF,
   },
-  // Feedback loops (FRI-1712), failures answered (FRI-1714).
+  // Feedback loops, failures answered.
   couldntDraw: {
     items: [
       {
@@ -454,7 +454,7 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholder: "Approve the wordmark, or ask for a change.",
     placeholderMobile: "Approve, or ask for a change.",
   },
-  // A card action the server refused, its words under the card (FRI-1714).
+  // A card action the server refused, its words under the card.
   cardError: {
     items: [{ ...wordmark, error: "That step is done." } as StreamItem],
     placeholder: "Approve the wordmark, or ask for a change.",
@@ -466,7 +466,7 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholder: "Tell me about the brand you're building.",
     placeholderMobile: "Tell me about your brand.",
   },
-  // Feedback loops (FRI-1712): a card action heard at once, then done; past cards read-only.
+  // Feedback loops: a card action heard at once, then done; past cards read-only.
   heard: {
     items: [wordmark, { id: "echo", kind: "action", label: "Using this wordmark", state: "Sending" }],
     placeholder: "Approve the wordmark, or ask for a change.",
@@ -515,7 +515,7 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholder: AFTER_BRIEF,
     placeholderMobile: AFTER_BRIEF,
   },
-  // FRI-1722: the symbol opener with Go ahead (frames 5677:18540 and siblings).
+  // The symbol opener with Go ahead (frames 5677:18540 and siblings).
   openerGoAhead: {
     items: [
       {
@@ -530,7 +530,7 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholder: AFTER_BRIEF,
     placeholderMobile: AFTER_BRIEF,
   },
-  // FRI-1722: a words-only reply that offered a move, with Yes, redraw / No (frames 5677:17564 and siblings).
+  // A words-only reply that offered a move, with Yes, redraw / No (frames 5677:17564 and siblings).
   offer: {
     items: [
       { id: "said", kind: "visitor", text: "Instead of nine squares, three offset bars stacked: the bottom one starts in the middle, the second shifts left, the top one shifts right and is cut to a triangle." },
@@ -539,7 +539,7 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholder: AFTER_BRIEF,
     placeholderMobile: AFTER_BRIEF,
   },
-  // FRI-1722: a second dead end at the kit, with its two exits (frames 5677:17760 and siblings).
+  // A second dead end at the kit, with its two exits (frames 5677:17760 and siblings).
   deadEnd: {
     items: [
       { id: "said", kind: "visitor", text: "Make the top of the droplet green and the base purple." },
@@ -554,11 +554,11 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
         },
       },
     ],
-    // At the kit the bar keeps the kit's own placeholder (the Gala seat's gate-read on FRI-1721).
+    // At the kit the bar keeps the kit's own placeholder (as the frames draw it).
     placeholder: "Ask for a change, or start a new project.",
     placeholderMobile: "Ask for a change.",
   },
-  // FRI-1724: after the kit, a lowercase name, and Keep it / Draw new ones (frames 5677:17956 and siblings). At the kit, the kit's placeholder.
+  // After the kit, a lowercase name, and Keep it / Draw new ones (frames 5677:17956 and siblings). At the kit, the kit's placeholder.
   keepSymbol: {
     items: [
       { id: "said", kind: "visitor", text: "Can we make the name all lowercase?" },
@@ -576,7 +576,7 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholder: "Ask for a change, or start a new project.",
     placeholderMobile: "Ask for a change.",
   },
-  // FRI-1722: the stress test card with Change something and Approve (frames 5677:18152 and siblings).
+  // The stress test card with Change something and Approve (frames 5677:18152 and siblings).
   stressActions: {
     items: [
       {
@@ -587,7 +587,7 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholder: AFTER_BRIEF,
     placeholderMobile: AFTER_BRIEF,
   },
-  // FRI-1722: the echo settled under Gala's line, with no reply (frames 5677:18724 and siblings).
+  // The echo settled under Gala's line, with no reply (frames 5677:18724 and siblings).
   settled: {
     items: [
       { id: "line", kind: "gala", text: "Three variations of Wide Channels. I recommend Half Step: the shorter base keeps the stagger sharp in small avatars." },
@@ -619,7 +619,7 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholder: AFTER_BRIEF,
     placeholderMobile: AFTER_BRIEF,
   },
-  // FRI-1718: a Pick whose turn ended with no reply. The echo's state comes from echoState itself: the turn is over, so it settles to Sent.
+  // A Pick whose turn ended with no reply. The echo's state comes from echoState itself: the turn is over, so it settles to Sent.
   echoSettled: {
     items: [
       {
@@ -646,7 +646,7 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
     placeholderMobile: AFTER_BRIEF,
   },
   pickColors: {
-    // Past the stress test, its card shows the footer in place of its buttons (FRI-1722), as in the studio.
+    // Past the stress test, its card shows the footer in place of its buttons, as in the studio.
     items: [{ ...stressTest, past: { signedOff: true, backTo: "stressTest" } } as StreamItem, { id: "picker", kind: "colorPicker", data: { say: colorPickerSay, colors: { primary: PRIMARY, secondary: SECONDARY, tertiary: TERTIARY }, saved: false } }],
     placeholder: "Or describe your colors in words.",
     placeholderMobile: "Or describe your colors in words.",
@@ -721,7 +721,7 @@ export const screens: Record<string, { items: StreamItem[]; placeholder: string;
         id: "picks",
         kind: "picks",
         data: {
-          // After the first download (FRI-1723): the halls card follows the kit with the files-saved line.
+          // After the first download: the halls card follows the kit with the files-saved line.
           say: "Files saved. One last thing, and it’s optional.",
           drafts: [marks.rising, marks.peel, marks.wheat, marks.badge, marks.narrow, marks.heavy, marks.withName, marks.hearth].map((markUrl, index) => ({ id: String(index), markUrl })),
           finalMarkUrl: tinted(heavyRaw, PRIMARY),
@@ -755,7 +755,7 @@ export const panels: Record<string, PanelView> = {
       { key: "kit", name: "Kit", summary: "SVG, EPS, PNG, square and social images", status: "upcoming" },
     ],
   },
-  // Back while working (FRI-1715): the done rows wait for Gala, and say so.
+  // Back while working: the done rows wait for Gala, and say so.
   historyWorking: {
     view: "history",
     projectName: BRAND,
@@ -811,7 +811,7 @@ export const panels: Record<string, PanelView> = {
       { family: "Work Sans", category: "Sans · Neo Grotesque", current: false },
     ],
   },
-  // FRI-1730: the spec sheet from the kit's real spec. "kit" is a colorway on white; "kitOnGround" is frame 5689:19050; "kitLime" is walk note 22.
+  // The spec sheet from the kit's real spec. "kit" is a colorway on white; "kitOnGround" is frame 5689:19050; "kitLime" is the Quiet Stock case from a test walk.
   kit: kitView(BRAND, whiteSpec as KitSpecData, (label) => (label === "primary, color, SVG" ? whitePrimary : undefined)),
   kitOnGround: kitView(BRAND, emberSpec as KitSpecData, (label) => (label === "primary, color, SVG" ? emberPrimary : undefined)),
   kitLime: kitView(BRAND, limeSpec as KitSpecData, (label) => (label === "primary, black, SVG" ? limePrimary : undefined)),
@@ -825,7 +825,7 @@ export const panels: Record<string, PanelView> = {
       { id: "5", group: "From past projects", text: "Ember & Rye: picked the hearth mark, set in Young Serif." },
     ],
   },
-  // A memory edit and an add that the server refused (FRI-1714): the server's words under each.
+  // A memory edit and an add that the server refused: the server's words under each.
   memoryErrors: {
     view: "memory",
     lines: [

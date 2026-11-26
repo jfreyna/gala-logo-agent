@@ -1,5 +1,5 @@
 /**
- * The kit shows the colors as picked (FRI-1730), without a model.
+ * The kit shows the colors as picked, without a model.
  *
  *   node --experimental-strip-types --no-warnings engine/checks/colors-as-picked.check.ts
  *
@@ -19,7 +19,7 @@
  *   and whole-kit zips; the card's colorway preview sits on the ground hex;
  *   `kitHolds` names the on-ground files and the Colorway section.
  * - On white or neutral: no on-ground file, and the card stays on white.
- * - Primary black with both fills primary (walk note 22's Quiet Stock): no
+ * - Primary black with both fills primary (Quiet Stock, from a test walk): no
  *   "color" files, no two PNG files with the same bytes (so no lock-up ships
  *   twice), and the spec says the all-black set holds the colorway.
  * - A black mark with a tertiary name: the primary, stacked and wordmark
@@ -59,7 +59,7 @@ const INPUTS: Record<"ground" | "white" | "black" | "mixed", KitInput> = {
   ground: { mark: MARK, name: "Ember & Rye", fontFamily: "Young Serif", colors: EMBER, colorway: { mark: "tertiary", wordmark: "tertiary", ground: "secondary", letter: "C", name: "Quiet ground" } },
   white: { mark: MARK, name: "Ember & Rye", fontFamily: "Young Serif", colors: EMBER, colorway: { mark: "primary", wordmark: "tertiary" } },
   black: { mark: MARK, name: "Ember & Rye", fontFamily: "Young Serif", colors: { primary: "#000000", secondary: "#CEF82D" }, colorway: { mark: "primary", wordmark: "primary", ground: "secondary", letter: "C", name: "Quiet Stock" } },
-  // The seat's gate-1 case: a black mark with a tertiary name. Only the icon (the mark alone) matches the all-black set.
+  // A review case: a black mark with a tertiary name. Only the icon (the mark alone) matches the all-black set.
   mixed: { mark: MARK, name: "Ember & Rye", fontFamily: "Young Serif", colors: { primary: "#000000", secondary: "#CEF82D", tertiary: "#2B2622" }, colorway: { mark: "primary", wordmark: "tertiary" } },
 };
 const built: Partial<Record<keyof typeof INPUTS, KitResult>> = {};
@@ -94,7 +94,7 @@ function cornerPixel(bytes: Uint8Array): number[] {
   return [...raw.subarray(1, 5)];
 }
 
-const h = createHarness("The kit shows the colors as picked (FRI-1730)");
+const h = createHarness("The kit shows the colors as picked");
 
 for (const key of Object.keys(INPUTS) as (keyof typeof INPUTS)[]) {
   h.check(`the ${key} kit builds`, async () => {
@@ -265,7 +265,7 @@ h.check("black colorway: the Kit view pictures the all-black file on the lime gr
   assertEqual(view.colorway?.paper, "#CEF82D", "the Colorway paper");
   assertEqual(view.clearSpace.zoneColor, "#000000", "the clear-space line");
   assertEqual(view.colors.map((color) => color.hex), ["#000000", "#CEF82D"], "the swatches as picked");
-  // One rounding on the sheet (the seat's gate-read): black on lime reads the same in the Colorway badge and in Secondary's own badge.
+  // One rounding on the sheet (from review): black on lime reads the same in the Colorway badge and in Secondary's own badge.
   const pair = view.colorway?.pairs[0]?.label.split(" ").pop();
   const secondaryOnBlack = view.colors[1]?.contrast[1]?.label.split(" ").pop();
   assertEqual(pair, secondaryOnBlack, "the Colorway badge and the Secondary on-black badge");

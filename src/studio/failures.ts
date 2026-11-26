@@ -1,5 +1,5 @@
 /**
- * What the studio decides when something fails (FRI-1714), kept apart from
+ * What the studio decides when something fails, kept apart from
  * the page so a check can run it: how a stored notice is drawn, what
  * Couldn't start says, what a turn request that did not start leads to, and
  * a send that keeps the person's words when it fails.

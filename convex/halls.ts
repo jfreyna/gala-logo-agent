@@ -10,7 +10,7 @@ import { hall } from "./schema";
  * Until launch the halls are quiet: while GALA_HALLS_OPEN is not "true",
  * only picks from the account named in GALA_HALLS_PREVIEW_OWNER show (the
  * run in which Gala designed Gala's own logo). Opening the halls is one
- * environment value, set by the founder.
+ * environment value, set by the operator.
  */
 export const list = query({
   args: { hall },

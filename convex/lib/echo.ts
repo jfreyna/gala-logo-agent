@@ -75,13 +75,13 @@ export function echoFor(action: EchoAction, card: Record<string, unknown> | null
       return { sending: "Sending your picks to the halls", sent: "Sent your picks to the halls" };
     case "declinePicks":
       return same("No picks for the halls");
-    // The reply buttons and the stress test's Approve leave the button's own words (FRI-1722).
+    // The reply buttons and the stress test's Approve leave the button's own words.
     case "approveMark":
       return same("Approve");
     case "goAhead":
       return same("Go ahead");
     case "answerOffer": {
-      // The keep-the-symbol offer (FRI-1724) has its own labels.
+      // The keep-the-symbol offer has its own labels.
       const offer = artifact.offer as { keepSymbol?: unknown } | null | undefined;
       if (offer?.keepSymbol != null) return same(action.answer === "yes" ? "Keep it" : "Draw new ones");
       return same(action.answer === "yes" ? "Yes, redraw" : "No");

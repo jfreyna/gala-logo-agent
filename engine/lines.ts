@@ -87,7 +87,7 @@ export const PICK_COLORS_LINE = "Now it’s time to pick your colors. Primary le
 /** Gala's line above the picks card (from the studio's design). */
 export const PICKS_LINE = "One last thing, and it’s optional.";
 
-/** Gala's line above the picks card when it follows the first finished kit download (FRI-1723). */
+/** Gala's line above the picks card when it follows the first finished kit download. */
 export const FILES_SAVED_LINE = "Files saved. One last thing, and it’s optional.";
 
 /** Gala's line above the colorways when no checked line could be written. */

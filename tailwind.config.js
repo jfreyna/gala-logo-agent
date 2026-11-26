@@ -31,7 +31,7 @@ const colors = {
   "stroke-2-dark": "#3b7187",
   "button-1-default-light": "#633ba4",
   "button-1-default-dark": "#7f55c3",
-  /** The other Primary states (gala-button, FRI-1712). */
+  /** The other Primary states (gala-button). */
   "button-1-hover-light": "#7f55c3",
   "button-1-hover-dark": "#8a4ded",
   "button-1-pressed-light": "#451d87",
@@ -51,7 +51,7 @@ const colors = {
   "neutral-300": "#d4d4d4",
   "neutral-500": "#737373",
   "neutral-900": "#171717",
-  /** The left rule on gala-notice (FRI-1712), the same in both modes. */
+  /** The left rule on gala-notice, the same in both modes. */
   "warning-400": "#f0c000",
   "brand-secondary-50": "#f4f7e3",
   "brand-tertiary-50": "#f6fafc",
@@ -63,7 +63,7 @@ const colors = {
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
-  // Hover states show on pointer devices only (FRI-1712): a tap on a phone leaves no stuck hover.
+  // Hover states show on pointer devices only: a tap on a phone leaves no stuck hover.
   future: { hoverOnlyWhenSupported: true },
   darkMode: ["selector", '[data-theme="dark"]'],
   theme: {

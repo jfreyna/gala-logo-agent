@@ -1,5 +1,5 @@
 /**
- * Honest words (FRI-1719): a description counts as a change, an offer is
+ * Honest words: a description counts as a change, an offer is
  * stored and a yes runs it exactly, the line about a round is written from
  * the drawings, a words-only reply never claims work, a file with no words
  * is answered, the decline keeps the card, and a request is said to be kept
@@ -36,7 +36,7 @@
  * What it does not prove: that every description is read as one (each Jev
  * answer is one model's reading of one message), or that Gala's wording is
  * good. Case 3's line is judged by Jev, which is evidence, not proof. No
- * check grades the drawings' quality; that is the founder's.
+ * check grades the drawings' quality; that is a person's call.
  */
 import { assert, assertEqual, createHarness } from "../../kit/scripts/harness.ts";
 import { rasterize } from "../../kit/src/render.ts";

@@ -1,6 +1,7 @@
 {
   "name": "frilly-gala",
   "private": true,
+  "license": "UNLICENSED",
   "version": "0.1.0",
   "type": "module",
   "description": "Gala, a logo design agent on Fly.io Sprites. The persona prompt is withheld.",

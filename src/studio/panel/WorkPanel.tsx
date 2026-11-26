@@ -92,7 +92,7 @@ function PhaseRow({ phase, working, onOpen, onGoBack }: { phase: Phase; working:
             ))}
           </span>
         )}
-        {/* Status=Done while working (FRI-1712): going back waits for Gala, and the row says so instead of ignoring the press. */}
+        {/* Status=Done while working: going back waits for Gala, and the row says so instead of ignoring the press. */}
         {phase.status === "done" && working && (
           <span className="type-caption-semibold relative shrink-0 whitespace-nowrap text-text-neutral-2-light dark:text-text-neutral-2-dark" data-name="go-back-waiting">
             Back to this step when I finish

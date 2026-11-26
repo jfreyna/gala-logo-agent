@@ -1,5 +1,5 @@
 /**
- * The founder's first walk, replayed: a brief for Gala's own logo.
+ * The first test walk, replayed: a brief for Gala's own logo.
  *
  *   node engine/checks/walk.check.ts
  *
@@ -48,7 +48,7 @@ function walk(): MemoryStore {
   return store;
 }
 
-const h = createHarness(`The founder's walk, replayed (prompt: ${prompt.source})`);
+const h = createHarness(`The first test walk, replayed (prompt: ${prompt.source})`);
 
 for (let run = 1; run <= 3; run++) {
   h.check(`run ${run}: the answer with the tagline and the anti-words gets a brief card, not the decline`, async () => {
@@ -57,7 +57,7 @@ for (let run = 1; run <= 3; run++) {
     await turn.read();
     await brief(turn);
     const last = store.messages[store.messages.length - 1]!;
-    // The decline now keeps the card and replaces only Gala's line (FRI-1719), so a decline is looked for in both places.
+    // The decline now keeps the card and replaces only Gala's line, so a decline is looked for in both places.
     assert(!(last.text ?? "").startsWith(DECLINE_LINE), "Gala declined");
     assert(!String(last.artifact?.say ?? "").startsWith(DECLINE_LINE), "Gala's line on the brief card is the decline");
     assertEqual(last.kind, "brief", "the last thing Gala wrote");

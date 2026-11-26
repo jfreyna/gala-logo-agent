@@ -1,14 +1,14 @@
 /**
  * What the box says after the brief at the drawing steps, on desktop and on
- * a phone (gala-prompt-bar / no clip, Figma 5676:17707, FRI-1721). Gala
+ * a phone (gala-prompt-bar / no clip, Figma 5676:17707). Gala
  * looks at images only while the brief is written, so there the box asks
  * for words.
  */
 export const AFTER_BRIEF = "Describe it and I'll draw it.";
 
 /**
- * The steps whose frames draw "Describe it and I'll draw it." (the Gala
- * seat's gate-read on FRI-1721): the drawing steps. Every other step after
+ * The steps whose frames draw "Describe it and I'll draw it." :
+ * the drawing steps. Every other step after
  * the brief keeps its own placeholder, since "draw it" doesn't fit there.
  */
 export const DRAWING_STEPS = ["symbolOpener", "directions", "variations", "stressTest"];
@@ -16,7 +16,7 @@ export const DRAWING_STEPS = ["symbolOpener", "directions", "variations", "stres
 /**
  * The prompt bar at a step: whether it shows the attach button, and its
  * placeholder for desktop and for a phone. The attach button shows only at
- * the brief; after it the bar is gala-prompt-bar / no clip (FRI-1721).
+ * the brief; after it the bar is gala-prompt-bar / no clip.
  * The step is the project's stage; a plain string, so the engine's checks can
  * import this file as it is.
  */

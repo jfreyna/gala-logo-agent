@@ -1,7 +1,7 @@
 /**
  * Lays out the lock-ups from the traced mark and the outlined wordmark.
  *
- * Proportions are read from the `gala-kit` frame (Figma, FRI-1701), with the
+ * Proportions are read from the `gala-kit` frame (Figma), with the
  * mark's box as the unit:
  * - Primary: mark box 48, gap 10, type 22 (mark left, type right).
  * - Stacked: mark box 56, gap 6, type 16 (mark above, type below, centered).
@@ -13,7 +13,7 @@
  * real ink would come closer to the mark than the gap. Every artwork is cropped tight to its ink; clear
  * space is a rule in the spec sheet, not padding in the file.
  *
- * A name on two lines (FRI-1728) follows the same rules as one block: in
+ * A name on two lines follows the same rules as one block: in
  * the primary lock-up the block is centered on the mark and its lines are
  * left-aligned; in the stacked lock-up and the wordmark the lines are
  * centered. The line advance is the typeface's own (font.ts, `setLines`).

@@ -81,7 +81,7 @@ export function standingRequests(turn: Turn, request: Request | null): string[] 
 /**
  * What Jev saw in each drawing: whether it shows the request, and whether
  * it differs from its starting mark (null when not asked). `measured` is
- * set when the two came from boxes (FRI-1725): what the part did. It goes
+ * set when the two came from boxes: what the part did. It goes
  * on the card, not to the words call.
  */
 export type Compared = { showsRequest: boolean | null; differsFromStart: boolean | null; measured?: Measured | null };
@@ -92,10 +92,10 @@ export type Compared = { showsRequest: boolean | null; differsFromStart: boolean
  * big it is, the part is boxed in the start and in each drawing and the
  * two answers come from the measurement (measure.ts): `showsRequest` is
  * whether the part did what was asked (and, when other requests stand,
- * whether the drawing shows those too, by FRI-1719's yes/no), and
+ * whether the drawing shows those too, by the yes/no check), and
  * `differsFromStart` is yes when the part measurably changed, else
- * FRI-1719's answer, since another part may have changed. Wherever the
- * measurement can't be used, FRI-1719's yes/no answers stand.
+ * the yes/no answer, since another part may have changed. Wherever the
+ * measurement can't be used, the yes/no answers stand.
  */
 export async function compareRound(turn: Turn, drafts: Draft[], wanted: string[] | null, start: Image | null, newest: string | null = null): Promise<Compared[]> {
   const drawings = await Promise.all(

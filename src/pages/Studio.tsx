@@ -146,13 +146,13 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
   const [pending, setPending] = useState<{ key: number; label: string }[]>([]);
   // The server's own message for what failed, under the control it came from (gala-inline-error), until the next action there.
   const [cardErrors, setCardErrors] = useState<Record<string, string>>({});
-  /** A reply button this page pressed, by the message it sits under, until the stored conversation shows it (FRI-1722). */
+  /** A reply button this page pressed, by the message it sits under, until the stored conversation shows it. */
   const [replyPress, setReplyPress] = useState<Record<string, "primary" | "secondary">>({});
   const [memoryErrors, setMemoryErrors] = useState<Record<string, string>>({});
   const [sendError, setSendError] = useState<string | null>(null);
-  // A failed Stop request (FRI-1715): its words under the bar, until the next press.
+  // A failed Stop request: its words under the bar, until the next press.
   const [stopError, setStopError] = useState<string | null>(null);
-  // Handed off (FRI-1715): a card action passed the next move to the message box. Off when the person types, or after 6 seconds.
+  // Handed off: a card action passed the next move to the message box. Off when the person types, or after 6 seconds.
   const [handedOff, setHandedOff] = useState(0);
   useEffect(() => {
     if (handedOff === 0) return;
@@ -217,7 +217,7 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
     // Cards whose step is past show their footer in place of their buttons and chips.
     const plain = all.map((message) => ({ id: message._id, author: message.author, kind: message.kind, artifact: message.artifact as Record<string, any> | null }));
     const past = stage === undefined ? {} : pastCards(plain, stage);
-    // Reply buttons under the lines that offered a move, and Go ahead under the symbol opener (FRI-1722).
+    // Reply buttons under the lines that offered a move, and Go ahead under the symbol opener.
     const replies = repliesFor(plain, replyPress, stage === "symbolOpener");
     const stream = all.flatMap((message, at): StreamItem[] => {
       const id = message._id;
@@ -255,7 +255,7 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
   /**
    * Sends the message and the file. The box and the attachment are cleared
    * only once the send went through; if it fails, both stay, the bar shows
-   * Send failed, and the reason is under it (FRI-1712 pattern 6).
+   * Send failed, and the reason is under it .
    */
   async function sendMessage() {
     const words = text.trim();
@@ -302,7 +302,7 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
 
   /**
    * The first finished download tells Gala, once per kit card, so the halls
-   * card can follow it (FRI-1723). The card's `downloaded` mark survives a
+   * card can follow it. The card's `downloaded` mark survives a
    * reload; the ref covers the moment before the mark comes back. If the
    * call fails, the next download tries again, and the person's next
    * message brings the halls card anyway.
@@ -342,9 +342,9 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
   }
 
   /**
-   * "Finish in the kit" (FRI-1722): moves nothing. It brings the kit card
+   * "Finish in the kit": moves nothing. It brings the kit card
    * into view and outlines it the way a hand-off outlines the message box
-   * (FRI-1715: a 2px button-1 line, off after the same 6 seconds).
+   * (a 2px button-1 line, off after the same 6 seconds).
    */
   function showKit() {
     const kits = document.querySelectorAll<HTMLElement>('[data-name="gala-kit"]');
@@ -373,7 +373,7 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
       .finally(() => setPending((list) => list.filter((entry) => entry.key !== key)));
   }
 
-  /** Try again, on a notice: asks for the turn once more, marked as a retry so it replays what failed (FRI-1729). A turn still owed starts its requests over. */
+  /** Try again, on a notice: asks for the turn once more, marked as a retry so it replays what failed. A turn still owed starts its requests over. */
   function retry() {
     if (startFailed !== null) {
       setStartFailed(null);
@@ -424,7 +424,7 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
       case "changeDirection":
       case "changeMark":
         return setFocusRequest((value) => value + 1);
-      // A reply button: Working at once, and the same move typing the answer makes (FRI-1722).
+      // A reply button: Working at once, and the same move typing the answer makes.
       case "answerOffer":
         return pressReply(itemId, action.answer === "yes" ? "primary" : "secondary", action.cardId as Id<"messages">, { type: "answerOffer", answer: action.answer });
       case "goAhead":
@@ -590,7 +590,7 @@ export function Studio({ projectId }: { projectId: Id<"projects"> }) {
           if (file?.previewUrl) URL.revokeObjectURL(file.previewUrl);
           setFile(null);
         },
-        // The step's Hints, from the same table as what Gala knows the step can do (engine/stepFacts.ts, FRI-1722).
+        // The step's Hints, from the same table as what Gala knows the step can do (engine/stepFacts.ts).
         hints: STEP_FACTS[project.stage].hints,
         focusRequest,
       }}

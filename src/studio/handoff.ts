@@ -1,5 +1,5 @@
 /**
- * Hand-offs to the message box (FRI-1715, gap A): the card actions and
+ * Hand-offs to the message box (gap A): the card actions and
  * notice buttons that pass the next move to the person's words, so the
  * prompt bar shows Handed off instead of only moving the cursor.
  *

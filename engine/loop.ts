@@ -72,7 +72,7 @@ export async function runTurn(store: Store, prompt: Prompt, signal: AbortSignal,
     }
     throw new Error(`The turn did not settle at stage ${turn.stage}.`);
   } catch (error) {
-    // Stop is confirmed in the chat (FRI-1715): Gala's line says so, and asks what to do next.
+    // Stop is confirmed in the chat: Gala's line says so, and asks what to do next.
     if (signal.aborted) {
       await store.write([{ op: "artifact", kind: NOTICE_KIND, artifact: stoppedNotice(turn.stage, turn.state.messages.length > before) }]).catch(() => undefined);
       return "stopped";
@@ -90,7 +90,7 @@ export async function runTurn(store: Store, prompt: Prompt, signal: AbortSignal,
   }
 }
 
-/** After a Try again: when the turn wrote nothing from Gala, the one line that says nothing was owed (FRI-1729). */
+/** After a Try again: when the turn wrote nothing from Gala, the one line that says nothing was owed. */
 async function sayWhenNothingOwed(turn: Turn, before: number): Promise<void> {
   await turn.read();
   if (turn.state.messages.slice(before).some((message) => message.author === "gala")) return;

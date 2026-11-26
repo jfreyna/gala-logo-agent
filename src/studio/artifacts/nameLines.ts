@@ -1,7 +1,7 @@
 /** No imports: the engine's check:two-line reads this file too. */
 
 /**
- * The name on one line or two (FRI-1728), set by what the person says.
+ * The name on one line or two, set by what the person says.
  * `breakAfter` is how many words go on the first line. Absent on cards from
  * before the setting: one line.
  */

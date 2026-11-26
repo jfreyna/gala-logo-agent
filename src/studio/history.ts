@@ -1,5 +1,5 @@
 /**
- * Which cards in the conversation are history (FRI-1712 pattern 1).
+ * Which cards in the conversation are history .
  *
  * A card is read-only once the person has signed it off, once its step is
  * behind the project, or once it has been superseded: a card of an earlier
@@ -45,7 +45,7 @@ export const HISTORY_KINDS = ["brief", "direction", "typeSet", "wordmark", "conc
 export type Past = {
   signedOff: boolean;
   backTo: Stage | null;
-  /** True while Gala works: going back waits, and the footer says so (FRI-1715). */
+  /** True while Gala works: going back waits, and the footer says so. */
   working?: boolean;
 };
 

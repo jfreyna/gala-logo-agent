@@ -1,5 +1,5 @@
 /**
- * A long name on two lines (FRI-1728): the setting, the break, the
+ * A long name on two lines: the setting, the break, the
  * geometry, the kit's files, and the stress test's honest answer.
  *
  *   node --env-file-if-exists=/home/sprite/gala.env --experimental-strip-types --no-warnings engine/checks/two-line.check.ts
@@ -10,7 +10,7 @@
  *
  * What this proves:
  *   1. Jev reads "one line or two" from varied wording at the wordmark and
- *      the lockup (the founder's two walk requests among them), together
+ *      the lockup (two requests from a test walk among them), together
  *      with the settings read in the same call, and a message about
  *      something else leaves it alone;
  *   2. a two-word name breaks after its first word with no question asked;
@@ -27,7 +27,7 @@
  *      their path data) for the primary, stacked and wordmark lock-ups in
  *      every variant, a name-only kit's wordmark too (its square is drawn
  *      from it), and one line when no break is set;
- *   5. at the stress test, the founder's 7:48 request gets the can't-do
+ *   5. at the stress test, the test walk's 7:48 request gets the can't-do
  *      with "the name is set at the lockup, next", and nothing is drawn;
  *   6. the step facts: the wordmark and the lockup can set the lines; the
  *      setting is kept on the card, carried from the wordmark to the
@@ -62,7 +62,7 @@ import { Turn } from "../turn.ts";
 import { projectAt } from "./project.ts";
 import { TWO_LINE_TYPE } from "../../src/studio/artifacts/nameLines.ts";
 
-const h = createHarness("A long name on two lines (FRI-1728)");
+const h = createHarness("A long name on two lines");
 const fetcher = globalThis.fetch as unknown as FetchLike;
 const FAMILY = "Young Serif";
 const TWO = "Fernhollow Waterworks";
@@ -369,7 +369,7 @@ h.check("6c. a whole turn at the wordmark writes two lines onto the card, and ke
   assertEqual([after.case, after.lines, after.breakAfter], ["allCaps", "twoLines", 1], "case changed, lines kept");
 });
 
-h.check("6d. a whole turn at the lockup: the founder's 7:51 request sets the name on two lines, stacked, and draws no new symbol", async () => {
+h.check("6d. a whole turn at the lockup: the test walk's 7:51 request sets the name on two lines, stacked, and draws no new symbol", async () => {
   const store = projectAt("lockup");
   store.project.brandName = TWO;
   Object.assign(store.latest("wordmark").artifact!, { brandName: TWO });

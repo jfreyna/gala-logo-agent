@@ -201,7 +201,7 @@ export async function compareDrawing(
     images: { drawing: judgeView(drawing), ...(options.start !== null ? { start: judgeView(options.start) } : {}) },
     questions: {
       ...(options.request !== null ? { showsRequest: { type: "noul", instructions: "`request` is what the person asked to see or change in the mark. Does `drawing` show it?" } as const } : {}),
-      // FRI-1725: when one request is measured with boxes (measure.ts), the rest are asked about on their own.
+      // When one request is measured with boxes (measure.ts), the rest are asked about on their own.
       ...(others !== null ? { showsOthers: { type: "noul", instructions: "`otherRequests` are things the person asked to see or change in the mark. Does `drawing` show all of them?" } as const } : {}),
       ...(options.start !== null ? { differsFromStart: { type: "noul", instructions: "`drawing` was drawn starting from `start`. Is it visibly a different mark from `start`, beyond small differences in the edges? Answer no if the shapes are the same." } as const } : {}),
     },

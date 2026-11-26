@@ -5,7 +5,7 @@
  *
  * It runs the wordmark step against the real Jev and model, so it runs
  * only on the Sprite. Storage is memory. The families are test cases only:
- * Alata is the typeface the founder picked when the step failed on every
+ * Alata is the typeface picked on a test walk when the step failed on every
  * message, Roboto fails the same way on the old setter, and Pacifico is a
  * connected script.
  *
@@ -27,7 +27,7 @@ assertComplete(prompt);
 const h = createHarness(`The wordmark step opens in any typeface (prompt: ${prompt.source})`);
 
 for (const [family, why] of [
-  ["Alata", "the typeface that stopped the step on the founder's walk"],
+  ["Alata", "the typeface that stopped the step on a test walk"],
   ["Roboto", "the same cause, in the most used family"],
   ["Pacifico", "a connected script"],
 ] as const) {

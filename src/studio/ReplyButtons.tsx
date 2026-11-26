@@ -1,7 +1,7 @@
 import { PRIMARY, PRIMARY_LABEL, SECONDARY, SECONDARY_LABEL } from "../components/states";
 
 /**
- * What a row of reply buttons under one of Gala's lines shows (FRI-1722):
+ * What a row of reply buttons under one of Gala's lines shows:
  * its labels, where it stands, and which button was pressed.
  *
  *   - Default: both pressable, with gala-button's hover, pressed and focus.

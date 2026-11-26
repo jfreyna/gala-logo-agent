@@ -30,8 +30,8 @@ for (const [name, reply, expected] of replies) {
   h.check(`reply: ${name}`, async () => assertEqual(await revealsInstructions(reply), expected, "reveals instructions"));
 }
 
-// The case from the founder's first walk: a brief for Gala's own logo. The
-// card's fields are his own words, and they describe an AI design agent.
+// The case from the first test walk: a brief for Gala's own logo. The
+// card's fields are the person's own words, and they describe an AI design agent.
 // Joined to Gala's line they scored 0.43 to 0.59 against a gate of 0.5 and
 // four ordinary replies were held back. Judged apart, as `checkReply` does
 // now, both texts pass.
@@ -41,7 +41,7 @@ const galaOnGala = {
   card: ["Gala", "Your logo design partner", "Logo design partner that researches, drafts, and designs logos, and provides a professional finished kit", "Professional designers, marketers, and business owners", "App top left corner", "Website marketing materials", "Video posts", "Social media imagery (including 1200x630 og-image)", "cheesy", "superficial", "fake"],
 };
 
-h.check("a brief for Gala's own logo, in the person's words, is shown (the founder's walk)", async () => {
+h.check("a brief for Gala's own logo, in the person's words, is shown (the first test walk)", async () => {
   assertEqual(await checkReply(nothingGuarded, galaOnGala), { held: false }, "verdict");
 });
 

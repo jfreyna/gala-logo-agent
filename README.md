@@ -6,6 +6,19 @@ Gala takes a person from a brief to a finished logo kit, in five steps: discover
 
 This repository holds the web app, its storage, the engine that does the work, and the kit pipeline.
 
+- **Live:** https://gala.frillyconcierge.com
+- **Demo video:** (link to come)
+- **Built for:** Fly.io's Hacksgiving 2026. Gala runs on a Fly.io Sprite and does all of its model work through two Sprites connectors, Gemini and TypeSafe.
+
+## How Gala uses the Sprites connectors
+
+Gala has no model key. Both model gateways are Sprites connectors: each answers only from inside the Sprite, at an address the Sprite gives it, and takes no auth header. The server reads the two addresses from its environment (`GALA_GEMINI_URL` and `GALA_TYPESAFE_URL`, see `env.example`).
+
+- **Gemini writes and draws** (`engine/gemini.ts`). The text model fills in a fixed JSON shape for everything Gala says, so a reply is data that code checks before it is shown. The research step lets it search the web first, so the competitors it names are real. The image models draw each mark, which the engine then traces to vector paths.
+- **TypeSafe decides** (`engine/jev.ts`). Jev, TypeSafe's structured evaluator, answers questions with a known set of answers: yes or no, a pick from named options, a score on a rubric, and where something sits in an image. Gala asks Jev whenever an answer comes from a known set: what a person's message asks for, which type classes fit the brief, whether a draft passes its checks, how the mark holds up at 16px or inverted, whether a part moved as asked, and whether a reply reveals the prompt.
+
+The split is the design: Gemini writes the words and the drawings, Jev makes every choice and every check, and code owns the order of the steps.
+
 ## How it is put together
 
 ```
@@ -89,6 +102,10 @@ The persona prompt, the instructions for each step and the hall rules are not in
 
 ## Running it
 
+### Locally
+
+You need Node 22.6 or later (the checks run TypeScript with Node's own type stripping) and a Convex account.
+
 ```bash
 npm install
 cp env.example .env.local   # then fill in the addresses
@@ -98,7 +115,17 @@ npm run dev                 # http://localhost:3000
 
 `npm run typecheck` checks the app, the Convex functions and the engine. `npm run build` makes the production build in `dist/`; `npm start` serves it.
 
-The engine needs the two connectors, so it runs only on a Sprite. `./scripts/deploy-sprite.sh` builds and deploys; the server reads its settings from `/home/sprite/gala.env` (see `env.example`), a file the deploy never touches. With `sprite proxy 8080` running, the dev server passes `/api` through to the Sprite.
+Locally, the web app, sign-in and storage all run. The engine needs the two connectors, which answer only from inside a Sprite, so a turn needs a Sprite: with `sprite proxy 8080` running, the dev server passes `/api` through to Gala's server there. Checks marked "anywhere" in the table below run on any machine.
+
+### On a Sprite
+
+1. Create a Sprite and add the Gemini and TypeSafe connectors to it. Note the address each connector answers on inside the Sprite.
+2. On the Sprite, write `/home/sprite/gala.env` with the four server values from `env.example`: the two connector addresses, your Convex deployment's HTTP address, and a long random `GALA_SERVER_SECRET`.
+3. Set the same `GALA_SERVER_SECRET` in your Convex deployment's environment (the Convex dashboard's environment variables, or `npx convex env set`).
+4. Optionally load your own persona prompt with `node scripts/set-prompt.mjs <file>`. Without one, Gala runs on the public stand-in in `engine/standin-prompt.ts`.
+5. From this folder, run `GALA_SPRITE=<your sprite> ./scripts/deploy-sprite.sh`. It builds the app, copies the build, server, engine and kit pipeline to `/home/sprite/gala`, starts the service on port 8080 and prints two health checks. It never reads or writes `gala.env`.
+
+The server reads its settings from `gala.env` each time the service starts. Opening the Sprite's URL to visitors is a separate step, taken in the Sprite's own settings.
 
 ## The backdrops
 
@@ -120,7 +147,7 @@ Each prints `N/N passed`, or `N/M, run incomplete` when a check could not run. E
 |---|---|---|
 | `npm run check:guard` | The code half of prompt protection: copies of the prompt are caught, reformatted or not; ordinary replies are not | anywhere |
 | `npm run check:jev` | The Jev reply check and the halls' quote check, on leaking, harmless, offensive and personal cases | on the Sprite |
-| `npm run check:walk` | The founder's first walk replayed: a brief for Gala's own logo gets its card, not the decline | on the Sprite |
+| `npm run check:walk` | The first test walk replayed: a brief for Gala's own logo gets its card, not the decline | on the Sprite |
 | `npm run check:e2e` | One full brief, first message to kit and picks, against the real models with a scripted person | on the Sprite |
 | `npm run check:held` | A request about a later step is stored for that step and the stage stays; a request for the current step is not held | on the Sprite |
 | `npm run check:held-reaches` | A held request is in what its step works from when it opens: the typeface, the wordmark's case, the symbol's idea, the lockup's layout, the colors | on the Sprite |
@@ -141,3 +168,7 @@ Each prints `N/N passed`, or `N/M, run incomplete` when a check could not run. E
 | `npm run check:backdrops -- <frames>` | The backdrops at rest against Figma's rendering, and what moves: only transform and opacity, loops paused off screen, the halls' entrance, the pointer only where there is one, nothing under reduced motion | with the dev server running |
 | `npm run measure:backdrops` | Main-thread time per frame for each backdrop on a throttled phone profile, against a 2 ms budget | with the dev server running |
 | `cd kit && npm run verify` | The kit's color maths and every file it writes | anywhere; the EPS checks need Ghostscript |
+
+## License
+
+All rights reserved; published for judging Hacksgiving 2026. See [LICENSE](LICENSE).

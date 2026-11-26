@@ -55,7 +55,7 @@ export const LAYOUT: Setting<Layout> = {
 };
 
 /**
- * The name on one line or two (FRI-1728). Read at the wordmark and at the
+ * The name on one line or two. Read at the wordmark and at the
  * lockup; it has no chip, so the person asks in words and the card shows
  * it. Two lines break between words only: a one-word name stays on one
  * line (`canBreak`), and where a longer name breaks is `readBreak`'s.

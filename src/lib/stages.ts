@@ -23,8 +23,8 @@ export type Stage =
 /**
  * The line a project card shows for each stage. The frames give five of
  * these; the rest are the same steps as the frames' section labels name
- * them, and the wordmark, the symbol and the lockup as the Gala seat named
- * them on FRI-1710.
+ * them, and the wordmark, the symbol and the lockup as the
+ * design review named them.
  */
 export const STAGE_LABEL: Record<Stage, string> = {
   brief: "Brief started",

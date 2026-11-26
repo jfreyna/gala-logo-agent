@@ -1,5 +1,5 @@
 /**
- * What Gala knows at each step (FRI-1720): one facts table, given to every
+ * What Gala knows at each step: one facts table, given to every
  * words-only reply; a can't-do reply with the closest move and, only for a
  * finishing touch on a kept mark, the kit line; a second words-only reply
  * given the way out; and a change at the colorways sent to the step whose

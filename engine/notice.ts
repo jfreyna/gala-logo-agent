@@ -1,6 +1,6 @@
 /**
- * Gala's answer when something didn't work (Figma gala-notice 5661:16975,
- * FRI-1712 pattern 2): plain words, the cause in the person's terms, and a
+ * Gala's answer when something didn't work (Figma gala-notice 5661:16975):
+ * plain words, the cause in the person's terms, and a
  * way forward.
  *
  * A notice is a card of kind "notice" in the conversation. It carries its
@@ -10,7 +10,7 @@
  * a step back instead.
  *
  * The lines here are fixed, not a model's: a notice is written exactly when
- * a model's answer can't be relied on. "Stopped" is written by FRI-1715.
+ * a model's answer can't be relied on. "Stopped" is written on its own (below).
  */
 import { CannotSet } from "../kit/src/font.ts";
 import { ModelError } from "./gemini.ts";
@@ -59,11 +59,11 @@ const STEP_NAMES: Partial<Record<Stage, string>> = {
 };
 
 /**
- * Gala's line after Stop (gala-notice Kind=Stopped, FRI-1715). `kept` is
+ * Gala's line after Stop (gala-notice Kind=Stopped). `kept` is
  * true when the turn had already written something before it was stopped:
  * the words alone, no button, since replaying would redo work already in.
  * When nothing was kept it offers Try again, which replays the stopped
- * request once (Kind=Stopped with retry, FRI-1729, the founder's yes); a
+ * request once (Kind=Stopped with retry); a
  * stop is not a failure, so stopping again never escalates to Repeated.
  */
 export function stoppedNotice(stage: Stage, kept: boolean): Notice {
@@ -79,7 +79,7 @@ export function stoppedNotice(stage: Stage, kept: boolean): Notice {
 }
 
 /**
- * Gala's line when Try again finds nothing owed (FRI-1729): what it failed
+ * Gala's line when Try again finds nothing owed: what it failed
  * on was answered since, or the turn was stopped on purpose. A fixed line,
  * never silence, with the step's next move.
  */

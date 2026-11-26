@@ -2,8 +2,8 @@
  * Color math for the kit: hex parsing, the 50 to 900 ladder, WCAG contrast
  * and a straight CMYK conversion. Pure and dependency-free.
  *
- * The ladder follows the method of Frilly's tenant dashboard colors page
- * (FRI-1603), re-implemented here: each brand color is its own anchor; it is
+ * The ladder follows the method of Frilly's tenant dashboard colors page,
+ * re-implemented here: each brand color is its own anchor; it is
  * taken into OKLCH (Bjorn Ottosson's OKLab), its hue is held, lightness walks
  * a fixed ladder, chroma is the anchor's chroma scaled by a per-step curve,
  * and an out-of-gamut step loses chroma (never lightness or hue) until it
@@ -21,9 +21,9 @@ export type Role = "primary" | "secondary" | "tertiary";
 export const LADDER_STEPS = ["50", "100", "200", "300", "400", "500", "600", "700", "800", "900"] as const;
 export type LadderStep = (typeof LADDER_STEPS)[number];
 
-/** Target OKLCH lightness per step (the FRI-1603 ladder). */
+/** Target OKLCH lightness per step (Frilly's palette ladder). */
 const STEP_LIGHTNESS: readonly number[] = [0.979, 0.956, 0.904, 0.83, 0.745, 0.652, 0.52, 0.43, 0.283, 0.214];
-/** Per-step chroma as a share of the anchor's chroma (the FRI-1603 curve). */
+/** Per-step chroma as a share of the anchor's chroma (Frilly's palette curve). */
 const STEP_CHROMA: readonly number[] = [0.09, 0.21, 0.28, 0.58, 0.72, 0.82, 1.0, 1.05, 0.83, 0.62];
 
 export type Rgb = [number, number, number];

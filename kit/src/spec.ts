@@ -39,7 +39,7 @@ export type Colorway = {
   name?: string;
 };
 
-/** What a color does in the chosen colorway (FRI-1730): fills the mark, the name, or is the ground. Empty when the colorway does not use it. */
+/** What a color does in the chosen colorway: fills the mark, the name, or is the ground. Empty when the colorway does not use it. */
 export type ColorUse = "mark" | "wordmark" | "ground";
 
 export type SpecColor = {
@@ -50,12 +50,12 @@ export type SpecColor = {
   ladder: LadderEntry[];
   nearestStep: LadderStep;
   contrast: { onWhite: Contrast; onBlack: Contrast };
-  /** What this color does in the chosen colorway (FRI-1730). A logo of the name alone never lists "mark". */
+  /** What this color does in the chosen colorway. A logo of the name alone never lists "mark". */
   uses: ColorUse[];
 };
 
 /**
- * The chosen colorway as the spec sheet shows it (FRI-1730). `files` names,
+ * The chosen colorway as the spec sheet shows it. `files` names,
  * per lock-up, the variant whose files carry the colorway's fills: "color",
  * or "black" / "white" when the colorway paints that lock-up the same as the
  * all-black or all-white set, which then stands in for it. `onGround` is
@@ -86,7 +86,7 @@ export type SpecSheet = {
   type: FontInfo & { sample: string };
   colors: SpecColor[];
   pairs: SpecPair[];
-  /** Added by FRI-1730; kits built before it have none. */
+  /** Added with the colorway's own files; kits built before it have none. */
   colorway?: SpecColorway;
   cmykNote: string;
 };
@@ -148,7 +148,7 @@ export function buildSpec(
     seen.add(key);
     pairs.push({ foreground, background, contrast: contrast(resolve(colors, foreground), resolve(colors, background)) });
   };
-  // The transparent lock-ups are read on white; the square, the social image and (FRI-1730) the on-ground lock-ups sit on the ground.
+  // The transparent lock-ups are read on white; the square, the social image and the on-ground lock-ups sit on the ground.
   for (const bg of ["white", ground] as const) {
     addPair(colorway.mark, bg);
     addPair(colorway.wordmark, bg);

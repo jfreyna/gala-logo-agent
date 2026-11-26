@@ -1,6 +1,6 @@
 /**
  * The states every button and chip has (Figma gala-button 5666:18006 and
- * gala-filter-chip 5548:7011, FRI-1712), as class lists to add to a
+ * gala-filter-chip 5548:7011), as class lists to add to a
  * button's own layout classes.
  *
  *   - Hover shows on pointer devices only (tailwind.config.js turns on

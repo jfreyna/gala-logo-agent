@@ -92,7 +92,7 @@ async function turn(request: IncomingMessage, response: ServerResponse): Promise
   const projectId = idOf(body?.projectId);
   // "Back to this step" in the Work panel names the step; anything else is refused.
   const back = body?.back === undefined ? undefined : isStage(body.back) ? body.back : null;
-  // Try again on a notice (FRI-1729): the turn replays what it failed on, or says nothing was owed.
+  // Try again on a notice: the turn replays what it failed on, or says nothing was owed.
   const retry = body?.retry === true;
   if (token === null || projectId === null || back === null) return json(response, 400, { state: "refused" });
   if (prompt === null) return json(response, 503, { state: "unavailable" });

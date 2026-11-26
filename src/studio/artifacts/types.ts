@@ -102,7 +102,7 @@ export type WordmarkArtifact = {
   letterSpacingEm: number;
   /** True once the person signs it off; the symbol opens then. */
   approved: boolean;
-  /** The weight the name is drawn in (FRI-1711 `info.weight`). Absent on cards from before it was stored: Regular. */
+  /** The weight the name is drawn in (the kit's `info.weight`). Absent on cards from before it was stored: Regular. */
   weight?: number;
 } & NameLines;
 
@@ -181,7 +181,7 @@ export type Lockup = {
   /** "Primary", "Stacked", "Icon", "Wordmark", "All black", "All white". */
   label: string;
   previewUrl: string;
-  /** The paper it is shown on: white, black for the all-white variant, or the colorway's ground as a hex when that is a brand color (FRI-1730). */
+  /** The paper it is shown on: white, black for the all-white variant, or the colorway's ground as a hex when that is a brand color. */
   ground: "white" | "black" | (string & {});
 };
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Small feedback (FRI-1715), as the page draws it.
+ * Small feedback, as the page draws it.
  *
  *   node scripts/check-feedback-drawn.mjs
  *
@@ -79,7 +79,7 @@ check("Stopped with something kept: Gala's line alone, with no rule and no butto
   await page.close();
 });
 
-check("Stopped with nothing kept (FRI-1729): the line, no rule, and one secondary Try again", async () => {
+check("Stopped with nothing kept: the line, no rule, and one secondary Try again", async () => {
   const page = await open("/preview/stoppedRetry?top=1");
   const notice = await page.$eval('[data-name="gala-notice"]', (element) => ({
     kind: element.dataset.kind,

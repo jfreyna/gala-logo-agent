@@ -327,7 +327,7 @@ check("studio: on a phone the prompt bar's working line stays on one line, and i
 });
 
 check("studio: no fades; the scroll area runs from the header's bottom edge to the prompt bar's top edge, desktop and phone", async () => {
-  // The viewport fix folded into FRI-1721: the conversation scrolls right up to the header and down to the prompt bar.
+  // The viewport fix: the conversation scrolls right up to the header and down to the prompt bar.
   const measure = (page) =>
     page.evaluate(() => {
       const box = (name) => document.querySelector(`[data-name="${name}"]`).getBoundingClientRect();
@@ -370,7 +370,7 @@ check("studio: scrolled to the newest item, it rests 92px (52px on a phone) abov
 });
 
 check("studio: a long rationale grows its card instead of running into the checks, and the row's checks and buttons line up", async () => {
-  // The founder's walk: five lines of rationale ran over the 16px / Circle / Inverted badges.
+  // From a test walk: five lines of rationale ran over the 16px / Circle / Inverted badges.
   const long = "A drop of ink pivots on its point, the way a brush lands before a stroke. It keeps Gala's motion without leaning on the obvious paintbrush, and the counter stays open at small sizes, so it still reads in a browser tab.";
   const measure = (page, cardName, rowName) =>
     page.evaluate(

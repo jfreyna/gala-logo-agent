@@ -1,5 +1,5 @@
 /**
- * Small feedback (FRI-1715), without a model or a browser.
+ * Small feedback, without a model or a browser.
  *
  *   node --experimental-strip-types --no-warnings engine/checks/feedback.check.ts
  *
@@ -17,7 +17,7 @@ import { runTurn } from "../loop.ts";
 import { NOTICE_KIND, stoppedNotice, type Notice } from "../notice.ts";
 import { projectAt } from "./project.ts";
 
-const h = createHarness("Small feedback (FRI-1715)");
+const h = createHarness("Small feedback");
 
 /** Each action and whether it hands off to the box. */
 const HANDS_OFF: [string, { type: string; action?: { do?: string } }, boolean][] = [
@@ -35,7 +35,7 @@ for (const [name, action, expected] of HANDS_OFF) {
 
 h.check("Handed off lasts 6 seconds when the person doesn't type", () => assertEqual(HAND_OFF_MS, 6000, "the time"));
 
-h.check("a turn stopped mid-step writes the Stopped line, says nothing was kept, and offers Try again (FRI-1729)", async () => {
+h.check("a turn stopped mid-step writes the Stopped line, says nothing was kept, and offers Try again", async () => {
   const store = projectAt("wordmark", { withCard: false });
   const controller = new AbortController();
   controller.abort();

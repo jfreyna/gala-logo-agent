@@ -26,7 +26,7 @@ type Drawing = { layout: LockupLayout; mark: [number, number]; type: [number, nu
  */
 const HERO: Record<LockupLayout, Drawing> = {
   sideBySide: { layout: "sideBySide", mark: [56, 96], type: [30, 52], gap: [14, 24] },
-  // Not drawn in the file; sizes from the Gala seat on FRI-1710: mark 48 and name 26 on a phone, 80 and 44 on desktop, the gap 0.15 of the mark.
+  // Not drawn in the file; sizes from the design review: mark 48 and name 26 on a phone, 80 and 44 on desktop, the gap 0.15 of the mark.
   stacked: { layout: "stacked", mark: [48, 80], type: [26, 44], gap: [7.2, 12] },
 };
 const OTHER: Record<LockupLayout, Drawing & { caption: string; height: string }> = {
@@ -64,7 +64,7 @@ export function Lockup({
   onBack: () => void;
 }) {
   useGoogleFont(data.family, data.brandName);
-  // On two lines (FRI-1728): left-aligned beside the symbol, centered under it, as the kit sets them.
+  // On two lines: left-aligned beside the symbol, centered under it, as the kit sets them.
   const lines = linesOfName(data.brandName, data);
 
   /** The symbol and the name, drawn at one of the frames' sizes. The sizes switch at the same width the layout does. */

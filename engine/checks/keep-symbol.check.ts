@@ -1,6 +1,6 @@
 /**
- * Keep the approved symbol through a wordmark or typeface change (FRI-1724,
- * walk note 6: a lowercase name asked for after the kit dropped the droplet).
+ * Keep the approved symbol through a wordmark or typeface change
+ * (from a test walk: a lowercase name asked for after the kit dropped the droplet).
  *
  *   node --experimental-strip-types --no-warnings engine/checks/keep-symbol.check.ts
  *

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Cards and history on the dev deployment (FRI-1713): every card action
+ * Cards and history on the dev deployment: every card action
  * leaves its line and wakes Gala; past cards refuse changes; a typeface
  * change after the type step goes back through a turn and redraws.
- * Failures answered (FRI-1714): refusals come back in the server's own
+ * Failures answered: refusals come back in the server's own
  * words; a color typeface is answered with a notice, and the same failure
  * twice with Repeated.
  *
@@ -180,7 +180,7 @@ function refused(call) {
   return "";
 }
 
-// Failures answered (FRI-1714): the server's own words, thrown so a production deployment passes them on.
+// Failures answered: the server's own words, thrown so a production deployment passes them on.
 
 check("a refused card action comes back in the server's own words, as a ConvexError", async () => {
   const oldType = messages().find((message) => message.kind === "typeSet");

@@ -6,7 +6,7 @@ import { Thinking } from "../../components/Thinking";
 import { DownloadChip, type DownloadState } from "../Feedback";
 
 /**
- * gala-kit (Figma 5551:8131; FRI-1730 frame 5689:19465): the finished
+ * gala-kit (Figma 5551:8131; frame 5689:19465): the finished
  * lock-up kit. Six lock-ups on paper (the colorway's lock-ups on its ground
  * when that is a brand color), the kinds of file in the kit, the spec sheet
  * link, and Download kit.

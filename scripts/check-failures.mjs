@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Failures answered (FRI-1714), as the page draws them.
+ * Failures answered, as the page draws them.
  *
  *   node scripts/check-failures.mjs
  *

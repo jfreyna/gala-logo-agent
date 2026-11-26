@@ -1,5 +1,5 @@
 /**
- * The kit card first, the halls card after the first download (FRI-1723),
+ * The kit card first, the halls card after the first download,
  * without a model.
  *
  *   node --experimental-strip-types --no-warnings engine/checks/kit-first.check.ts
@@ -83,7 +83,7 @@ const talk: Steering = { act: "talk" };
 /** The drafts Gala showed in the made-up project: three directions and three variations. */
 const SHOWN = ["mark-a", "mark-b", "mark-c", "var-1", "var-2", "var-3"];
 
-const h = createHarness("Kit first, halls after the first download (FRI-1723)");
+const h = createHarness("Kit first, halls after the first download");
 
 h.check("the kit step writes the kit card alone, not downloaded, with the halls logo, and waits at the picks step", async () => {
   const store = readyForKit();

@@ -35,13 +35,13 @@ export type StepFacts = {
   cantDo: CantDo[];
   /** The exact way out, for the second words-only reply in a row at this step. */
   wayOut: string;
-  /** The prompt bar's Hints at this step: example lines the person can press to fill the box (FRI-1722, the founder's approved copy, one set per step group). */
+  /** The prompt bar's Hints at this step: example lines the person can press to fill the box (approved copy, one set per step group). */
   hints: string[];
 };
 
 /**
- * The Hints, per step group, verbatim as the founder approved them on
- * FRI-1722 (2026-11-25). Fixed copy: each is a move the step's row can make.
+ * The Hints, per step group, verbatim as approved on 2026-11-25.
+ * Fixed copy: each is a move the step's row can make.
  */
 const HINTS = {
   brief: ["Here's what my business does and who it's for", "My logo will live on a sign and an app icon", "Three things my brand must never be"],
@@ -60,7 +60,7 @@ export const KIT_HOLDS: string[] = [
   "a spec sheet with clear space, minimum sizes, the typeface, and each color's full ladder with hex, RGB and CMYK values",
 ];
 
-/** The founder's kit line, checked against what the kit writes: each part is one vector path that opens in Figma. */
+/** The kit line, checked against what the kit writes: each part is one vector path that opens in Figma. */
 export const KIT_LINE = "the kit's vector files open in Figma, where you or a designer can take it from there";
 
 /** After the brief, an attached image is stored but never looked at. */
@@ -70,7 +70,7 @@ const NO_IMAGES: CantDo = {
   kitCanFinish: false,
 };
 
-/** The name on one line or two (FRI-1728), at the wordmark and the lockup. */
+/** The name on one line or two, at the wordmark and the lockup. */
 const NAME_LINES = "set the name on one line or two, broken between its words (a name of one word stays on one line)";
 
 const SET_ASIDE: CantDo = { what: "use a draft that was set aside", reason: "a set-aside draft failed one of the checks", kitCanFinish: false };

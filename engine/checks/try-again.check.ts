@@ -1,10 +1,11 @@
 /**
- * Try again replays the request it failed on (FRI-1729, walk note 21).
+ * Try again replays the request it failed on (a case from a
+ * test walk).
  *
  *   node --env-file-if-exists=/home/sprite/gala.env engine/checks/try-again.check.ts
  *
  * Storage is memory. The first checks ask no model and run anywhere; the
- * last three replay the founder's case through real turns, so they read the
+ * last three replay the test walk's case through real turns, so they read the
  * person's words with the real Jev and models and run only on the Sprite
  * (anywhere else they are reported as not run, and the run is incomplete).
  * A model failure is injected as the walk had it: a ModelError on the
@@ -19,13 +20,13 @@
  *     real answer after it closes the request;
  *   - Stopped with something kept, Repeated and a typeface that can't draw
  *     the name are answers;
- *   - Stopped with nothing kept offers Try again (the founder's addition):
+ *   - Stopped with nothing kept offers Try again:
  *     the stopped request stays owed for it, and a new message after it is
  *     read alone; with something kept there is no button and Try again
  *     replays nothing;
  *   - a Try again with nothing owed writes one line, never silence; a turn
  *     that is not a Try again writes no such line;
- *   - the founder's case: "Lockup is approved as shown.", a model failure,
+ *   - the test walk's case: "Lockup is approved as shown.", a model failure,
  *     then Try again: the approval is read and saved once, and a second Try
  *     again finds nothing owed; a failure then a new typed message saves the
  *     approval once, never twice;
@@ -33,7 +34,7 @@
  *     replays nothing, and a new pick after it is read alone;
  *   - through real turns: a stop with nothing kept, a Try again stopped
  *     again (Stopped again, never Repeated), then Try again: saved once;
- *   - Repeated still follows the same failure twice (FRI-1714).
+ *   - Repeated still follows the same failure twice.
  *
  * What it does not prove: what the page draws, or that the button sends the
  * retry marker (read in src/pages/Studio.tsx and engine/api.ts). Each model
@@ -51,7 +52,7 @@ import type { Operation } from "../store.ts";
 import { Turn } from "../turn.ts";
 import { projectAt } from "./project.ts";
 
-const h = createHarness("Try again replays the request it failed on (FRI-1729)");
+const h = createHarness("Try again replays the request it failed on");
 
 const APPROVAL = "Lockup is approved as shown.";
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);

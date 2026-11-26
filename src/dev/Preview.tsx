@@ -110,7 +110,7 @@ export function Preview({ pathname, search }: { pathname: string; search: string
           : // &downloads=SVG:saved,EPS:saving,PNG:couldnt shows the kit's download chips in those states.
             item.kind === "kit" && downloads !== undefined
             ? { ...item, downloads }
-            : // &reply=Working|Done shows the reply buttons in that state; Working with the first button pressed (FRI-1722).
+            : // &reply=Working|Done shows the reply buttons in that state; Working with the first button pressed.
               item.reply !== undefined && (params.get("reply") === "Working" || params.get("reply") === "Done")
               ? { ...item, reply: { ...item.reply, view: { ...item.reply.view, state: params.get("reply") as "Working" | "Done", pressed: params.get("reply") === "Working" ? "primary" : null } } }
               : // &approved=1 shows the stress test card once approved.
@@ -163,7 +163,7 @@ export function Preview({ pathname, search }: { pathname: string; search: string
         onAttach: noop,
         onRemoveAttachment: noop,
         canAttach: screen.atBrief === true,
-        // &stage=<stage> shows that step's Hints (FRI-1722); the brief's otherwise.
+        // &stage=<stage> shows that step's Hints; the brief's otherwise.
         hints: STEP_FACTS[(params.get("stage") as Stage | null) ?? "brief"]?.hints ?? STEP_FACTS.brief.hints,
         hintsOpen: params.get("hints") === "1",
       }}

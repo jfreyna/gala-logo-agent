@@ -43,10 +43,10 @@ export function Wordmark({
   onBack: () => void;
 }) {
   useGoogleFont(data.family, data.brandName);
-  // The weight the kit drew the name in (FRI-1711): a family with no Regular is set in the weight a browser picks for it.
+  // The weight the kit drew the name in: a family with no Regular is set in the weight a browser picks for it.
   const weight = data.weight ?? 400;
   const type = { fontFamily: `"${data.family}", serif`, fontWeight: weight, letterSpacing: `${data.letterSpacingEm}em` };
-  // On two lines (FRI-1728) the lines are centered on each other, at the typeface's own line height, as the kit sets them.
+  // On two lines the lines are centered on each other, at the typeface's own line height, as the kit sets them.
   const lines = linesOfName(data.brandName, data);
   // The frames' heights hold one line. On two lines the hero and tiles keep those heights as a floor and grow to fit, with room above and below, so no line is clipped.
   const two = lines.length > 1;

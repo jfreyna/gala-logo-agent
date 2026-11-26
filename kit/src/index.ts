@@ -1,10 +1,10 @@
 /**
  * buildKit: the chosen mark, a Google font and the picked colors in; the
- * lock-up kit and its spec sheet out (FRI-1705, phase 5).
+ * lock-up kit and its spec sheet out (phase 5).
  *
  * Files: primary, stacked, icon and wordmark, each in color, all black and
  * all white, each as SVG, EPS and PNG (36), plus the square and the social
- * image (PNG). FRI-1730: when the colorway's ground is a brand color, each
+ * image (PNG). When the colorway's ground is a brand color, each
  * lock-up also comes on that ground ("ground", SVG, EPS and PNG); when the
  * colorway paints a lock-up the same as the all-black or all-white set, its
  * "color" files are left out and that set stands in (`spec.colorway.files`). Paths group by the kit card's chips: svg/, eps/, png/,
@@ -54,7 +54,7 @@ export type KitInput = {
 };
 
 export type Lockup = "primary" | "stacked" | "icon" | "wordmark" | "square" | "social";
-/** "ground": the lock-up in the colorway's fills on its brand-color ground (FRI-1730). */
+/** "ground": the lock-up in the colorway's fills on its brand-color ground. */
 export type Variant = "color" | "black" | "white" | "ground";
 export type Format = "svg" | "eps" | "png";
 
@@ -153,7 +153,7 @@ export async function buildKit(input: KitInput, options: KitOptions = {}): Promi
     white: { mark: "#FFFFFF", wordmark: "#FFFFFF" },
     ground: { mark: markColor, wordmark: wordColor, ground: groundColor },
   };
-  // FRI-1730: on-ground files only on a brand-color ground; a white or neutral colorway keeps today's set.
+  // On-ground files only on a brand-color ground; a white or neutral colorway keeps today's set.
   const brandGround = isBrandGround(input.colorway.ground);
   const colorwayFiles: SpecColorway["files"] = {};
 
@@ -165,7 +165,7 @@ export async function buildKit(input: KitInput, options: KitOptions = {}): Promi
   for (const lockup of ["primary", "stacked", "icon", "wordmark"] as const) {
     const flat = art[lockup];
     if (flat === undefined) continue;
-    // FRI-1730: no "color" copy of the all-black (or all-white) files; the on-ground files when the ground is a brand color.
+    // No "color" copy of the all-black (or all-white) files; the on-ground files when the ground is a brand color.
     const holder = colorwayVariant(flat, fills);
     colorwayFiles[lockup] = holder;
     const variants: Variant[] = [...(holder === "color" ? (["color"] as const) : []), "black", "white", ...(brandGround ? (["ground"] as const) : [])];

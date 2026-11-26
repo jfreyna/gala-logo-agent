@@ -18,7 +18,7 @@
  *   page, then compared with the black SVG,
  *   so its geometry is proven; every EPS fill is also checked in the file text.
  * - The trace is checked for path count, bounds and fill, not likeness to the
- *   source mark; likeness is for the founder's eye (screenshots in the PR).
+ *   source mark; likeness is for a person's eye (screenshots in the PR).
  */
 
 import { execFileSync, spawnSync } from "node:child_process";

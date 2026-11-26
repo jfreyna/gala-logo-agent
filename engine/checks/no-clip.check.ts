@@ -1,5 +1,5 @@
 /**
- * No clip after the brief (FRI-1721): the prompt bar shows the attach button
+ * No clip after the brief: the prompt bar shows the attach button
  * only while the project is at the brief, and a file that still arrives
  * after it gets an answer.
  *

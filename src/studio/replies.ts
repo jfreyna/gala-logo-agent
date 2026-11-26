@@ -1,6 +1,6 @@
 /**
  * Which of Gala's lines carry reply buttons, and where each row stands
- * (gala-reply-buttons, FRI-1722). Read from the stored conversation only,
+ * (gala-reply-buttons). Read from the stored conversation only,
  * so a reload shows the same rows: a line that offered a move keeps its
  * buttons, Done once the move is answered.
  *
@@ -28,9 +28,9 @@ export type LineReply = { view: ReplyView; primary: ReplyAction; secondary?: Rep
 
 type Message = { id: string; author: string; kind: string; artifact: Record<string, any> | null };
 
-/** The approved labels (FRI-1722). */
+/** The approved labels. */
 export const OFFER_LABELS = { yes: "Yes, redraw", no: "No" } as const;
-/** The keep-the-symbol offer's labels (FRI-1724). */
+/** The keep-the-symbol offer's labels. */
 export const KEEP_LABELS = { yes: "Keep it", no: "Draw new ones" } as const;
 export const GO_AHEAD = "Go ahead";
 export const EXIT_LABELS = { kit: "Finish in the kit", directions: "Back to directions" } as const;

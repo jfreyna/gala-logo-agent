@@ -167,7 +167,7 @@ h.check("kit: choosing a colorway hands the choices to buildKit and stores 38 fi
   assertEqual(store.kit.downloads.map((file) => file.label), ["SVG", "EPS", "PNG", "Square", "Social", "Kit"], "downloads");
   assertEqual(store.latest("kit").artifact!.lockups.length, 6, "lock-up previews");
   assertEqual(store.project.stage, "picks", "stage");
-  // FRI-1723: the kit card arrives alone; the halls card waits for the first download.
+  // The kit card arrives alone; the halls card waits for the first download.
   assertEqual(store.messages.filter((message) => message.kind === "picks").length, 0, "halls cards with the kit");
 });
 

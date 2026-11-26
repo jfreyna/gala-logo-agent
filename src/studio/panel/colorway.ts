@@ -1,5 +1,5 @@
 /**
- * The spec sheet's colorway words (FRI-1730, frame 5689:19050), built from
+ * The spec sheet's colorway words (frame 5689:19050), built from
  * the kit's spec. Code decides every fact (the roles, the uses, the
  * contrast); these functions only word them.
  */
@@ -20,10 +20,10 @@ export type KitView = {
   /**
    * The colorway as picked. `paper` is the ground's hex on a brand-color
    * ground, or null for the white paper. Absent for a kit built before
-   * FRI-1730.
+   * the colorway was stored.
    */
   colorway?: { paper: string | null; previewUrl: string; title: string | null; pairs: PairBadge[]; caption: string };
-  /** `paper`: the ground's hex on a brand-color ground, or null for the white paper (FRI-1730). */
+  /** `paper`: the ground's hex on a brand-color ground, or null for the white paper. */
   clearSpace: { previewUrl: string; zoneColor: string; paper?: string | null; caption: string };
   minimumSizes: { item: string; value: string }[];
   type: { family: string; caption: string };
@@ -33,7 +33,7 @@ export type KitView = {
 type Role = "primary" | "secondary" | "tertiary";
 type Use = "mark" | "wordmark" | "ground";
 
-/** What the stored spec holds for the colorway (kits built before FRI-1730 have none). */
+/** What the stored spec holds for the colorway (kits built before it was stored have none). */
 export type SpecColorway = {
   letter: string | null;
   name: string | null;
@@ -109,7 +109,7 @@ export type KitSpecData = {
   type: { family: string; licenseName: string | null };
   colors: { role: Role; hex: string; ladder: { step: string; hex: string }[]; uses?: Use[]; contrast: { onWhite: Contrast; onBlack: Contrast } }[];
   pairs?: SpecPair[];
-  /** FRI-1730; absent on kits built before it. */
+  /** Absent on kits built before the colorway was stored. */
   colorway?: SpecColorway;
 };
 
@@ -120,7 +120,7 @@ export type KitSpecData = {
 export function kitView(brandName: string, spec: KitSpecData, fileUrl: (label: string) => string | undefined): KitView {
   const nameOnly = spec.clearSpace.basis === "wordmarkHeight";
   const colorway = spec.colorway;
-  // The colorway's transparent file: "color", or the all-black / all-white set that stands in for it (FRI-1730).
+  // The colorway's transparent file: "color", or the all-black / all-white set that stands in for it.
   // A logo of the name alone has no primary lock-up: its wordmark stands in.
   const colorwayFile = (lockup: "primary" | "wordmark") => fileUrl(`${lockup}, ${colorway?.files[lockup] ?? "color"}, SVG`);
   const previewUrl = colorwayFile("primary") ?? colorwayFile("wordmark") ?? "";

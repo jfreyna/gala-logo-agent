@@ -1,5 +1,5 @@
 /**
- * Failures answered (FRI-1714), without a model or a browser.
+ * Failures answered, without a model or a browser.
  *
  *   node --experimental-strip-types --no-warnings engine/checks/failures.check.ts
  *
@@ -39,7 +39,7 @@ import { settablePicks, whyNot } from "../typeset.ts";
 import { Turn } from "../turn.ts";
 import { projectAt } from "./project.ts";
 
-const h = createHarness("Failures answered (FRI-1714)");
+const h = createHarness("Failures answered");
 
 /** A typeface with none of the letters in the name, and a color one; both are test cases only. */
 const LACKS_LETTERS = "Noto Emoji";

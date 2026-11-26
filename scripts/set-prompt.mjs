@@ -3,7 +3,7 @@
  * Loads Gala's real prompt into the `frilly-gala` environment.
  *
  *   node scripts/set-prompt.mjs private/gala-prompt.md          (dev)
- *   node scripts/set-prompt.mjs private/gala-prompt.md --prod   (production; the founder's to run)
+ *   node scripts/set-prompt.mjs private/gala-prompt.md --prod   (production; the owner's to run)
  *
  * One environment value holds at most 8 KiB, so the text is split across
  * GALA_PROMPT_01, GALA_PROMPT_02 and so on, and convex/prompt.ts joins

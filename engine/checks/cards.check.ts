@@ -1,5 +1,5 @@
 /**
- * Cards and history (FRI-1713): the rules, without a browser or a model.
+ * Cards and history: the rules, without a browser or a model.
  *
  *   node --experimental-strip-types --no-warnings engine/checks/cards.check.ts
  *
@@ -27,7 +27,7 @@ import { STEPS } from "../steps.ts";
 import { MemoryStore } from "../store-memory.ts";
 import { Turn } from "../turn.ts";
 
-const h = createHarness("Cards and history (FRI-1713)");
+const h = createHarness("Cards and history");
 
 type M = { id: string; author: string; kind: string; artifact: Record<string, any> | null };
 const gala = (id: string, kind: string, artifact: Record<string, any>): M => ({ id, author: "gala", kind, artifact });
@@ -98,7 +98,7 @@ const CASES: { name: string; stage: Parameters<typeof pastCards>[1]; messages: M
     expect: { r: undefined, k: undefined },
   },
   {
-    // FRI-1722 gave the stress test Approve and Change something, so once past it shows the footer like every card with buttons.
+    // The stress test has Approve and Change something, so once past it shows the footer like every card with buttons.
     name: "the stress test, now with buttons, shows the footer once past: signed off when approved",
     stage: "lockup",
     messages: [gala("s", "stressTest", { approved: true })],

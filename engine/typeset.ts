@@ -43,8 +43,8 @@ export function namesToSet(name: string): string[] {
  * it can't. "unconfirmed" means the check itself could not finish.
  *
  * A color typeface (COLR, SVG or bitmap glyphs, as the font file reports
- * it) is never used: the kit draws a logo in one color (the founder's
- * ruling on FRI-1712, 2026-11-25). That is a live check on the file, with
+ * it) is never used: the kit draws a logo in one color (a product
+ * ruling, 2026-11-25). That is a live check on the file, with
  * no list of families, so the offer passes over it for the next-ranked
  * family in its class, and a person who names or picks one is told why.
  */

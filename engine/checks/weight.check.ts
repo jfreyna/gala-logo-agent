@@ -1,11 +1,10 @@
 /**
- * The wordmark card names the weight it is drawn in (FRI-1713, from
- * FRI-1711 proposal 4).
+ * The wordmark card names the weight it is drawn in.
  *
  *   node --env-file-if-exists=/home/sprite/gala.env --experimental-strip-types --no-warnings engine/checks/weight.check.ts
  *
  * It runs the wordmark step against the real Jev and model, so it runs
- * only on the Sprite. Storage is memory. Buda is the case from FRI-1711:
+ * only on the Sprite. Storage is memory. Buda is the test case:
  * Google serves it in Light only, so the kit draws it at 300. Young Serif
  * has a Regular.
  *

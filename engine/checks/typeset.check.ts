@@ -51,7 +51,7 @@ async function open(store: MemoryStore): Promise<Turn> {
   await turn.read();
   return turn;
 }
-/** Gala's last words: a plain line, or a notice's (FRI-1714: a failure is answered in a notice). */
+/** Gala's last words: a plain line, or a notice's (a failure is answered in a notice). */
 const lastLine = (store: MemoryStore) => {
   const last = store.messages.findLast((message) => message.author === "gala" && (message.kind === "text" || message.kind === "notice"));
   return last?.kind === "notice" ? (last.artifact?.say ?? "") : (last?.text ?? "");

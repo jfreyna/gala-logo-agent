@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Button and chip states (FRI-1715), as the browser draws them, against the
+ * Button and chip states, as the browser draws them, against the
  * component sets' own values (gala-button 5666:18006, gala-filter-chip
  * 5548:7011), light and dark.
  *

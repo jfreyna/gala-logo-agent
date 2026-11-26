@@ -1,5 +1,5 @@
 /**
- * Reaching earlier cards (FRI-1718): a pick or a name on any round of the
+ * Reaching earlier cards: a pick or a name on any round of the
  * current step, a redraw from the right mark, a pick with a change, and an
  * echo that settles.
  *
@@ -31,11 +31,11 @@
  *      "pull that one up" bringing the round back with nothing drawn.
  *
  * What it does not prove: that the drawings follow the request or look
- * good (that is the founder's to judge), or that Jev reads every wording
+ * good (that is a person's to judge), or that Jev reads every wording
  * the same way: each steering answer is one model's reading of one message.
  * Gala's line naming the mark is checked for the name only, not its
  * quality. The replay's seed marks are simple shapes drawn in code, not the
- * founder's drawings.
+ * test walk's drawings.
  */
 import { assert, assertEqual, createHarness } from "../../kit/scripts/harness.ts";
 import { rasterize } from "../../kit/src/render.ts";
@@ -334,7 +334,7 @@ h.check("6. Ninth-Floor replay: every round starts from the mark the person was 
 
   const older = first.artifact!.concepts[1] as { id: string; name: string; markFileId: string };
 
-  // 2:16 pm, the founder's words: "pull that one up", no change. That round comes back unpicked, and nothing new is drawn.
+  // 2:16 pm, the test walk's words: "pull that one up", no change. That round comes back unpicked, and nothing new is drawn.
   const drawnBefore = store.statuses.filter((status) => status === WORKING.variations).length;
   store.visitorSays(`We want the one from an earlier round called ${older.name}, not three new ones. Can you pull that one up? These three new ones are rejected.`);
   assertEqual(await runTurn(store, prompt, signal()), "done", "the 2:16 pm turn");

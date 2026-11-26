@@ -36,7 +36,7 @@ async function post(path: string, body: Record<string, unknown>): Promise<string
  * Asks Gala to take a turn on a project; with `back`, the turn first goes
  * back to that step ("Back to this step" in the Work panel); with `retry`,
  * it is a Try again on a notice, which replays what the turn failed on or
- * says nothing was owed (FRI-1729). Resolves when the turn ends, with
+ * says nothing was owed. Resolves when the turn ends, with
  * how it ended: "done", "stopped", "busy", "signin" (the sign-in was
  * refused when the turn opened), "trouble", or null when nothing answered.
  */
@@ -64,7 +64,7 @@ export function fileMemoryLine(memoryId: string, text: string): Promise<boolean>
  * Saves a stored file under its own name. Storage addresses are on another
  * origin, so a plain link can't name the download. True when the file was
  * fetched and handed to the browser; false when it couldn't be fetched, so
- * the button can say so (FRI-1712 gap N).
+ * the button can say so .
  */
 export async function download(url: string, fileName: string): Promise<boolean> {
   let blob: Blob;

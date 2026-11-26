@@ -338,13 +338,13 @@ async function checked(turn: Turn, found: Details, rounds: RoundOption[]): Promi
 /**
  * An offer Gala made: the exact request a yes runs, its words, and where the
  * conversation stood when it was made. `pressed` is set by the reply
- * buttons (convex/studio.ts `answerOffer`, FRI-1722): the answer waits on the
+ * buttons (convex/studio.ts `answerOffer`): the answer waits on the
  * card for the turn the press wakes.
  */
 export type Offer = { request: Request; moveToOffer: string; afterMessages: number; pressed?: "yes" | "no"; keepSymbol?: KeepSymbol };
 
 /**
- * FRI-1724: the offer to keep the approved symbol through a change to the
+ * The offer to keep the approved symbol through a change to the
  * name's case or the typeface. `to` is the step the change goes back to; a
  * yes keeps the symbol, any other answer takes today's path. Either way the
  * change itself is made.
@@ -353,7 +353,7 @@ export type KeepSymbol = { name: string; to: "wordmark" | "type" };
 
 /**
  * An offer once answered, typed or pressed, kept on its card so the reply
- * buttons under the line that made it show Done after a reload (FRI-1722).
+ * buttons under the line that made it show Done after a reload.
  * The standing offer itself is cleared, as before.
  */
 export type AnsweredOffer = { afterMessages: number; answer: "yes" | "no"; keepSymbol?: true };
@@ -365,7 +365,7 @@ function answering(card: StoredMessage, offer: Offer, answer: "yes" | "no"): Rec
   return { ...card.artifact!, offer: null, answeredOffers: [...answered.filter((kept) => kept.afterMessages !== offer.afterMessages), entry] };
 }
 
-/** The card an offer at this step is stored on: the newest round, the lockup card, or after the lockup the approved stress test card (FRI-1724). */
+/** The card an offer at this step is stored on: the newest round, the lockup card, or after the lockup the approved stress test card. */
 function offerCard(turn: Turn): StoredMessage | null {
   const roundKind = ROUND_KINDS[turn.stage];
   if (roundKind !== undefined) return roundsOf(turn, roundKind).at(-1) ?? null;
@@ -374,7 +374,7 @@ function offerCard(turn: Turn): StoredMessage | null {
 }
 
 /**
- * The approved symbol (FRI-1724): the newest stress test card, approved,
+ * The approved symbol: the newest stress test card, approved,
  * with the name of the variation it tested. Null before the stress test is
  * approved, or at a step not after it.
  */
@@ -389,7 +389,7 @@ export function approvedSymbol(turn: Turn): { card: StoredMessage; name: string 
 
 /**
  * A change to the name's case or the typeface, which goes back to `to`.
- * With an approved symbol, Gala first offers to keep it (FRI-1724); the
+ * With an approved symbol, Gala first offers to keep it; the
  * change itself waits on the answer. Without one: today's go back.
  */
 export async function nameChange(turn: Turn, to: "wordmark" | "type", request: Request): Promise<void> {
@@ -403,7 +403,7 @@ export async function nameChange(turn: Turn, to: "wordmark" | "type", request: R
   turn.steer({ act: "offer", moveToOffer, symbolName: symbol.name });
 }
 
-/** The answer to a keep-the-symbol offer (FRI-1724): a yes marks the symbol kept; either way the change goes back as today. */
+/** The answer to a keep-the-symbol offer: a yes marks the symbol kept; either way the change goes back as today. */
 async function answerKeepSymbol(turn: Turn, offer: Offer, keep: boolean): Promise<void> {
   if (keep) {
     const symbol = approvedSymbol(turn);
@@ -426,7 +426,7 @@ export function pendingOffer(turn: Turn): { card: StoredMessage; offer: Offer } 
 }
 
 /**
- * A "Back to directions" press waiting for this turn (FRI-1722): stored on
+ * A "Back to directions" press waiting for this turn: stored on
  * a card's newest exits, with no answer yet and nothing Gala wrote after
  * the line it sits under. `description` is the person's last words before
  * that line, carried as the drawing request the way a typed "go back to the
@@ -480,7 +480,7 @@ export async function steer(turn: Turn, options: { back?: Stage } = {}): Promise
   const message = turn.unansweredText();
   turn.said = message;
   if (message === "") {
-    // A reply button on an offer (FRI-1722): exactly what the typed answer does. A yes runs the stored request; a no clears it, and Gala answers the press.
+    // A reply button on an offer: exactly what the typed answer does. A yes runs the stored request; a no clears it, and Gala answers the press.
     const standing = pendingOffer(turn);
     if (standing?.offer.pressed !== undefined) {
       const answer = standing.offer.pressed;
@@ -490,7 +490,7 @@ export async function steer(turn: Turn, options: { back?: Stage } = {}): Promise
       await keep(turn, { ...standing.offer.request, drawing: null }, null);
       return turn.steer({ act: "redo", request: standing.offer.request });
     }
-    // "Back to directions" after a second dead end (FRI-1722): the typed path, a go back to the directions with the person's last description.
+    // "Back to directions" after a second dead end: the typed path, a go back to the directions with the person's last description.
     const exit = pressedExit(turn);
     if (exit !== null) {
       await turn.write([{ op: "patchArtifact", messageId: exit.card.id, artifact: { ...exit.card.artifact!, exits: exit.all.map((entry) => (entry === exit.exits ? { ...entry, answered: true } : entry)) } }]);
@@ -510,7 +510,7 @@ export async function steer(turn: Turn, options: { back?: Stage } = {}): Promise
   const choices = onScreen?.options ?? [];
   const reading = await read(turn, message, choices, onScreen?.signOff ?? false, standing?.offer.moveToOffer ?? null);
   console.log(describeReading(turn.stage, reading));
-  // A keep-the-symbol offer is answered either way: a yes keeps it, anything else takes today's path (FRI-1724).
+  // A keep-the-symbol offer is answered either way: a yes keeps it, anything else takes today's path.
   if (standing?.offer.keepSymbol !== undefined) {
     const yes = verdictOf(reading.acceptsOffer ?? 0) === "yes";
     if (yes) {
@@ -610,7 +610,7 @@ export async function steer(turn: Turn, options: { back?: Stage } = {}): Promise
     const asks = change === "no" ? null : request;
     // A typeface is shown only on the type card: going back with one named lands there, whichever later step was named.
     const target = asks !== null && asks.typeface !== null && stepIndex(to.stage) > stepIndex("type") ? "type" : to.stage;
-    // A change to the name or typeface after the symbol was approved: Gala offers to keep the symbol first (FRI-1724).
+    // A change to the name or typeface after the symbol was approved: Gala offers to keep the symbol first.
     if (asks !== null && (target === "type" || target === "wordmark") && (asks.typeface !== null || asks.nameAs !== null)) return nameChange(turn, target, asks);
     return goBack(turn, target, asks);
   }

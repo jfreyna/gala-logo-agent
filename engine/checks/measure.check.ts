@@ -1,7 +1,7 @@
 /**
- * Measuring drawings with Jev `box` (FRI-1725): for a request about where
+ * Measuring drawings with Jev `box`: for a request about where
  * one part sits or how big it is, the part is boxed in the starting mark
- * and in each drawing, code compares the edges, and FRI-1719's
+ * and in each drawing, code compares the edges, and the yes/no check's
  * `showsRequest` and `differsFromStart` come from that measurement.
  *
  *   node --experimental-strip-types --no-warnings engine/checks/measure.check.ts
@@ -35,11 +35,11 @@
  *   7. a size request measured both ways: a longer bar for "longer" shows
  *      the request, a shorter one doesn't;
  *   8. a request for a part the mark doesn't have is not measured, and
- *      keeps FRI-1719's answers;
+ *      keeps the yes/no answers;
  *   9. the fallback: with `box` refused (and, separately, every Jev call
  *      refused, as in the Nov 25 incident) the measurement gives nothing
  *      back without throwing, and `showsRequest` and `differsFromStart`
- *      are FRI-1719's yes/no answers;
+ *      are the yes/no answers;
  *  10. on the wider mark, where single boxes disagree, a real shift left is
  *      either measured as left or falls back; it is never measured as a
  *      move the other way or as unmoved.
@@ -166,13 +166,13 @@ h.check("7. a size request measured both ways: a longer bar shows \"longer\", a 
   assertEqual(shorter!.showsRequest, false, "the shorter bar's showsRequest");
 });
 
-h.check("8. a part the mark doesn't have is not measured, and the round keeps FRI-1719's yes/no answers", async () => {
+h.check("8. a part the mark doesn't have is not measured, and the round keeps the yes/no answers", async () => {
   const ask = "Move the small circle to the left.";
   const [entry] = await compareDrawings([SHIFTED_LEFT], { wanted: [ask], start: HALF_STEP, newest: ask });
   assertEqual(entry!.measured, null, "a part that isn't there was measured");
-  // What FRI-1719's answers say here is one model's reading and not this check's claim; only that they are what the round kept.
+  // What the yes/no answers say here is one model's reading and not this check's claim; only that they are what the round kept.
   const yesNo = await compareDrawing(SHIFTED_LEFT, { request: [ask], start: HALF_STEP });
-  assertEqual(entry!.showsRequest, yesNo.showsRequest, "showsRequest against FRI-1719's");
+  assertEqual(entry!.showsRequest, yesNo.showsRequest, "showsRequest against the yes/no answer");
 });
 
 // 9. The fallback.
@@ -209,7 +209,7 @@ async function refusing(refuse: (body: string) => boolean, run: () => Promise<vo
   }
 }
 
-h.check("9a. with box refused, the round keeps FRI-1719's yes/no answers", async () => {
+h.check("9a. with box refused, the round keeps the yes/no answers", async () => {
   await refusing(
     (body) => body.includes('"type":"box"'),
     async () => {
@@ -219,7 +219,7 @@ h.check("9a. with box refused, the round keeps FRI-1719's yes/no answers", async
       compared.forEach((entry, index) => {
         assert(typeof entry.showsRequest === "boolean" && typeof entry.differsFromStart === "boolean", `drawing ${index + 1} has no yes/no answers`);
       });
-      // FRI-1719's answer on the identical drawing, asked directly, is what the round kept.
+      // The yes/no answer on the identical drawing, asked directly, is what the round kept.
       assertEqual(compared[0]!.differsFromStart, yesNo[0]!.differsFromStart, "the identical drawing's differsFromStart");
     },
   );

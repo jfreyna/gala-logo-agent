@@ -16,7 +16,7 @@ export type Attachment = { fileName: string; previewUrl: string | null };
  * and a stop button).
  *
  * After the brief the attach button is gone (gala-prompt-bar / no clip,
- * Figma 5676:17707, FRI-1721). A file picked at the brief and not yet sent
+ * Figma 5676:17707). A file picked at the brief and not yet sent
  * keeps its chip and still sends; the engine answers it.
  */
 export function PromptBar({
@@ -50,7 +50,7 @@ export function PromptBar({
   attachment: Attachment | null;
   onAttach: (file: File) => void;
   onRemoveAttachment: () => void;
-  /** Shows the attach button. True only while the project is at the brief (FRI-1721). */
+  /** Shows the attach button. True only while the project is at the brief. */
   canAttach?: boolean;
   /** Example lines for the current step. Pressing one fills the prompt. */
   hints: string[];
@@ -58,10 +58,10 @@ export function PromptBar({
   hintsOpen?: boolean;
   /** Change this number to move the cursor into the prompt. */
   focusRequest?: number;
-  /** Send failed (FRI-1712): the words and the file are kept, and the border says so. */
+  /** Send failed: the words and the file are kept, and the border says so. */
   failed?: boolean;
   /**
-   * Handed off (FRI-1715): a card action passed the next move to this box.
+   * Handed off: a card action passed the next move to this box.
    * A 2px button-1 border eases in, and the placeholder asks what to change,
    * typing itself in once. The page turns it off when the person types, or
    * after 6 seconds.

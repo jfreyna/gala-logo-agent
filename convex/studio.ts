@@ -109,15 +109,15 @@ const action = v.union(
     loved: v.union(v.object({ quote: v.string() }), v.null()),
   }),
   v.object({ type: v.literal("declinePicks") }),
-  /** The first finished download from the kit (any format, or Download kit): Gala then offers the halls (FRI-1723). */
+  /** The first finished download from the kit (any format, or Download kit): Gala then offers the halls. */
   v.object({ type: v.literal("kitDownloaded") }),
-  /** "Approve" on the stress test card: the same approval a typed one is (FRI-1722). */
+  /** "Approve" on the stress test card: the same approval a typed one is. */
   v.object({ type: v.literal("approveMark") }),
-  /** "Go ahead" under the symbol opener: the same as saying go ahead (FRI-1722). */
+  /** "Go ahead" under the symbol opener: the same as saying go ahead. */
   v.object({ type: v.literal("goAhead") }),
-  /** "Yes, redraw" or "No" under the line that offered a move: the answer to the offer stored on this card (FRI-1722). */
+  /** "Yes, redraw" or "No" under the line that offered a move: the answer to the offer stored on this card. */
   v.object({ type: v.literal("answerOffer"), answer: v.union(v.literal("yes"), v.literal("no")) }),
-  /** "Back to directions" under a second dead end's line: the go back with the person's description, as typing it does (FRI-1722). */
+  /** "Back to directions" under a second dead end's line: the go back with the person's description, as typing it does. */
   v.object({ type: v.literal("takeWayOut") }),
 );
 
@@ -126,7 +126,7 @@ const OFFER_CARDS: Record<string, string> = {
   directions: "conceptSet",
   variations: "variationSet",
   lockup: "lockup",
-  // After the lockup, the keep-the-symbol offer (FRI-1724) is stored on the approved stress test card.
+  // After the lockup, the keep-the-symbol offer is stored on the approved stress test card.
   pickColors: "stressTest",
   colorways: "stressTest",
   kit: "stressTest",
@@ -149,7 +149,7 @@ export const act = mutation({
         break;
       }
       case "chooseType": {
-        // Once the project is past the type step, the type card is history: a change goes back to the step first (FRI-1713, gap C).
+        // Once the project is past the type step, the type card is history: a change goes back to the step first (gap C).
         if (project.stage !== "type") throw new ConvexError("That step is done.");
         const { artifact } = await card(ctx, projectId, messageId, "typeSet");
         if (!hasOption(artifact.directions, action.id)) throw new ConvexError("That typeface is not on the card.");

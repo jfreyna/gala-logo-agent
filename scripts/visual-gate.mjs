@@ -78,15 +78,15 @@ const screens = [
   // Drawn in desktop light only: a request held for a later step, and Gala opening the symbol step.
   { name: "held-desktop-light", path: "/preview/held?top=1", w: 1440, h: 1240, scheme: "light" },
   { name: "opener-desktop-light", path: "/preview/opener?top=1", ...DESKTOP, scheme: "light" },
-  // Feedback loops (FRI-1712), drawn in desktop light: a card action heard at once, then done; past cards read-only.
+  // Feedback loops, drawn in desktop light: a card action heard at once, then done; past cards read-only.
   { name: "fb-heard-desktop-light", path: "/preview/heard?top=1", w: 1440, h: 948, scheme: "light" },
   { name: "fb-heardworking-desktop-light", path: "/preview/heardWorking?top=1", w: 1440, h: 995, scheme: "light" },
   { name: "fb-history-desktop-light", path: "/preview/history", w: 1440, h: 1040, scheme: "light" },
-  // Failures answered (FRI-1714). Couldn't draw is also drawn in desktop dark and on a phone.
-  // Button states and small feedback (FRI-1715), drawn in desktop light.
+  // Failures answered. Couldn't draw is also drawn in desktop dark and on a phone.
+  // Button states and small feedback, drawn in desktop light.
   { name: "fb-handedoff-desktop-light", path: "/preview/handedOff?top=1&handedOff=1", w: 1440, h: 900, scheme: "light" },
   { name: "fb-stopped-desktop-light", path: "/preview/stopped?top=1", w: 1440, h: 900, scheme: "light" },
-  // Stopped with retry (FRI-1729), drawn as gala-notice variants: the notice alone, 768 wide on desktop and 348 on a phone.
+  // Stopped with retry, drawn as gala-notice variants: the notice alone, 768 wide on desktop and 348 on a phone.
   ...["desktop", "mobile"].flatMap((size) =>
     ["light", "dark"].map((scheme) => ({ name: `stoppedretry-${size}-${scheme}`, path: "/preview/stoppedRetry?top=1", ...(size === "desktop" ? DESKTOP : MOBILE), scheme, element: '[data-name="gala-notice"]' })),
   ),

@@ -1,6 +1,6 @@
 /**
- * The research cards' images (FRI-1709 finding 2), on the founder's Gala
- * brief, against the real model and the real sites.
+ * The research cards' images, on a test brief for
+ * Gala's own logo, against the real model and the real sites.
  *
  *   node --env-file-if-exists=/home/sprite/gala.env engine/checks/research.check.ts [folder for the icons]
  *
@@ -69,7 +69,7 @@ h.check("an icon under about 128px is not kept, and an SVG that links outside it
   assertEqual(storable("image/svg+xml", linked), null, "an SVG with an outside link");
 });
 
-h.check("the founder's Gala brief: six cards, each with the brand's own icon or the default image, and the distinct check gets the competitors' icons", async () => {
+h.check("the Gala brief: six cards, each with the brand's own icon or the default image, and the distinct check gets the competitors' icons", async () => {
   const store = new MemoryStore();
   store.project = { id: "project", brandName: "Gala", stage: "research" };
   store.visitorSays('We need to design a logo for this product, Gala. You are a logo design partner for professional designers, marketers, and business owners alike. You research, draft, and design a logo, and provide a professional finished kit. Modern and playful.');

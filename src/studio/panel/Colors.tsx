@@ -41,11 +41,11 @@ export function ColorSummary({ colors }: { colors: RoleColor[] }) {
 export type { PickedColor } from "./colorway";
 
 /**
- * gala-palette (Figma 5540:5478, FRI-1730 frame 5689:19050): the kit's
+ * gala-palette (Figma 5540:5478 and frame 5689:19050): the kit's
  * colors. Each brand color first as picked, a 64px swatch with its role and
  * what it does in this colorway, then its hex, RGB and CMYK values and its
  * contrast. Its ladder follows, labelled "Tints and shades", with no chip
- * marked as the base: the picked color is never a ladder step (FRI-1603).
+ * marked as the base: the picked color is never a ladder step.
  * The CMYK note says the values are a reference.
  */
 export function Palette({ colors }: { colors: PickedColor[] }) {

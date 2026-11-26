@@ -1,5 +1,5 @@
 /**
- * The colorway's own files (FRI-1730): which variants each lock-up ships,
+ * The colorway's own files: which variants each lock-up ships,
  * and the on-ground artwork.
  *
  * - On the ground: when the colorway's ground is a brand color (secondary
