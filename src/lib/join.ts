@@ -40,14 +40,22 @@ export function looksLikeEmail(value: string): boolean {
 
 const GOOGLE_PENDING_KEY = "gala-google-sign-in-pending";
 
-/** Start a Google sign-in. The browser leaves and returns to Gala's root. */
+/**
+ * Start a Google sign-in or sign-up. The browser leaves and returns to Gala's root.
+ *
+ * `requestSignUp` lets a Google address with no Frilly account create one;
+ * without it Frilly answers a new address with Better-Auth's `signup_disabled`
+ * page. It is a request, not a pass: Frilly still decides on its side (Google
+ * must have verified the address, under a per-IP limit). An existing account
+ * signs in as before.
+ */
 export function continueWithGoogle(): void {
   try {
     sessionStorage.setItem(GOOGLE_PENDING_KEY, "1");
   } catch {
     // Without session storage the sign-in still works; only the label is skipped.
   }
-  void authClient.signIn.social({ provider: "google", callbackURL: returnAddress() });
+  void authClient.signIn.social({ provider: "google", callbackURL: returnAddress(), requestSignUp: true });
 }
 
 const recordJoinEntrySource = makeFunctionReference<"mutation", { source: string }, boolean>("join:recordJoinEntrySource");
