@@ -92,7 +92,7 @@ export function About() {
           <section className="relative flex w-full shrink-0 flex-col items-start gap-[12px]" data-name="section/Built on">
             <SectionTitle>Built on</SectionTitle>
             <Para>
-              Gala runs on a Fly.io Sprite. Gemini writes and draws, TypeSafe’s Jev checks the work, Google Fonts sets the type, and Convex keeps your projects, files and Gala’s memory. Made by Frilly.
+              Gala runs on a Fly.io Sprite. Gemini writes and draws, TypeSafe’s Jev checks the work, Google Fonts sets the type, and Convex keeps your projects, files and Gala’s memory. The video on the home page plays from YouTube, in its privacy-enhanced mode. Gala counts visits with Google Analytics, which uses cookies and receives the address of each page you open, without your name, your email or anything you make here. Made by Frilly.
             </Para>
           </section>
 

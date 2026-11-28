@@ -43,14 +43,15 @@ const SECURITY_HEADERS = {
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "Content-Security-Policy": [
     "default-src 'self'",
-    "script-src 'self'",
+    "script-src 'self' https://www.googletagmanager.com https://static.cloudflareinsights.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob: https:",
-    "connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://*.convex.site https://fonts.googleapis.com https://fonts.gstatic.com",
+    "connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://*.convex.site https://fonts.googleapis.com https://fonts.gstatic.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://analytics.google.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
+    "frame-src https://www.youtube-nocookie.com",
   ].join("; "),
 };
 

@@ -47,7 +47,7 @@ function useHall(kind: HallKind): HallEntry[] {
 
 /**
  * The front page (Figma "Intro" frames 5595:14205, :14245, :14285, :14320):
- * the hero with the join card, then the two halls, then the footer.
+ * the hero with the join card, the video, then the two halls, then the footer.
  */
 export function Home({ sample, sampleOpen }: { sample?: { fame: HallEntry[]; shame: HallEntry[] }; sampleOpen?: HallKind }) {
   const { location } = useRouter();
@@ -95,6 +95,24 @@ export function Home({ sample, sampleOpen }: { sample?: { fame: HallEntry[]; sha
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/*
+        The video: muted so it can start on its own. YouTube shows its controls on hover or tap.
+        The frame stretches with the page up to 1080 wide and keeps 16:9; the border sits outside it.
+      */}
+      <section className="relative flex w-full shrink-0 flex-col items-center gap-[20px] px-[16px] pb-[24px] pt-[40px] desktop:gap-[32px] desktop:px-[40px] desktop:pb-[56px] desktop:pt-[80px]" data-name="video">
+        <h2 className="w-full text-center font-headings text-[28px] font-bold leading-[normal] text-headline-1-light desktop:text-[36px] dark:text-headline-1-dark">See Gala at work</h2>
+        <div className="relative aspect-video w-full max-w-[1080px] overflow-hidden rounded-[12px] shadow-[0px_8px_24px_0px_rgba(3,28,41,0.12)] ring-2 ring-brand-tertiary-200 desktop:rounded-[16px] desktop:shadow-[0px_16px_48px_0px_rgba(3,28,41,0.12)] dark:shadow-[0px_8px_24px_0px_rgba(3,28,41,0.4)] dark:ring-brand-tertiary-700 dark:desktop:shadow-[0px_16px_48px_0px_rgba(3,28,41,0.4)]">
+          <iframe
+            className="absolute inset-0 h-full w-full"
+            src="https://www.youtube-nocookie.com/embed/XZ4PGqv5Zyg?autoplay=1&mute=1&controls=1&playsinline=1&loop=1&playlist=XZ4PGqv5Zyg&rel=0"
+            title="Gala demo video"
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
         </div>
       </section>
 
